@@ -39,3 +39,7 @@
 ## Decision Log
 
 - **[2026-04-15] Repo restructure:** Mirrored azerothcore-playerbots layout. playerbot/ → src/Bot/, playerbot/strategy/ → src/Ai/Base/, per-class dirs → src/Ai/Class/{class}/, ahbot/ → src/AhBot/, sql/ → data/sql/, conf files → conf/. ~780 include paths updated via sed. CMakeLists.txt rewritten. Zero logic changes. Lowercase kept for existing subdir names (cMaNGOS convention). PascalCase for new structural dirs.
+
+- **Build setup:** Clone `cmangos/mangos-classic` into playerbots-updates/. Symlink `mangos-classic/src/modules/PlayerBots` → cmangos-playerbots. Builddir at `playerbots-updates/builddir/`. Configure: `CC=clang CXX=clang++ cmake -DBUILD_PLAYERBOTS=ON -DFETCHCONTENT_SOURCE_DIR_PLAYERBOTS=<symlink_path> -DCMAKE_BUILD_TYPE=Release -B builddir -S mangos-classic`. Build: `cmake --build builddir -- -j$(nproc)`.
+- **Compat shims:** Core mangos game files include `playerbot/X.h` and `ahbot/AhBot.h` (old paths). Created shim headers at module root `playerbot/` and `ahbot/` that forward to new `src/` paths. Required files: `playerbot/{playerbot.h,PlayerbotAI.h,PlayerbotAIConfig.h,RandomPlayerbotMgr.h}`, `ahbot/AhBot.h`.
+- **Angle-bracket include gotcha:** One file (DebugAction.cpp) used `<playerbot/TravelNode.h>` with angle brackets — missed by sed which only targeted double-quote includes. Always check `<playerbot/` pattern too when fixing stale includes.

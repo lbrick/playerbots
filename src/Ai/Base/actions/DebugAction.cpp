@@ -1,7 +1,7 @@
 #include "src/Bot/Engine/playerbot.h"
 #include "DebugAction.h"
 #include "src/Bot/PlayerbotAIConfig.h"
-#include <playerbot/TravelNode.h>
+#include "src/Mgr/TravelNode.h"
 #include "ChooseTravelTargetAction.h"
 #include "src/Ai/Base/values/SharedValueContext.h"
 #include "src/Ai/Base/actions/RpgSubActions.h"
