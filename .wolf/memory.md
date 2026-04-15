@@ -8,3 +8,5 @@
 | 14:25 | Fixed ActionContext.h + TriggerContext.h stale raid includes (5 raids each) | src/Ai/Base/actions/ActionContext.h, src/Ai/Base/triggers/TriggerContext.h | fixed | ~100 |
 | 14:35 | Set up local build: cloned mangos-classic, symlinked module, created builddir | mangos-classic/, builddir/, src/modules/PlayerBots symlink | cmake configure OK | ~200 |
 | 14:45 | Created compatibility shim headers for core game includes at old playerbot/ ahbot/ paths | playerbot/*.h, ahbot/AhBot.h | full build clean — playerbots+game+mangosd all built | ~150 |
+| 08:28 | Restructured BWL and MC raids to AC-style Action/Strategy/Trigger subdir layout | src/Ai/Raid/BlackwingLair/, src/Ai/Raid/MoltenCore/ | complete | ~3000 |
+| 09:23 | Restructured Karazhan, Naxxramas, OnyxiasLair raids to AC-style Action/Strategy/Trigger subdir layout | src/Ai/Raid/{Karazhan,Naxxramas,OnyxiasLair}/ | complete | ~2500 |

@@ -90,11 +90,11 @@ source_group("Ai\\Class\\Warrior"     FILES ${Ai_Warrior})
 
 # ── Ai Raid ──────────────────────────────────────────────────────────────────
 
-file(GLOB Ai_BlackwingLair ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/BlackwingLair/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/BlackwingLair/*.h)
-file(GLOB Ai_Karazhan      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Karazhan/*.cpp      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Karazhan/*.h)
-file(GLOB Ai_MoltenCore    ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/MoltenCore/*.cpp    ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/MoltenCore/*.h)
-file(GLOB Ai_Naxxramas     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Naxxramas/*.cpp     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Naxxramas/*.h)
-file(GLOB Ai_OnyxiasLair   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/OnyxiasLair/*.cpp   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/OnyxiasLair/*.h)
+file(GLOB_RECURSE Ai_BlackwingLair ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/BlackwingLair/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/BlackwingLair/*.h)
+file(GLOB_RECURSE Ai_Karazhan      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Karazhan/*.cpp      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Karazhan/*.h)
+file(GLOB_RECURSE Ai_MoltenCore    ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/MoltenCore/*.cpp    ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/MoltenCore/*.h)
+file(GLOB_RECURSE Ai_Naxxramas     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Naxxramas/*.cpp     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Naxxramas/*.h)
+file(GLOB_RECURSE Ai_OnyxiasLair   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/OnyxiasLair/*.cpp   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/OnyxiasLair/*.h)
 
 source_group("Ai\\Raid\\BlackwingLair" FILES ${Ai_BlackwingLair})
 source_group("Ai\\Raid\\Karazhan"      FILES ${Ai_Karazhan})

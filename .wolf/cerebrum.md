@@ -6,7 +6,7 @@
 
 ## User Preferences
 
-<!-- How the user likes things done. Code style, tools, patterns, communication. -->
+- **Raid layout:** Prefers AC-style subdirectory split per raid — Action/, Strategy/, Trigger/ subdirs with Raid{Short}{Type} file naming (e.g. RaidBwlActions.h, RaidMcStrategy.cpp). Trigger IsActive() implementations go in .cpp, not inline in headers. Strategy .cpp keeps inline multiplier classes if they're only used locally. CMakeLists uses GLOB_RECURSE for restructured raids.
 
 ## Key Learnings
 
@@ -23,7 +23,7 @@
   - `src/Util/` — GuidPosition, Helpers, WorldPosition, WorldSquare, ServerFacade, BroadcastHelper, ChatHelper, ChatFilter, LazyCalculatedValue
   - `src/Ai/Base/` — strategy engine root + actions/, generic/, triggers/, values/
   - `src/Ai/Class/{class}/` — per-class AI (10 classes, lowercase names)
-  - `src/Ai/Raid/{raid}/` — BlackwingLair, Karazhan, MoltenCore, Naxxramas, OnyxiasLair
+  - `src/Ai/Raid/{raid}/` — BlackwingLair, Karazhan, MoltenCore, Naxxramas, OnyxiasLair; BWL+MC restructured to AC-style subdirs: Action/, Strategy/, Trigger/ with Raid{Short}{Type}.h/.cpp naming
   - `src/AhBot/` — AH bot source
   - `conf/` — aiplayerbot.conf.dist.in*, ahbot.conf.dist.in
   - `data/sql/` — characters/base, characters/updates, world/{classic,tbc,wotlk}, other/

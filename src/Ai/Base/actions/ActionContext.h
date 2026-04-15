@@ -73,11 +73,11 @@
 #include "UseConsumableAction.h"
 #include "WorldBuffTravelActions.h"
 
-#include "src/Ai/Raid/OnyxiasLair/OnyxiasLairDungeonActions.h"
-#include "src/Ai/Raid/MoltenCore/MoltenCoreDungeonActions.h"
-#include "src/Ai/Raid/BlackwingLair/BlackwingLairDungeonActions.h"
-#include "src/Ai/Raid/Karazhan/KarazhanDungeonActions.h"
-#include "src/Ai/Raid/Naxxramas/NaxxramasDungeonActions.h"
+#include "src/Ai/Raid/OnyxiasLair/Action/RaidOnyActions.h"
+#include "src/Ai/Raid/MoltenCore/Action/RaidMcActions.h"
+#include "src/Ai/Raid/BlackwingLair/Action/RaidBwlActions.h"
+#include "src/Ai/Raid/Karazhan/Action/RaidKaraActions.h"
+#include "src/Ai/Raid/Naxxramas/Action/RaidNaxxActions.h"
 
 namespace ai
 {

@@ -3,28 +3,28 @@
 
 namespace ai
 {
-    class MoltenCoreDungeonStrategy : public Strategy
+    class BlackwingLairDungeonStrategy : public Strategy
     {
     public:
-        MoltenCoreDungeonStrategy(PlayerbotAI* ai) : Strategy(ai) {}
-        std::string getName() override { return "molten core"; }
+        BlackwingLairDungeonStrategy(PlayerbotAI* ai) : Strategy(ai) {}
+        std::string getName() override { return "blackwing lair"; }
 
     private:
         void InitCombatTriggers(std::list<TriggerNode*>& triggers) override;
         void InitNonCombatTriggers(std::list<TriggerNode*>& triggers) override;
     };
 
-    class MagmadarFightStrategy : public Strategy
+    class SuppressionRoomStrategy : public Strategy
     {
     public:
-        MagmadarFightStrategy(PlayerbotAI* ai) : Strategy(ai) {}
-        std::string getName() override { return "magmadar"; }
+        SuppressionRoomStrategy(PlayerbotAI* ai) : Strategy(ai) {}
+        std::string getName() override { return "suppression room"; }
 
     private:
         void InitCombatTriggers(std::list<TriggerNode*>& triggers) override;
         void InitNonCombatTriggers(std::list<TriggerNode*>& triggers) override;
-        void InitDeadTriggers(std::list<TriggerNode*>& triggers) override;
-        void InitReactionTriggers(std::list<TriggerNode*>& triggers) override;
         void InitCombatMultipliers(std::list<Multiplier*>& multipliers) override;
+        void InitNonCombatMultipliers(std::list<Multiplier*>& multipliers) override;
+        void OnStrategyAdded(BotState state) override;
     };
 }

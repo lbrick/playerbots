@@ -3,25 +3,26 @@
 
 namespace ai
 {
-    class NaxxramasDungeonStrategy : public Strategy
+    class OnyxiasLairDungeonStrategy : public Strategy
     {
     public:
-        NaxxramasDungeonStrategy(PlayerbotAI* ai) : Strategy(ai) {}
-        std::string getName() override { return "naxxramas"; }
+        OnyxiasLairDungeonStrategy(PlayerbotAI* ai) : Strategy(ai) {}
+        std::string getName() override { return "onyxia's lair"; }
 
     private:
         void InitCombatTriggers(std::list<TriggerNode*>& triggers) override;
     };
 
-    class FourHorsemanFightStrategy : public Strategy
+    class OnyxiaFightStrategy : public Strategy
     {
     public:
-        FourHorsemanFightStrategy(PlayerbotAI* ai) : Strategy(ai) {}
-        std::string getName() override { return "four horseman"; }
+        OnyxiaFightStrategy(PlayerbotAI* ai) : Strategy(ai) {}
+        std::string getName() override { return "onyxia"; }
 
     private:
         void InitCombatTriggers(std::list<TriggerNode*>& triggers) override;
         void InitNonCombatTriggers(std::list<TriggerNode*>& triggers) override;
         void InitDeadTriggers(std::list<TriggerNode*>& triggers) override;
+        void InitReactionTriggers(std::list<TriggerNode*>& triggers) override;
     };
 }

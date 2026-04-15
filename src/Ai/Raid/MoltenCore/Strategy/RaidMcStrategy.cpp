@@ -1,9 +1,10 @@
-
 #include "src/Bot/Engine/playerbot.h"
-#include "MoltenCoreDungeonStrategies.h"
+#include "RaidMcStrategy.h"
 #include "src/Ai/Base/generic/DungeonMultipliers.h"
 
 using namespace ai;
+
+// ── MoltenCoreDungeonStrategy ─────────────────────────────────────────────────
 
 void MoltenCoreDungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 {
@@ -14,20 +15,6 @@ void MoltenCoreDungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& trig
 
 void MoltenCoreDungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {
-    /*
-    triggers.push_back(new TriggerNode(
-        "val::and::{"
-        "action possible::use id::17333,"
-        "has object::go usable filter::go trapped filter::entry filter::{gos in sight,mc runes},"
-        "not::has object::entry filter::{gos close,mc runes}"
-        "}",
-        NextAction::array(0, new NextAction("move to::entry filter::{gos in sight,mc runes}", 1.0f), NULL)));
-
-    triggers.push_back(new TriggerNode(
-        "val::has object::go usable filter::entry filter::{gos close,mc runes}",
-        NextAction::array(0, new NextAction("use id::{17333,entry filter::{gos close,mc runes}}", 1.0f), NULL)));
-        */
-
     triggers.push_back(new TriggerNode(
         "mc rune in sight",
         NextAction::array(0, new NextAction("move to mc rune", 1.0f), NULL)));
@@ -42,6 +29,8 @@ void MoltenCoreDungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& t
         "fire protection potion ready",
         NextAction::array(0, new NextAction("fire protection potion", 100.0f), NULL)));
 }
+
+// ── MagmadarFightStrategy ─────────────────────────────────────────────────────
 
 void MagmadarFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 {

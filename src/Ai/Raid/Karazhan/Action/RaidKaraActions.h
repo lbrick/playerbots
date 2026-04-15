@@ -39,7 +39,7 @@ namespace ai
     {
     public:
         RemoveNetherPortalBuffsFromNetherspiteAction(PlayerbotAI* ai) : Action(ai, "remove nether portal buffs from netherspite") {}
-        virtual bool Execute(Event& event) override;
+        bool Execute(Event& event) override;
     };
 
     class AddNetherPortalPerseverenceForTankAction : public Action

@@ -48,11 +48,11 @@
 #include "generic/WorldBuffTravelStrategy.h"
 
 #include "generic/DungeonStrategy.h"
-#include "src/Ai/Raid/OnyxiasLair/OnyxiasLairDungeonStrategies.h"
-#include "src/Ai/Raid/MoltenCore/MoltenCoreDungeonStrategies.h"
-#include "src/Ai/Raid/BlackwingLair/BlackwingLairDungeonStrategies.h"
-#include "src/Ai/Raid/Karazhan/KarazhanDungeonStrategies.h"
-#include "src/Ai/Raid/Naxxramas/NaxxramasDungeonStrategies.h"
+#include "src/Ai/Raid/OnyxiasLair/Strategy/RaidOnyStrategy.h"
+#include "src/Ai/Raid/MoltenCore/Strategy/RaidMcStrategy.h"
+#include "src/Ai/Raid/BlackwingLair/Strategy/RaidBwlStrategy.h"
+#include "src/Ai/Raid/Karazhan/Strategy/RaidKaraStrategy.h"
+#include "src/Ai/Raid/Naxxramas/Strategy/RaidNaxxStrategy.h"
 
 namespace ai
 {

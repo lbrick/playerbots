@@ -1,8 +1,9 @@
-
 #include "src/Bot/Engine/playerbot.h"
-#include "OnyxiasLairDungeonStrategies.h"
+#include "RaidOnyStrategy.h"
 
 using namespace ai;
+
+// ── OnyxiasLairDungeonStrategy ────────────────────────────────────────────────
 
 void OnyxiasLairDungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 {
@@ -11,9 +12,11 @@ void OnyxiasLairDungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& tri
         NextAction::array(0, new NextAction("enable onyxia fight strategy", 100.0f), NULL)));
 }
 
+// ── OnyxiaFightStrategy ───────────────────────────────────────────────────────
+
 void OnyxiaFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 {
-    // ...
+    // TODO: add boss-specific combat triggers
 }
 
 void OnyxiaFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
@@ -32,5 +35,5 @@ void OnyxiaFightStrategy::InitDeadTriggers(std::list<TriggerNode*>& triggers)
 
 void OnyxiaFightStrategy::InitReactionTriggers(std::list<TriggerNode*>& triggers)
 {
-    // ...
+    // TODO: add boss-specific reaction triggers
 }

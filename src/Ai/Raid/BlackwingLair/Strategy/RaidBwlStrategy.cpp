@@ -1,29 +1,11 @@
 #include "src/Bot/Engine/playerbot.h"
-#include "BlackwingLairDungeonStrategies.h"
+#include "RaidBwlStrategy.h"
 
 using namespace ai;
 
-void BlackwingLairDungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
-{
-    triggers.push_back(new TriggerNode(
-        "suppression device close",
-        NextAction::array(0, new NextAction("disarm suppression device", 80.0f), NULL)));
-}
-
-void BlackwingLairDungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
-{
-    triggers.push_back(new TriggerNode(
-        "suppression device need stealth",
-        NextAction::array(0, new NextAction("stealth for suppression device", ACTION_HIGH + 3), NULL)));
-
-    triggers.push_back(new TriggerNode(
-        "suppression device in sight",
-        NextAction::array(0, new NextAction("move to suppression device", ACTION_HIGH + 2), NULL)));
-
-    triggers.push_back(new TriggerNode(
-        "suppression device close",
-        NextAction::array(0, new NextAction("disarm suppression device", ACTION_HIGH + 4), NULL)));
-}
+// ── SuppressionRoomPassiveMultiplier ─────────────────────────────────────────
+// Restricts rogues in the Suppression Room to only stealth/disarm actions,
+// preventing regular combat logic from breaking the mechanics.
 
 class SuppressionRoomPassiveMultiplier : public Multiplier
 {
@@ -40,23 +22,18 @@ public:
 
         const std::string& name = action->getName();
 
-        // Enable only the following strats for suppression room to avoid regular combat breaking logic
         if (name == "stealth for suppression device" ||
             name == "move to suppression device" ||
             name == "disarm suppression device" ||
             name == "deactivate suppression device")
-        {
             return 1.0f;
-        }
 
         if (name == "stealth" ||
             name == "unstealth" ||
             name == "check stealth" ||
             name == "sprint" ||
             name == "vanish")
-        {
             return 1.0f;
-        }
 
         if (name == "co" ||
             name == "nc" ||
@@ -80,13 +57,37 @@ public:
             name == "stay" ||
             name == "food" ||
             name == "drink")
-        {
             return 1.0f;
-        }
 
         return 0.0f;
     }
 };
+
+// ── BlackwingLairDungeonStrategy ─────────────────────────────────────────────
+
+void BlackwingLairDungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+{
+    triggers.push_back(new TriggerNode(
+        "suppression device close",
+        NextAction::array(0, new NextAction("disarm suppression device", 80.0f), NULL)));
+}
+
+void BlackwingLairDungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
+{
+    triggers.push_back(new TriggerNode(
+        "suppression device need stealth",
+        NextAction::array(0, new NextAction("stealth for suppression device", ACTION_HIGH + 3), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "suppression device in sight",
+        NextAction::array(0, new NextAction("move to suppression device", ACTION_HIGH + 2), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "suppression device close",
+        NextAction::array(0, new NextAction("disarm suppression device", ACTION_HIGH + 4), NULL)));
+}
+
+// ── SuppressionRoomStrategy ──────────────────────────────────────────────────
 
 void SuppressionRoomStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 {
