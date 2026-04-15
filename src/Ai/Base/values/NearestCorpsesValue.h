@@ -1,0 +1,19 @@
+#pragma once
+#include "src/Ai/Base/Value.h"
+#include "NearestUnitsValue.h"
+#include "src/Bot/PlayerbotAIConfig.h"
+
+namespace ai
+{
+    class NearestCorpsesValue : public NearestUnitsValue
+	{
+	public:
+        NearestCorpsesValue(PlayerbotAI* ai, float range = sPlayerbotAIConfig.sightDistance) :
+          NearestUnitsValue(ai, "nearest corpses", range) {}
+
+    protected:
+        void FindUnits(std::list<Unit*> &targets) override;
+        bool AcceptUnit(Unit* unit) override;
+
+	};
+}

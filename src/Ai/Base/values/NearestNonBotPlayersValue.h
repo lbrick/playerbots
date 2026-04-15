@@ -1,0 +1,18 @@
+#pragma once
+#include "src/Ai/Base/Value.h"
+#include "NearestUnitsValue.h"
+#include "src/Bot/PlayerbotAIConfig.h"
+
+namespace ai
+{
+    class NearestNonBotPlayersValue : public NearestUnitsValue
+	{
+	public:
+        NearestNonBotPlayersValue(PlayerbotAI* ai, float range = sPlayerbotAIConfig.reactDistance) :
+          NearestUnitsValue(ai, "nearest non bot players", range, true) {}
+
+    protected:
+        void FindUnits(std::list<Unit*> &targets) override;
+        bool AcceptUnit(Unit* unit) override;
+	};
+}

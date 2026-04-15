@@ -1,0 +1,6 @@
+
+#include "src/Bot/Engine/playerbot.h"
+#include "PaladinMultipliers.h"
+#include "PaladinActions.h"
+
+using namespace ai;

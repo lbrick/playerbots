@@ -21,104 +21,136 @@ set(LIBRARY_NAME playerbots)
 #Add PCH Files
 set(bots_PCH "${CMAKE_CURRENT_SOURCE_DIR}/botpch.h")
 
-#Base files
-file(GLOB Playerbot_Source ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/*.h)
-    source_group("Player Bot" FILES ${Playerbot_Source})
+# ── Bot ──────────────────────────────────────────────────────────────────────
 
-file(GLOB AHbot_Source ${CMAKE_CURRENT_SOURCE_DIR}/ahbot/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/ahbot/*.h)
-    source_group("AH Bot" FILES ${AHbot_Source})
+file(GLOB Bot_Source    ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/*.cpp     ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/*.h)
+file(GLOB Bot_Engine    ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/Engine/*.cpp   ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/Engine/*.h)
+file(GLOB Bot_Factory   ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/Factory/*.cpp  ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/Factory/*.h)
+file(GLOB Bot_Cmd       ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/Cmd/*.cpp      ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/Cmd/*.h)
+file(GLOB Bot_Debug     ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/Debug/*.cpp    ${CMAKE_CURRENT_SOURCE_DIR}/src/Bot/Debug/*.h)
 
-#Define base source library
+source_group("Bot"          FILES ${Bot_Source})
+source_group("Bot\\Engine"  FILES ${Bot_Engine})
+source_group("Bot\\Factory" FILES ${Bot_Factory})
+source_group("Bot\\Cmd"     FILES ${Bot_Cmd})
+source_group("Bot\\Debug"   FILES ${Bot_Debug})
+
+# ── AhBot ────────────────────────────────────────────────────────────────────
+
+file(GLOB AHbot_Source ${CMAKE_CURRENT_SOURCE_DIR}/src/AhBot/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/AhBot/*.h)
+source_group("AhBot" FILES ${AHbot_Source})
+
+# ── Db / Mgr / Util ──────────────────────────────────────────────────────────
+
+file(GLOB Db_Source   ${CMAKE_CURRENT_SOURCE_DIR}/src/Db/*.cpp   ${CMAKE_CURRENT_SOURCE_DIR}/src/Db/*.h)
+file(GLOB Mgr_Source  ${CMAKE_CURRENT_SOURCE_DIR}/src/Mgr/*.cpp  ${CMAKE_CURRENT_SOURCE_DIR}/src/Mgr/*.h)
+file(GLOB Util_Source ${CMAKE_CURRENT_SOURCE_DIR}/src/Util/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Util/*.h)
+
+source_group("Db"   FILES ${Db_Source})
+source_group("Mgr"  FILES ${Mgr_Source})
+source_group("Util" FILES ${Util_Source})
+
+# ── Ai Base ──────────────────────────────────────────────────────────────────
+
+file(GLOB Ai_Base     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/*.cpp     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/*.h)
+file(GLOB Ai_Actions  ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/actions/*.cpp  ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/actions/*.h)
+file(GLOB Ai_Generic  ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/generic/*.cpp  ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/generic/*.h)
+file(GLOB Ai_Triggers ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/triggers/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/triggers/*.h)
+file(GLOB Ai_Values   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/values/*.cpp   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Base/values/*.h)
+
+source_group("Ai\\Base"          FILES ${Ai_Base})
+source_group("Ai\\Base\\Actions" FILES ${Ai_Actions})
+source_group("Ai\\Base\\Generic" FILES ${Ai_Generic})
+source_group("Ai\\Base\\Trigger" FILES ${Ai_Triggers})
+source_group("Ai\\Base\\Value"   FILES ${Ai_Values})
+
+# ── Ai Class ─────────────────────────────────────────────────────────────────
+
+file(GLOB Ai_DeathKnight ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/deathknight/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/deathknight/*.h)
+file(GLOB Ai_Druid       ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/druid/*.cpp       ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/druid/*.h)
+file(GLOB Ai_Hunter      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/hunter/*.cpp      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/hunter/*.h)
+file(GLOB Ai_Mage        ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/mage/*.cpp        ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/mage/*.h)
+file(GLOB Ai_Paladin     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/paladin/*.cpp     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/paladin/*.h)
+file(GLOB Ai_Priest      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/priest/*.cpp      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/priest/*.h)
+file(GLOB Ai_Rogue       ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/rogue/*.cpp       ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/rogue/*.h)
+file(GLOB Ai_Shaman      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/shaman/*.cpp      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/shaman/*.h)
+file(GLOB Ai_Warlock     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/warlock/*.cpp     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/warlock/*.h)
+file(GLOB Ai_Warrior     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/warrior/*.cpp     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Class/warrior/*.h)
+
+source_group("Ai\\Class\\DeathKnight" FILES ${Ai_DeathKnight})
+source_group("Ai\\Class\\Druid"       FILES ${Ai_Druid})
+source_group("Ai\\Class\\Hunter"      FILES ${Ai_Hunter})
+source_group("Ai\\Class\\Mage"        FILES ${Ai_Mage})
+source_group("Ai\\Class\\Paladin"     FILES ${Ai_Paladin})
+source_group("Ai\\Class\\Priest"      FILES ${Ai_Priest})
+source_group("Ai\\Class\\Rogue"       FILES ${Ai_Rogue})
+source_group("Ai\\Class\\Shaman"      FILES ${Ai_Shaman})
+source_group("Ai\\Class\\Warlock"     FILES ${Ai_Warlock})
+source_group("Ai\\Class\\Warrior"     FILES ${Ai_Warrior})
+
+# ── Ai Raid ──────────────────────────────────────────────────────────────────
+
+file(GLOB Ai_BlackwingLair ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/BlackwingLair/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/BlackwingLair/*.h)
+file(GLOB Ai_Karazhan      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Karazhan/*.cpp      ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Karazhan/*.h)
+file(GLOB Ai_MoltenCore    ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/MoltenCore/*.cpp    ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/MoltenCore/*.h)
+file(GLOB Ai_Naxxramas     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Naxxramas/*.cpp     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Naxxramas/*.h)
+file(GLOB Ai_OnyxiasLair   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/OnyxiasLair/*.cpp   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/OnyxiasLair/*.h)
+
+source_group("Ai\\Raid\\BlackwingLair" FILES ${Ai_BlackwingLair})
+source_group("Ai\\Raid\\Karazhan"      FILES ${Ai_Karazhan})
+source_group("Ai\\Raid\\MoltenCore"    FILES ${Ai_MoltenCore})
+source_group("Ai\\Raid\\Naxxramas"     FILES ${Ai_Naxxramas})
+source_group("Ai\\Raid\\OnyxiasLair"   FILES ${Ai_OnyxiasLair})
+
+# ── Library definition ───────────────────────────────────────────────────────
+
 set(LIBRARY_SRCS
-    ${Playerbot_Source}
+    # Bot
+    ${Bot_Source}
+    ${Bot_Engine}
+    ${Bot_Factory}
+    ${Bot_Cmd}
+    ${Bot_Debug}
+    # AhBot
     ${AHbot_Source}
+    # Db / Mgr / Util
+    ${Db_Source}
+    ${Mgr_Source}
+    ${Util_Source}
+    # Ai Base
+    ${Ai_Base}
+    ${Ai_Actions}
+    ${Ai_Generic}
+    ${Ai_Triggers}
+    ${Ai_Values}
+    # Ai Class
+    ${Ai_DeathKnight}
+    ${Ai_Druid}
+    ${Ai_Hunter}
+    ${Ai_Mage}
+    ${Ai_Paladin}
+    ${Ai_Priest}
+    ${Ai_Rogue}
+    ${Ai_Shaman}
+    ${Ai_Warlock}
+    ${Ai_Warrior}
+    # Ai Raid
+    ${Ai_BlackwingLair}
+    ${Ai_Karazhan}
+    ${Ai_MoltenCore}
+    ${Ai_Naxxramas}
+    ${Ai_OnyxiasLair}
+    # PCH
     ${bots_PCH}
     ${CMAKE_CURRENT_SOURCE_DIR}/botpch.cpp
 )
 
-#Strategy files
-file(GLOB Playerbot_Strategy ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/*.h)
-    source_group("Player Bot\\Strategies" FILES ${Playerbot_Strategy})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Strategy})
+# ── Build flags ──────────────────────────────────────────────────────────────
 
-#Action files
-file(GLOB Playerbot_Actions ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/actions/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/actions/*.h)
-    source_group("Player Bot\\Strategies\\Actions" FILES ${Playerbot_Actions})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Actions})
-
-#Generic files
-file(GLOB Playerbot_Generic ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/generic/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/generic/*.h)
-    source_group("Player Bot\\Strategies\\Generic" FILES ${Playerbot_Generic})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Generic})
-
-#Trigger files
-file(GLOB Playerbot_Triggers ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/triggers/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/triggers/*.h)
-    source_group("Player Bot\\Strategies\\Triggers" FILES ${Playerbot_Triggers})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Triggers})
-
-#Value files
-file(GLOB Playerbot_Values ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/values/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/values/*.h)
-    source_group("Player Bot\\Strategies\\Values" FILES ${Playerbot_Values})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Values})
-
-## Class files
-
-#Druid AI
-file(GLOB Playerbot_Druid ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/druid/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/druid/*.h)
-    source_group("Player Bot\\Strategies\\Druid" FILES ${Playerbot_Druid})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Druid})
-
-#Hunter AI
-file(GLOB Playerbot_Hunter ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/hunter/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/hunter/*.h)
-    source_group("Player Bot\\Strategies\\Hunter" FILES ${Playerbot_Hunter})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Hunter})
-
-#Mage AI
-file(GLOB Playerbot_Mage ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/mage/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/mage/*.h)
-    source_group("Player Bot\\Strategies\\Mage" FILES ${Playerbot_Mage})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Mage})
-
-#Paladin AI
-file(GLOB Playerbot_Paladin ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/paladin/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/paladin/*.h)
-    source_group("Player Bot\\Strategies\\Paladin" FILES ${Playerbot_Paladin})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Paladin})
-
-#Priest AI
-file(GLOB Playerbot_Priest ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/priest/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/priest/*.h)
-    source_group("Player Bot\\Strategies\\Priest" FILES ${Playerbot_Priest})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Priest})
-
-#Rogue AI
-file(GLOB Playerbot_Rogue ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/rogue/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/rogue/*.h)
-    source_group("Player Bot\\Strategies\\Rogue" FILES ${Playerbot_Rogue})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Rogue})
-
-#Shaman AI
-file(GLOB Playerbot_Shaman ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/shaman/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/shaman/*.h)
-    source_group("Player Bot\\Strategies\\Shaman" FILES ${Playerbot_Shaman})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Shaman})
-
-#Warlock AI
-file(GLOB Playerbot_Warlock ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/warlock/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/warlock/*.h)
-    source_group("Player Bot\\Strategies\\Warlock" FILES ${Playerbot_Warlock})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Warlock})
-
-#Warrior AI
-file(GLOB Playerbot_Warrior ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/warrior/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/warrior/*.h)
-    source_group("Player Bot\\Strategies\\Warrior" FILES ${Playerbot_Warrior})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_Warrior})
-
-#Deathknight AI
-file(GLOB Playerbot_DeathKnight ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/deathknight/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/deathknight/*.h)
-    source_group("Player Bot\\Strategies\\DeathKnight" FILES ${Playerbot_DeathKnight})
-    LIST(APPEND LIBRARY_SRCS ${Playerbot_DeathKnight})
-
-# Define ENABLE_PLAYERBOTS if need
 if (BUILD_PLAYERBOTS)
   add_definitions(-DENABLE_PLAYERBOTS)
 endif()
 
-# Define Core
 if ( ${CMAKE_PROJECT_NAME} MATCHES "CMaNGOS")
   add_definitions(-DCMANGOS)
 else()
@@ -127,7 +159,6 @@ else()
   endif()
 endif()
 
-# Define Expansion
 if ( ${CMAKE_PROJECT_NAME} MATCHES "Classic")
   add_definitions(-DMANGOSBOT_ZERO)
 endif()
@@ -138,12 +169,10 @@ if ( ${CMAKE_PROJECT_NAME} MATCHES "WoTLK")
   add_definitions(-DMANGOSBOT_TWO)
 endif()
 
-# Define ENABLE_MODULES if need
 if (BUILD_MODULES)
   add_definitions(-DENABLE_MODULES)
 endif()
 
-# Define BUILD_AHBOT if need
 if (BUILD_AHBOT)
   add_definitions(-DBUILD_AHBOT)
 endif()
@@ -151,6 +180,8 @@ endif()
 if(PCH)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endif()
+
+# ── Target ───────────────────────────────────────────────────────────────────
 
 add_library(${LIBRARY_NAME} STATIC ${LIBRARY_SRCS})
 
@@ -170,15 +201,16 @@ target_include_directories(${LIBRARY_NAME}
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Install config files
+# ── Config install ───────────────────────────────────────────────────────────
+
 if ( ${CMAKE_PROJECT_NAME} MATCHES "Classic")
-	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/playerbot/aiplayerbot.conf.dist.in ${CMAKE_CURRENT_BINARY_DIR}/aiplayerbot.conf.dist)
-endif()	
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/conf/aiplayerbot.conf.dist.in ${CMAKE_CURRENT_BINARY_DIR}/aiplayerbot.conf.dist)
+endif()
 if ( ${CMAKE_PROJECT_NAME} MATCHES "TBC")
-	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/playerbot/aiplayerbot.conf.dist.in.tbc ${CMAKE_CURRENT_BINARY_DIR}/aiplayerbot.conf.dist)
-endif()	
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/conf/aiplayerbot.conf.dist.in.tbc ${CMAKE_CURRENT_BINARY_DIR}/aiplayerbot.conf.dist)
+endif()
 if ( ${CMAKE_PROJECT_NAME} MATCHES "WoTLK")
-	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/playerbot/aiplayerbot.conf.dist.in.wotlk ${CMAKE_CURRENT_BINARY_DIR}/aiplayerbot.conf.dist)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/conf/aiplayerbot.conf.dist.in.wotlk ${CMAKE_CURRENT_BINARY_DIR}/aiplayerbot.conf.dist)
 endif()
 if (NOT CONF_INSTALL_DIR)
   set(CONF_INSTALL_DIR ${CONF_DIR})
@@ -187,7 +219,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/aiplayerbot.conf.dist DESTINATION ${CO
 
 set_target_properties(${LIBRARY_NAME} PROPERTIES PROJECT_LABEL "PlayerBots")
 
-# Generate PCH
 if(PCH)
   target_precompile_headers(${LIBRARY_NAME} PRIVATE ${bots_PCH})
 endif()
