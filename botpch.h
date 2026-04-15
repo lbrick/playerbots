@@ -51,13 +51,13 @@
 #include <numeric>
 
 // Playerbot core
-#include "playerbot/playerbot.h"
+#include "src/Bot/Engine/playerbot.h"
 
 // Playerbot AI framework (included 40-60+ times each, rarely modified)
-#include "playerbot/strategy/AiObject.h"
-#include "playerbot/strategy/Value.h"
-#include "playerbot/strategy/Action.h"
-#include "playerbot/strategy/Trigger.h"
-#include "playerbot/strategy/Strategy.h"
-#include "playerbot/strategy/NamedObjectContext.h"
-#include "playerbot/strategy/AiObjectContext.h"
+#include "src/Ai/Base/AiObject.h"
+#include "src/Ai/Base/Value.h"
+#include "src/Ai/Base/Action.h"
+#include "src/Ai/Base/Trigger.h"
+#include "src/Ai/Base/Strategy.h"
+#include "src/Ai/Base/NamedObjectContext.h"
+#include "src/Ai/Base/AiObjectContext.h"
