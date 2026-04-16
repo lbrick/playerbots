@@ -908,17 +908,37 @@ static std::vector<float> GenerateRandomWeights(int n)
 
 bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateStatus)
 {
+    // Classify quest log: any doable quest (questLevel <= botLevel+3) suppresses grind.
+    // All-too-high or empty log → grinding legitimate to level up.
+    bool hasDoableQuests = false;
+    uint8 botLevel = bot->GetLevel();
+    for (uint8 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
+    {
+        uint32 questId = bot->GetQuestSlotQuestId(slot);
+        if (!questId || ai->lowPriorityQuest.count(questId))
+            continue;
+        Quest const* quest = sObjectMgr.GetQuestTemplate(questId);
+        if (quest && (int32)quest->GetQuestLevel() <= (int32)botLevel + 3)
+        {
+            hasDoableQuests = true;
+            break;
+        }
+    }
+
     std::vector<NewRpgStatus> available;
     uint32 probSum = 0;
 
     for (NewRpgStatus status : candidateStatus)
     {
-        if (sPlayerbotAIConfig.RpgStatusProbWeight[status] == 0)
+        uint32 weight = sPlayerbotAIConfig.RpgStatusProbWeight[status];
+        if (weight == 0)
             continue;
+        if (hasDoableQuests && (status == RPG_GO_GRIND || status == RPG_GO_CAMP))
+            weight = 1;
         if (CheckRpgStatusAvailable(status))
         {
             available.push_back(status);
-            probSum += sPlayerbotAIConfig.RpgStatusProbWeight[status];
+            probSum += weight;
         }
     }
 
@@ -934,7 +954,10 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
     NewRpgStatus chosen = RPG_STATUS_END;
     for (NewRpgStatus status : available)
     {
-        acc += sPlayerbotAIConfig.RpgStatusProbWeight[status];
+        uint32 w = sPlayerbotAIConfig.RpgStatusProbWeight[status];
+        if (hasDoableQuests && (status == RPG_GO_GRIND || status == RPG_GO_CAMP))
+            w = 1;
+        acc += w;
         if (acc >= roll) { chosen = status; break; }
     }
 
