@@ -232,17 +232,29 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
         QuestStatus status = bot->GetQuestStatus(item.m_qId);
 
         if (status == QUEST_STATUS_NONE &&
+            !ai->lowPriorityQuest.count(item.m_qId) &&
             bot->CanTakeQuest(quest, false) &&
             bot->CanAddQuest(quest, false) &&
             IsQuestWorthDoing(quest) &&
             IsQuestCapableDoing(quest))
         {
             AcceptQuest(quest, guid);
-            if (ai->GetMaster())
-                ai->TellPlayerNoFacing(GetMaster(),"Quest accepted " + ChatHelper::formatQuest(quest));
-            BroadcastHelper::BroadcastQuestAccepted(ai, bot, quest);
-            ai->rpgStatistic.questAccepted++;
-            sLog.outDebug("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
+            // Verify accept succeeded (CMSG handler may reject if cannot interact with NPC).
+            // If quest is still NONE, the accept failed — mark low priority to stop retrying.
+            if (bot->GetQuestStatus(item.m_qId) == QUEST_STATUS_NONE)
+            {
+                ai->lowPriorityQuest.insert(item.m_qId);
+                sLog.outDebug("[New RPG] %s accept quest %u failed (cannot interact), marked low priority",
+                              bot->GetName(), quest->GetQuestId());
+            }
+            else
+            {
+                if (ai->GetMaster())
+                    ai->TellPlayerNoFacing(GetMaster(),"Quest accepted " + ChatHelper::formatQuest(quest));
+                BroadcastHelper::BroadcastQuestAccepted(ai, bot, quest);
+                ai->rpgStatistic.questAccepted++;
+                sLog.outDebug("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
+            }
         }
 
         if (status == QUEST_STATUS_COMPLETE && bot->CanRewardQuest(quest, false))
@@ -424,6 +436,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
             bot->GetQuestStatus(questId) == QUEST_STATUS_FAILED)
         {
             sLog.outDebug("[New RPG] %s drop quest %u", bot->GetName(), questId);
+            ai->lowPriorityQuest.insert(questId);
             WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
             packet << (uint8)i;
             bot->GetSession()->HandleQuestLogRemoveQuest(packet);
@@ -435,7 +448,10 @@ bool NewRpgBaseAction::OrganizeQuestLog()
     }
     if (dropped >= 8) return true;
 
-    // Pass 2: drop quests in a different zone.
+    // Pass 2: drop quests tied to a specific zone that doesn't match the bot's current zone.
+    // zoneSort < 0 means a general category (e.g. "Class", "Professions") — keep those.
+    // zoneSort == 0 means no zone requirement — keep those.
+    // zoneSort > 0 and != botZone means zone-specific quest for another zone — drop.
     for (uint16 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
     {
         uint32 questId = bot->GetQuestSlotQuestId(i);
@@ -446,9 +462,11 @@ bool NewRpgBaseAction::OrganizeQuestLog()
             continue;
         int32 zoneSort = quest->GetZoneOrSort();
         int32 botZone = (int32)bot->GetZoneId();
-        if (zoneSort < 0 || (zoneSort > 0 && zoneSort != botZone))
+        if (zoneSort > 0 && zoneSort != botZone)
         {
-            sLog.outDebug("[New RPG] %s drop quest %u (zone mismatch)", bot->GetName(), questId);
+            sLog.outDebug("[New RPG] %s drop quest %u (zone mismatch: quest zone %d, bot zone %d)",
+                          bot->GetName(), questId, zoneSort, botZone);
+            ai->lowPriorityQuest.insert(questId);
             WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
             packet << (uint8)i;
             bot->GetSession()->HandleQuestLogRemoveQuest(packet);
@@ -468,6 +486,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
             continue;
         Quest const* quest = sObjectMgr.GetQuestTemplate(questId);
         sLog.outDebug("[New RPG] %s drop quest %u (full clear)", bot->GetName(), questId);
+        ai->lowPriorityQuest.insert(questId);
         WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
         packet << (uint8)i;
         bot->GetSession()->HandleQuestLogRemoveQuest(packet);
@@ -583,6 +602,7 @@ bool NewRpgBaseAction::HasQuestToAcceptOrReward(WorldObject* object)
         if (!quest) continue;
         QuestStatus status = bot->GetQuestStatus(item.m_qId);
         if (status == QUEST_STATUS_NONE &&
+            !ai->lowPriorityQuest.count(item.m_qId) &&
             bot->CanTakeQuest(quest, false) &&
             bot->CanAddQuest(quest, false) &&
             IsQuestWorthDoing(quest) &&
@@ -929,6 +949,7 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
             {
                 uint32 questId = bot->GetQuestSlotQuestId(slot);
                 if (!questId) continue;
+                if (ai->lowPriorityQuest.count(questId)) continue;
 
                 WorldPosition poiPos;
                 int32 poiObjIdx;
@@ -998,6 +1019,7 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
             {
                 uint32 questId = bot->GetQuestSlotQuestId(slot);
                 if (!questId) continue;
+                if (ai->lowPriorityQuest.count(questId)) continue;
                 WorldPosition pos;
                 int32 objIdx;
                 if (GetQuestPOIPosAndObjectiveIdx(questId, pos, objIdx))

@@ -246,6 +246,11 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         int32 objectiveIdx = 0;
         if (!GetQuestPOIPosAndObjectiveIdx(questId, poiPos, objectiveIdx))
         {
+            // No travel destination for this quest — mark low priority so it won't be
+            // re-selected or re-accepted until the bot resets (e.g. logs out).
+            ai->lowPriorityQuest.insert(questId);
+            ai->rpgStatistic.questAbandoned++;
+            sLog.outDebug("[New RPG] %s no POI for quest %u, marked low priority", bot->GetName(), questId);
             ai->rpgInfo.ChangeToIdle();
             return true;
         }
