@@ -1,12 +1,17 @@
 #include "playerbot/playerbot.h"
 #include "playerbot/PlayerbotAIConfig.h"
-#include "playerbot/PlayerbotDbStore.h"
+#include "PlayerbotDbStore.h"
 #include "playerbot/PlayerbotFactory.h"
+#include "playerbot/RandomPlayerbotFactory.h"
 #include "playerbot/RandomPlayerbotMgr.h"
 #include "playerbot/ServerFacade.h"
 #include "playerbot/TravelMgr.h"
 #include "Chat/ChannelMgr.h"
 #include "Social/SocialMgr.h"
+#include "Accounts/AccountMgr.h"
+#include "strategy/actions/ChangeTalentsAction.h"
+#include "strategy/actions/InviteToGroupAction.h"
+#include "AiFactory.h"
 
 class LoginQueryHolder;
 class CharacterHandler;
@@ -23,12 +28,15 @@ PlayerbotHolder::PlayerbotHolder() : PlayerbotAIBase()
     m_holderHandlers["g"] = &PlayerbotHolder::HandleGuild;
     m_holderHandlers["r"] = &PlayerbotHolder::HandleRaid;
     m_holderHandlers["rl"] = &PlayerbotHolder::HandleRaidLeader;
+    m_holderHandlers["create"] = &PlayerbotHolder::HandleCreate;
+    m_holderHandlers["group"] = &PlayerbotHolder::HandleGroup;
 
     m_botCommandHandlers["add"] = &PlayerbotHolder::HandleBotAddLogin;
     m_botCommandHandlers["login"] = &PlayerbotHolder::HandleBotAddLogin;
     m_botCommandHandlers["remove"] = &PlayerbotHolder::HandleBotRemoveLogout;
     m_botCommandHandlers["logout"] = &PlayerbotHolder::HandleBotRemoveLogout;
     m_botCommandHandlers["rm"] = &PlayerbotHolder::HandleBotRemoveLogout;
+    m_botCommandHandlers["delete"] = &PlayerbotHolder::HandleBotDelete;
     m_botCommandHandlers["gear"] = &PlayerbotHolder::HandleBotGear;
     m_botCommandHandlers["equip"] = &PlayerbotHolder::HandleBotGear;
     m_botCommandHandlers["train"] = &PlayerbotHolder::HandleBotTrainLearn;
@@ -555,7 +563,7 @@ std::string PlayerbotHolder::ProcessBotCommand(std::string cmd, ObjectGuid guid,
         
         if (!subType.empty())
             realParam = subType;
-        else if (it->second == &PlayerbotHolder::HandleBotAddLogin || it->second == &PlayerbotHolder::HandleBotAlways)
+        else if (it->second == &PlayerbotHolder::HandleBotAddLogin || it->second == &PlayerbotHolder::HandleBotAlways || it->second == &PlayerbotHolder::HandleBotDelete)
             realParam = std::to_string(guid.GetRawValue());        
         else
             realParam = param;            
@@ -711,7 +719,7 @@ std::list<std::string> PlayerbotHolder::HandlePlayerbotCommand(const std::string
         for (auto& itr : playerBots)
         {
             Player* bot = itr.second;
-            if (bot && (bot->IsInWorld() || param.find("add") == 0 || param.find("login") == 0))
+            if (bot && (bot->IsInWorld() || param.find("add") == 0 || param.find("login") == 0 || param.find("delete") == 0))
                 bots.insert(bot->GetName());
         }
     }
@@ -1809,6 +1817,337 @@ std::string PlayerbotHolder::HandleBotRemoveLogout(Player* bot, Player* master, 
     return "ok";
 }
 
+std::list<std::string> PlayerbotHolder::HandleCreate(Player* master, const std::string param, AccountTypes security)
+{
+    std::list<std::string> messages;
+
+    // Allow null master for RA/console usage
+    // Player* master can be null when called via .rndbot commands
+
+    std::string name;
+    uint8 race = 0;
+    uint8 cls = 0;
+    uint32 level = 0;
+    bool autoAdd = master;
+    uint8 gender = GENDER_NONE;
+    Team team = Team::TEAM_BOTH_ALLOWED;
+    BotRoles role = BotRoles::BOT_ROLE_NONE;
+    std::string groupWith = master ? master->GetName() : "";
+
+    std::vector<std::string> args = Qualified::getMultiQualifiers(param, " ");
+    for (const auto& arg : args)
+    {
+        size_t eqPos = arg.find('=');
+        if (eqPos == std::string::npos)
+            continue;
+
+        std::string key = arg.substr(0, eqPos);
+        std::string value = arg.substr(eqPos + 1);
+
+        if (key == "name")
+            name = value;
+        else if (key == "faction")
+            team = ChatHelper::parseTeam(value);
+        else if (key == "race")
+            race = ChatHelper::parseRace(value);
+        else if (key == "class")
+            cls = ChatHelper::parseClass(value);
+        else if (key == "gender")
+            gender = ChatHelper::parseGender(value);
+        else if (key == "level")
+            level = std::stoul(value);
+        else if (key == "role")
+            role = ChatHelper::parseRole(value);
+        else if (key == "login")
+            autoAdd = (value == "1" || value == "true" || value == "yes");
+        else if (key == "group")
+            groupWith = value;
+    }
+
+    std::string error;
+    uint32 accountId = GetOrCreateAccount(master, error);
+    if (accountId == 0)
+    {
+        messages.push_back(error);
+        return messages;
+    }
+
+    uint32 maxCharsPerAccount = 9;
+#ifdef MANGOSBOT_TWO
+    maxCharsPerAccount = 10;
+#endif
+
+    if (sAccountMgr.GetCharactersCount(accountId) >= maxCharsPerAccount)
+    {
+        messages.push_back("Account has max characters");
+        return messages;
+    }
+
+    uint8 skin = 0, face = 0, hairStyle = 0, hairColor = 0, facialHair = 0;
+
+    if (!name.empty())
+    {
+        auto result = CharacterDatabase.PQuery("SELECT guid FROM characters WHERE name = '%s'", name.c_str());
+        if (result)
+        {
+            messages.push_back("Name already exists");
+            return messages;
+        }
+    }
+
+    if (team == TEAM_BOTH_ALLOWED && master)
+        team = master->GetTeam();
+
+    if (gender == GENDER_NONE)
+        gender = urand(GENDER_MALE, GENDER_FEMALE);
+
+    RandomPlayerbotFactory factory(0);
+
+    if (cls == 0)
+        cls = factory.GetRandomClass(race);
+
+    if (race == 0)
+    {
+        race = factory.GetRandomRace(cls, team);
+    }
+
+    if (name.empty())
+    {
+        RandomPlayerbotFactory::NameRaceAndGender raceAndGender = RandomPlayerbotFactory::CombineRaceAndGender(gender, race);
+        name =  RandomPlayerbotFactory::CreateRandomBotName(raceAndGender);
+    }
+
+    WorldSession* botSession = new WorldSession(accountId, NULL, SEC_PLAYER,
+#ifdef MANGOSBOT_TWO
+        2, 0, LOCALE_enUS, "", 0, 0, false);
+#endif
+#ifdef MANGOSBOT_ONE
+        2, 0, LOCALE_enUS, "", 0, 0, false);
+#endif
+#ifdef MANGOSBOT_ZERO
+        0, LOCALE_enUS, "", 0);
+#endif
+
+    botSession->SetNoAnticheat();
+
+    Player* newBot = new Player(botSession);
+    if (!newBot->Create(sObjectMgr.GeneratePlayerLowGuid(), name, race, cls, gender, skin, face, hairStyle, hairColor, facialHair, 0))
+    {
+        delete botSession;
+        delete newBot;
+        messages.push_back("Failed to create character");
+        return messages;
+    }
+
+    newBot->setCinematic(2);
+    newBot->SetAtLoginFlag(AT_LOGIN_NONE);
+    sObjectAccessor.AddObject(newBot);
+
+    uint32 botGuid = newBot->GetGUIDLow();
+
+    if (level > 1)
+    {
+        newBot->SetLevel(level);
+        newBot->SetUInt32Value(PLAYER_XP, 0);
+        newBot->InitStatsForLevel(true);
+#ifdef MANGOSBOT_ZERO
+        newBot->InitTaxiNodes();
+#else
+        newBot->InitTaxiNodesForLevel();
+#endif
+        newBot->InitTalentForLevel();
+        newBot->InitPrimaryProfessions();
+        newBot->learnDefaultSpells();
+        
+        std::ostringstream out;
+        ChangeTalentsAction::AutoSelectTalents(newBot, &out, role);
+
+        sRandomPlayerbotMgr.SetValue(botGuid, "create levelup", 1);
+        sRandomPlayerbotMgr.SetValue(botGuid, "create group", 1, groupWith);
+    }
+    else
+        newBot->SetLevel(1);
+
+    if (master)
+    {
+        newBot->SetMap(master->GetMap());
+        newBot->SetPosition(master->GetPositionX(), master->GetPositionY(), master->GetPositionZ(), master->GetOrientation());
+    }
+
+    newBot->SaveToDB();
+
+    messages.push_back("Bot created: " + name);
+
+    botSession->LogoutPlayer();
+    sObjectAccessor.RemoveObject(newBot);
+    delete newBot;
+    delete botSession;
+
+    if (autoAdd)
+    {
+        sPlayerbotAIConfig.freeAltBots.push_back(std::make_pair(accountId, botGuid));
+        messages.push_back("Bot is now online");
+    }
+    else
+    {
+        messages.push_back("Use '.rndbot add " + name + "' to bring this bot online");
+    }
+
+    return messages;
+}
+
+std::list<std::string> PlayerbotHolder::HandleGroup(Player* master, const std::string param, AccountTypes security)
+{
+    std::list<std::string> messages;
+
+    if (!master)
+    {
+        messages.push_back("group command requires a master (in-game)");
+        return messages;
+    }
+
+    uint32 masterLevel = master->GetLevel();
+    uint8 masterClass = master->getClass();
+    Team team = master->GetTeam();
+    BotRoles masterRole = AiFactory::GetPlayerRoles(master);
+    uint8 groupSize = 5;
+    uint8 currentGroupSize = 1;
+    Group* group = master->GetGroup();
+    if (group)
+        currentGroupSize = group->GetMembersCount();
+
+    if (Qualified::isValidNumberString(param))
+    {
+        groupSize = stoi(param);
+    }
+
+    std::unordered_map<uint8, std::unordered_map<BotRoles, uint32>> allowedClassNr = LfgAction::AllowedClassRoleNr(master, groupSize);
+
+    RandomPlayerbotFactory factory(0);
+
+    uint32 maxTries = 10*groupSize;
+
+    uint32 botsCreated = 0;
+    uint32 continue_role = 0, continue_race = 0, continue_class = 0;
+    std::map<uint8, uint32> classesCreated;
+
+    while (currentGroupSize < groupSize)
+    {
+        maxTries--;
+        if (!maxTries)
+            break;
+
+        BotRoles role = BotRoles(urand(BotRoles::BOT_ROLE_TANK, BotRoles::BOT_ROLE_DPS));
+
+        if (allowedClassNr[0][role] == 0)
+        {
+            continue_role++;
+            continue;
+        }
+
+        uint8 cls = factory.GetRandomClass(0, role);
+
+#ifdef MANGOSBOT_ZERO
+        if (cls == CLASS_PALADIN && team == HORDE)
+        {
+            continue_race++;
+            continue;
+        }
+        if (cls == CLASS_SHAMAN && team == ALLIANCE)
+        {
+            continue_race++;
+            continue;
+        }
+#endif
+
+        if (allowedClassNr[cls].find(role) != allowedClassNr[cls].end() && allowedClassNr[cls][role] == 0)
+        {
+            continue_class++;
+            continue;
+        }
+
+        std::ostringstream paramStr;
+        paramStr << "level=" << masterLevel << " class=" << ChatHelper::formatClass(cls) << " group=" << master->GetName();
+
+        auto result = HandleCreate(master, paramStr.str(), security);
+        messages.splice(messages.end(), result);
+
+        if (!messages.empty())
+        {
+            auto lastMsg = messages.front();
+            if (lastMsg.find("Bot created:") != std::string::npos)
+            {
+                classesCreated[cls]++;
+                botsCreated++;
+                currentGroupSize++;
+            }
+        }
+    
+        allowedClassNr[0][role]--; 
+        
+        if (allowedClassNr[cls].find(role) != allowedClassNr[cls].end())
+            allowedClassNr[cls][role]--;
+    }
+
+    std::ostringstream debugInfo;
+    debugInfo << "DEBUG group: target=" << (int)groupSize << ", created=" << botsCreated;
+    if (maxTries == 0)
+        debugInfo << " (maxTries exhausted)";
+    debugInfo << ", continues: role=" << continue_role << ", race=" << continue_race << ", class=" << continue_class;
+    debugInfo << ", classes: ";
+    for (auto& kv : classesCreated)
+        debugInfo << ChatHelper::formatClass(kv.first) << "=" << kv.second << ",";
+    sLog.outString("%s", debugInfo.str().c_str());
+
+    return messages;
+}
+
+uint32 PlayerbotHolder::GetOrCreateAccount(Player* master, std::string& error)
+{
+    if (!master)
+    {
+        // For console/RA usage without master - delegate to derived class
+        error = "GetOrCreateAccount requires master or override in derived class";
+        return 0;
+    }
+    
+    uint32 masterAccountId = master->GetSession()->GetAccountId();
+    return masterAccountId;
+}
+
+void PlayerbotHolder::OnBotDeleted(uint32 botGuid, uint32 accountId)
+{
+}
+
+std::string PlayerbotHolder::HandleBotDelete(Player* bot, Player* master, const std::string param)
+{
+    if (!Qualified::isValidNumberString(param))
+        return "Add: Error parsing " + param;
+
+    ObjectGuid guid = ObjectGuid(uint64(std::stoull(param)));
+
+    uint32 masterAccountId = master ? master->GetSession()->GetAccountId() : 0;
+    PlayerbotMgr* mgr = master ? master->GetPlayerbotMgr() : nullptr;
+    
+    uint32 botAccount = sObjectMgr.GetPlayerAccountIdByGUID(guid);
+    bool isRandomAccount = sPlayerbotAIConfig.IsInRandomAccountList(botAccount);
+
+    if (!isRandomAccount && masterAccountId != botAccount)
+        return "Not your bot";
+
+    if (isRandomAccount && mgr == this)
+        return "Not your bot";
+
+    if (bot)
+        LogoutPlayerBot(guid);
+
+    Player::DeleteFromDB(guid, botAccount, true, true);
+
+    OnBotDeleted(guid, botAccount);
+
+    return "ok";
+}
+
 std::string PlayerbotHolder::HandleBotGear(Player* bot, Player* master, const std::string param)
 {
     if (param.empty())
@@ -2015,6 +2354,9 @@ std::unordered_map<std::string, std::string> PlayerbotHolder::GetCommandTexts()
         {"reload", "Reload the playerbot config (GM only).\nUsage: .(rnd)bot reload"},
         {"tweak", "Adjust the tweak value for testing (GM only).\nUsage: .(rnd)bot tweak"},
         {"self", "Enable self-bot mode for a player.\nUsage: .(rnd)bot self <playername>"},
+        {"group", "Create 4 bots with complementary classes at master's level.\nUsage: .(rnd)bot group"},
+        {"create", "Create a new bot character.\nUsage: .(rnd)bot create level=<n> class=<class> race=<race>"},
+        {"spoof", "Spoof as another bot for command routing.\nUsage: .(rnd)bot spoof <botname>"},
         
         // Bot commands (used with .(rnd)bot <bot> ...)
         {"add", "Add a bot to the player's group.\nUsage: .(rnd)bot add <playername>"},
@@ -2022,6 +2364,7 @@ std::unordered_map<std::string, std::string> PlayerbotHolder::GetCommandTexts()
         {"remove", "Remove a bot from the player's group.\nUsage: .(rnd)bot remove <botname>"},
         {"logout", "Remove a bot from the player's group.\nUsage: .(rnd)bot logout <botname>"},
         {"rm", "Remove a bot from the player's group.\nUsage: .(rnd)bot rm <botname>"},
+        {"delete", "Delete a bot character.\nUsage: .(rnd)bot delete <botname>"},
         
         {"gear", "Equip best gear on bot.\nUsage: .(rnd)bot gear <bot> "},
         {"equip", "Equip best gear on bot.\nUsage: .(rnd)bot equip  <bot> "},
