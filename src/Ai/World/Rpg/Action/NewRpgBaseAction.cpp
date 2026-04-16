@@ -48,6 +48,10 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 
     // Stuck check: require 5-yd meaningful progress before resetting timer.
     float disToDest = WorldPosition(bot).distance(dest);
+
+    // Already at destination — no movement needed, let caller transition state.
+    if (disToDest < 10.0f)
+        return false;
     if (disToDest + 5.0f < ai->rpgInfo.nearestMoveFarDis)
     {
         ai->rpgInfo.nearestMoveFarDis = disToDest;
@@ -239,13 +243,24 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
             IsQuestCapableDoing(quest))
         {
             AcceptQuest(quest, guid);
-            // Verify accept succeeded (CMSG handler may reject if cannot interact with NPC).
-            // If quest is still NONE, the accept failed — mark low priority to stop retrying.
+            // Verify accept succeeded (CMSG handler may reject if cannot interact).
             if (bot->GetQuestStatus(item.m_qId) == QUEST_STATUS_NONE)
             {
-                ai->lowPriorityQuest.insert(item.m_qId);
-                sLog.outDebug("[New RPG] %s accept quest %u failed (cannot interact), marked low priority",
-                              bot->GetName(), quest->GetQuestId());
+                // GameObject failures are distance-based (transient) — bot just wasn't close
+                // enough. Don't mark low priority; travel system will re-approach.
+                // Creature failures (faction/phase/hostility) are permanent — mark low priority.
+                bool isGameObject = (bot->GetMap()->GetGameObject(guid) != nullptr);
+                if (!isGameObject)
+                {
+                    ai->lowPriorityQuest.insert(item.m_qId);
+                    sLog.outDebug("[New RPG] %s accept quest %u failed (cannot interact), marked low priority",
+                                  bot->GetName(), quest->GetQuestId());
+                }
+                else
+                {
+                    sLog.outDebug("[New RPG] %s accept quest %u failed (GO too far), will retry on approach",
+                                  bot->GetName(), quest->GetQuestId());
+                }
             }
             else
             {
@@ -758,10 +773,12 @@ WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
     {
         for (auto& [dest, wp, dist] : pointList)
         {
-            if (!wp || wp->getMapId() != bot->GetMapId())
+            if (!wp || wp->getMapId() != botPos.getMapId())
+                continue;
+            if (wp->getZ() < 0.0f)
                 continue;
             if (!inCity &&
-                sTerrainMgr.GetZoneId(bot->GetMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
+                sTerrainMgr.GetZoneId(botPos.getMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
                 continue;
             if (dist <= hiRange)
                 hiLocs.push_back(*wp);
@@ -801,12 +818,14 @@ WorldPosition NewRpgBaseAction::SelectRandomCampPos(Player* bot)
     {
         for (auto& [dest, wp, dist] : pointList)
         {
-            if (!wp || wp->getMapId() != bot->GetMapId())
+            if (!wp || wp->getMapId() != botPos.getMapId())
+                continue;
+            if (wp->getZ() < 0.0f)
                 continue;
             if (dist < 50.f)
                 continue;
             if (!inCity &&
-                sTerrainMgr.GetZoneId(bot->GetMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
+                sTerrainMgr.GetZoneId(botPos.getMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
                 continue;
             locs.push_back(*wp);
         }
