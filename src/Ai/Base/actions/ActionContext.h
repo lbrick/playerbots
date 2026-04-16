@@ -78,6 +78,7 @@
 #include "src/Ai/Raid/BlackwingLair/Action/RaidBwlActions.h"
 #include "src/Ai/Raid/Karazhan/Action/RaidKaraActions.h"
 #include "src/Ai/Raid/Naxxramas/Action/RaidNaxxActions.h"
+#include "src/Ai/World/Rpg/Action/NewRpgAction.h"
 
 namespace ai
 {
@@ -393,6 +394,15 @@ namespace ai
 
             creators["enable four horseman fight strategy"] = [](PlayerbotAI* ai) { return new FourHorsemanEnableFightStrategyAction(ai); };
             creators["disable four horseman fight strategy"] = [](PlayerbotAI* ai) { return new FourHorsemanDisableFightStrategyAction(ai); };
-        }    
+
+            // New RPG Actions
+            creators["new rpg status update"] = [](PlayerbotAI* ai) { return new NewRpgStatusUpdateAction(ai); };
+            creators["new rpg go grind"]       = [](PlayerbotAI* ai) { return new NewRpgGoGrindAction(ai); };
+            creators["new rpg go camp"]        = [](PlayerbotAI* ai) { return new NewRpgGoCampAction(ai); };
+            creators["new rpg wander random"]  = [](PlayerbotAI* ai) { return new NewRpgWanderRandomAction(ai); };
+            creators["new rpg wander npc"]     = [](PlayerbotAI* ai) { return new NewRpgWanderNpcAction(ai); };
+            creators["new rpg do quest"]       = [](PlayerbotAI* ai) { return new NewRpgDoQuestAction(ai); };
+            creators["new rpg travel flight"]  = [](PlayerbotAI* ai) { return new NewRpgTravelFlightAction(ai); };
+        }
     };
 };

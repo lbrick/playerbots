@@ -46,6 +46,7 @@
 #include "generic/WanderStrategy.h"
 #include "generic/ConsumableStrategy.h"
 #include "generic/WorldBuffTravelStrategy.h"
+#include "src/Ai/World/Rpg/Strategy/NewRpgStrategy.h"
 
 #include "generic/DungeonStrategy.h"
 #include "src/Ai/Raid/OnyxiasLair/Strategy/RaidOnyStrategy.h"
@@ -166,6 +167,7 @@ namespace ai
             creators["blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairDungeonStrategy(ai); };
             creators["karazhan"] = [](PlayerbotAI* ai) { return new KarazhanDungeonStrategy(ai); };
             creators["naxxramas"] = [](PlayerbotAI* ai) { return new NaxxramasDungeonStrategy(ai); };
+            creators["new rpg"] = [](PlayerbotAI* ai) { return new NewRpgStrategy(ai); };
 
             // Dungeon Boss Strategies
             creators["onyxia"] = [](PlayerbotAI* ai) { return new OnyxiaFightStrategy(ai); };

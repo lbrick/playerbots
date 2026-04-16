@@ -1,4 +1,5 @@
 #pragma once
+#include "src/Ai/World/Rpg/NewRpgInfo.h"
 #include "src/Mgr/PlayerbotMgr.h"
 #include "src/Bot/Engine/PlayerbotAIBase.h"
 #include "src/Ai/Base/AiObjectContext.h"
@@ -677,6 +678,10 @@ public:
 
     void SetLastEvent(Event& event) { lastEvent = event; }
     Event& GetLastEvent() { return lastEvent; }
+
+    // New RPG state machine (see src/Ai/World/Rpg/)
+    NewRpgInfo     rpgInfo;
+    NewRpgStatistic rpgStatistic;
 
 #ifdef BUILD_ELUNA
     MaNGOS::unique_weak_ptr<PlayerbotAI> GetWeakPtr() const { return m_weakRef; }

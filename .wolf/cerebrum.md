@@ -36,7 +36,12 @@
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
 <!-- Format: [YYYY-MM-DD] Description of what went wrong and what to do instead. -->
 
+- **[2026-04-16] NewRpgInfo.h include path:** Uses `src/Util/WorldPosition.h` (with src/ prefix) — matches project include convention. Do NOT use bare `WorldPosition.h`.
+
 ## Decision Log
+
+- **[2026-04-16] World/RPG New RPG system Phase 1+2 complete:** All scaffold files created and build verified. Files at src/Ai/World/Rpg/. PlayerbotAI.h has rpgInfo+rpgStatistic members. Config has enableNewRpgStrategy. StrategyContext/ActionContext/TriggerContext all registered. AiFactory.cpp NOT yet wired (Phase 5 todo). All action/base methods are stubs returning false — Phase 3+4 still pending. See WORLD_RPG_MIGRATION_PLAN.md.
+- **[2026-04-16] Build infrastructure:** `build.sh` at project root. `./build.sh` does incremental, `./build.sh clean` reconfigures. Build dir at `builddir/`. No ninja — uses make with `$(nproc)` jobs. Build takes ~11s for full playerbots recompile.
 
 - **[2026-04-15] Repo restructure:** Mirrored azerothcore-playerbots layout. playerbot/ → src/Bot/, playerbot/strategy/ → src/Ai/Base/, per-class dirs → src/Ai/Class/{class}/, ahbot/ → src/AhBot/, sql/ → data/sql/, conf files → conf/. ~780 include paths updated via sed. CMakeLists.txt rewritten. Zero logic changes. Lowercase kept for existing subdir names (cMaNGOS convention). PascalCase for new structural dirs.
 

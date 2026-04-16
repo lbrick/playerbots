@@ -189,6 +189,9 @@ AiPlayerbot.RandombotsWalkingRPG.InDoors = 0
 # Bots greet to the players
 AiPlayerbot.EnableGreet = 1
 
+# Enable the new RPG autonomous state machine (idle/grind/camp/wander/quest/flight).
+AiPlayerbot.EnableNewRpgStrategy = 1
+
 # Show helmet and cloak on randombots (reset required)
 AiPlayerbot.RandomBotShowHelmet = 1
 AiPlayerbot.RandomBotShowCloak = 1

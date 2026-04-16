@@ -561,3 +561,25 @@
 - `HealthTriggers.h` — pragma once (~1530 tok)
 - `LfgTriggers.cpp` — include "src/Bot/Engine/playerbot.h" (~125 tok)
 - `LfgTriggers.h` — pragma once (~131 tok)
+
+## src/Ai/World/Rpg/
+
+- `NewRpgInfo.h` — std::variant-based state container for New RPG system; holds RpgData union (Idle/GoGrind/GoCamp/WanderNpc/WanderRandom/DoQuest/Rest/TravelFlight) + stuck-recovery fields; NewRpgStatistic struct (~932 tok)
+- `NewRpgInfo.cpp` — ChangeTo* methods, GetStatus() via std::visit, HasStatusPersisted(), ToString(), SetMoveFarTo() (~1274 tok)
+
+## src/Ai/World/Rpg/Action/
+
+- `NewRpgBaseAction.h` — Base class for all NewRpg actions; declares all Phase 3 helper methods (MoveFarTo, quest POI, NPC interaction, taxi) (~510 tok)
+- `NewRpgBaseAction.cpp` — Phase 3 stub implementations — all return false pending full implementation (~600 tok)
+- `NewRpgAction.h` — 7 concrete state action classes: StatusUpdate, GoGrind, GoCamp, WanderRandom, WanderNpc, DoQuest, TravelFlight (~544 tok)
+- `NewRpgAction.cpp` — Phase 4 stub Execute() methods — all return false pending full implementation (~299 tok)
+
+## src/Ai/World/Rpg/Strategy/
+
+- `NewRpgStrategy.h` — Declares NewRpgStrategy; registers 6 status triggers + StatusUpdate default action at priority 11.0f (~124 tok)
+- `NewRpgStrategy.cpp` — InitNonCombatTriggers: 6 TriggerNodes for go_grind/go_camp/wander_random/wander_npc/do_quest/travel_flight statuses (~350 tok)
+
+## src/Ai/World/Rpg/Trigger/
+
+- `NewRpgTriggers.h` — NewRpgStatusTrigger: single trigger class parameterised by NewRpgStatus enum value (~96 tok)
+- `NewRpgTriggers.cpp` — IsActive() checks ai->rpgInfo.GetStatus() == status (~55 tok)

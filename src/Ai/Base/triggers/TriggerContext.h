@@ -19,6 +19,7 @@
 #include "src/Ai/Raid/BlackwingLair/Trigger/RaidBwlTriggers.h"
 #include "src/Ai/Raid/Karazhan/Trigger/RaidKaraTriggers.h"
 #include "src/Ai/Raid/Naxxramas/Trigger/RaidNaxxTriggers.h"
+#include "src/Ai/World/Rpg/Trigger/NewRpgTriggers.h"
 #include "GlyphTriggers.h"
 #include "WorldBuffTravelTriggers.h"
 
@@ -331,6 +332,14 @@ namespace ai
 
             creators["start four horseman fight"] = [](PlayerbotAI* ai) { return new FourHorsemanStartFightTrigger(ai); };
             creators["end four horseman fight"] = [](PlayerbotAI* ai) { return new FourHorsemanEndFightTrigger(ai); };
+
+            // New RPG Status Triggers
+            creators["go grind status"]      = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GO_GRIND); };
+            creators["go camp status"]       = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GO_CAMP); };
+            creators["wander random status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_WANDER_RANDOM); };
+            creators["wander npc status"]    = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_WANDER_NPC); };
+            creators["do quest status"]      = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_DO_QUEST); };
+            creators["travel flight status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_TRAVEL_FLIGHT); };
         }
     };
 };

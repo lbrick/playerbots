@@ -224,6 +224,7 @@ public:
     std::list<uint32> randomBotGuilds;
 	std::list<uint32> pvpProhibitedZoneIds;
     bool enableGreet;
+    bool enableNewRpgStrategy;
     bool randomBotShowHelmet;
     bool randomBotShowCloak;
     bool disableRandomLevels;

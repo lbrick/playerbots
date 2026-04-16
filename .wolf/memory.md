@@ -3,6 +3,14 @@
 > Chronological action log. Hooks and AI append to this file automatically.
 > Old sessions are consolidated by the daemon weekly.
 | 00:00 | Restructured repo to mirror azerothcore-playerbots layout | src/, conf/, data/sql/, CMakeLists.txt | complete — all includes updated, old dirs removed | ~4000 |
+
+## Session: 2026-04-16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:30 | Verified build of all Phase 1+2 World/RPG files | src/Ai/World/Rpg/**/*.cpp | PASSED — all 5 new files compiled clean, 0 errors 0 warnings | ~300 |
+| 14:31 | Updated anatomy.md with World/Rpg section entries | .wolf/anatomy.md | complete | ~150 |
+| 14:31 | Updated cerebrum.md Decision Log + Do-Not-Repeat | .wolf/cerebrum.md | complete | ~100 |
 | 00:00 | Further restructured src/ — raids to Ai/Raid/, Bot subdirs (Engine/Factory/Cmd/Debug), Db/, Mgr/, Util/ | CMakeLists.txt + all includes | complete | ~3000 |
 | 14:20 | Fixed stale <playerbot/TravelNode.h> angle-bracket include in DebugAction.cpp | src/Ai/Base/actions/DebugAction.cpp | fixed → src/Mgr/TravelNode.h | ~50 |
 | 14:25 | Fixed ActionContext.h + TriggerContext.h stale raid includes (5 raids each) | src/Ai/Base/actions/ActionContext.h, src/Ai/Base/triggers/TriggerContext.h | fixed | ~100 |

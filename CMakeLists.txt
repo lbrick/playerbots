@@ -88,6 +88,11 @@ source_group("Ai\\Class\\Shaman"      FILES ${Ai_Shaman})
 source_group("Ai\\Class\\Warlock"     FILES ${Ai_Warlock})
 source_group("Ai\\Class\\Warrior"     FILES ${Ai_Warrior})
 
+# ── Ai World ─────────────────────────────────────────────────────────────────
+
+file(GLOB_RECURSE Ai_World ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/World/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/World/*.h)
+source_group("Ai\\World" FILES ${Ai_World})
+
 # ── Ai Raid ──────────────────────────────────────────────────────────────────
 
 file(GLOB_RECURSE Ai_BlackwingLair ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/BlackwingLair/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/BlackwingLair/*.h)
@@ -123,6 +128,8 @@ set(LIBRARY_SRCS
     ${Ai_Generic}
     ${Ai_Triggers}
     ${Ai_Values}
+    # Ai World
+    ${Ai_World}
     # Ai Class
     ${Ai_DeathKnight}
     ${Ai_Druid}

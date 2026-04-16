@@ -460,6 +460,7 @@ bool PlayerbotAIConfig::Initialize()
 
 	//SPP switches
     enableGreet = config.GetBoolDefault("AiPlayerbot.EnableGreet", false);
+    enableNewRpgStrategy = config.GetBoolDefault("AiPlayerbot.EnableNewRpgStrategy", true);
 	disableRandomLevels = config.GetBoolDefault("AiPlayerbot.DisableRandomLevels", false);
     instantRandomize = config.GetBoolDefault("AiPlayerbot.InstantRandomize", true);
     randomBotRandomPassword = config.GetBoolDefault("AiPlayerbot.RandomBotRandomPassword", true);
