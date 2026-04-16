@@ -1,40 +1,1019 @@
 #include "src/Bot/Engine/playerbot.h"
 #include "NewRpgBaseAction.h"
 
+#include "Server/DBCStructure.h"
+#include "Server/DBCStores.h"
+#include "Server/DBCEnums.h"
+#include "MotionGenerators/PathFinder.h"
+#include "src/Ai/Base/values/LastMovementValue.h"
+#include "src/Ai/Base/values/ItemUsageValue.h"
+#include "src/Util/BroadcastHelper.h"
+#include "src/Util/ServerFacade.h"
+#include "src/Util/ChatHelper.h"
+#include "src/Ai/Base/values/TravelValues.h"
+#include "src/Mgr/TravelMgr.h"
+
 using namespace ai;
 
-// ─── Phase 3 TODO — implement each method ────────────────────────────────────
-// Replace each stub return with the real implementation per WORLD_RPG_MIGRATION_PLAN.md
-
-bool NewRpgBaseAction::MoveFarTo(WorldPosition /*dest*/)               { return false; }
-bool NewRpgBaseAction::MoveWorldObjectTo(ObjectGuid /*guid*/, float)   { return false; }
-bool NewRpgBaseAction::MoveRandomNear(float)                           { return false; }
-bool NewRpgBaseAction::ForceToWait(uint32)                             { return false; }
-
-ObjectGuid NewRpgBaseAction::ChooseNpcOrGoToInteract(bool, float)      { return ObjectGuid(); }
-bool NewRpgBaseAction::HasQuestToAcceptOrReward(WorldObject*)          { return false; }
-bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid)         { return false; }
-bool NewRpgBaseAction::CanInteractWithQuestGiver(Object*)              { return false; }
-uint32 NewRpgBaseAction::BestRewardIndex(Quest const*)                 { return 0; }
-bool NewRpgBaseAction::IsQuestWorthDoing(Quest const*)                 { return false; }
-bool NewRpgBaseAction::IsQuestCapableDoing(Quest const*)               { return false; }
-bool NewRpgBaseAction::SearchQuestGiverAndAcceptOrReward()             { return false; }
-bool NewRpgBaseAction::AcceptQuest(Quest const*, ObjectGuid)           { return false; }
-bool NewRpgBaseAction::TurnInQuest(Quest const*, ObjectGuid)           { return false; }
-bool NewRpgBaseAction::OrganizeQuestLog()                              { return false; }
-
-bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32, WorldPosition&, int32&) { return false; }
-
-WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player*)          { return WorldPosition(); }
-WorldPosition NewRpgBaseAction::SelectRandomCampPos(Player*)           { return WorldPosition(); }
-bool NewRpgBaseAction::SelectRandomFlightTaxiNode(ObjectGuid&, std::vector<uint32>&) { return false; }
-
-bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> /*candidateStatus*/)
+// ─── Helper: resolve ObjectGuid to WorldObject (creature or GO) ──────────────
+static WorldObject* GetWorldObjectByGuid(PlayerbotAI* ai, Player* bot, ObjectGuid guid)
 {
-    return false;  // TODO Phase 3
+    if (Creature* c = ai->GetAnyTypeCreature(guid))
+        return c;
+    return bot->GetMap()->GetGameObject(guid);
 }
 
-bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus /*status*/)
+// ─── Movement helpers ────────────────────────────────────────────────────────
+
+bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 {
-    return false;  // TODO Phase 3
+    if (dest == WorldPosition())
+        return false;
+
+    if (dest != ai->rpgInfo.moveFarPos)
+        ai->rpgInfo.SetMoveFarTo(dest);
+
+    // Let committed movement finish before recomputing path.
+    // If bot is still moving toward its last waypoint, wait.
+    {
+        LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
+        if (sServerFacade.isMoving(bot) && lastMove.lastMoveShort.isValid())
+        {
+            WorldPosition cur(bot);
+            float remaining = cur.distance(lastMove.lastMoveShort);
+            if (remaining > 10.0f)
+                return true;
+        }
+    }
+
+    // Stuck check: require 5-yd meaningful progress before resetting timer.
+    float disToDest = WorldPosition(bot).distance(dest);
+    if (disToDest + 5.0f < ai->rpgInfo.nearestMoveFarDis)
+    {
+        ai->rpgInfo.nearestMoveFarDis = disToDest;
+        ai->rpgInfo.stuckTs = WorldTimer::getMSTime();
+        ai->rpgInfo.stuckAttempts = 0;
+    }
+    else if (++ai->rpgInfo.stuckAttempts >= 5 &&
+             WorldTimer::getMSTimeDiff(ai->rpgInfo.stuckTs, WorldTimer::getMSTime()) >= stuckTime)
+    {
+        ai->rpgInfo.stuckTs = WorldTimer::getMSTime();
+        ai->rpgInfo.stuckAttempts = 0;
+
+        AreaTableEntry const* areaEntry = GetAreaEntryByAreaID(bot->GetZoneId());
+        std::string zoneName = areaEntry ? ai->GetLocalizedAreaName(areaEntry) : "unknown";
+
+        sLog.outDebug("[New RPG] Teleport %s from (%.1f,%.1f,%.1f,%u) to (%.1f,%.1f,%.1f,%u) stuck moving far - Zone: %s (%u)",
+            bot->GetName(),
+            bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot->GetMapId(),
+            dest.getX(), dest.getY(), dest.getZ(), dest.getMapId(),
+            zoneName.c_str(), bot->GetZoneId());
+
+        return bot->TeleportTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), bot->GetOrientation());
+    }
+
+    // Close enough: use normal MoveTo.
+    if (disToDest < pathFinderDis)
+    {
+        return MoveTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), false, false, false, true);
+    }
+
+    const uint32 typeOk = PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_SHORT;
+
+    // Primary: ask mmap for the best route it can find.
+    {
+        PathFinder path(bot);
+        path.calculate(dest.getX(), dest.getY(), dest.getZ());
+        PathType type = path.getPathType();
+        bool canReach = !(type & (~typeOk));
+        if (canReach)
+        {
+            const Vector3& endPos = path.getActualEndPosition();
+            WorldPosition endWp(bot->GetMapId(), endPos.x, endPos.y, endPos.z);
+            float endDistToDest = endWp.distance(dest);
+            if (endDistToDest + 5.0f < disToDest)
+                return MoveTo(bot->GetMapId(), endPos.x, endPos.y, endPos.z, false, false, false, true);
+        }
+    }
+
+    // Fallback: sample forward cone for a reachable stepping stone.
+    float minDelta = M_PI_F;
+    const float x = bot->GetPositionX();
+    const float y = bot->GetPositionY();
+    const float z = bot->GetPositionZ();
+    const float baseAngle = bot->GetAngle(dest.getX(), dest.getY());
+    float rx = 0.f, ry = 0.f, rz = 0.f;
+    bool found = false;
+
+    for (int attempt = 0; attempt < 2; ++attempt)
+    {
+        float delta = (rand_norm_f() - 0.5f) * M_PI_F;  // ±π/2, forward cone
+        float sampleDis = (0.5f + rand_norm_f() * 0.5f) * pathFinderDis;
+        float angle = baseAngle + delta;
+        float dx = x + cos(angle) * sampleDis;
+        float dy = y + sin(angle) * sampleDis;
+        float dz = z + 0.5f;
+
+        PathFinder path(bot);
+        path.calculate(dx, dy, dz);
+        PathType type = path.getPathType();
+        bool canReach = !(type & (~typeOk));
+
+        if (canReach && fabs(delta) <= minDelta)
+        {
+            found = true;
+            const Vector3& endPos = path.getActualEndPosition();
+            rx = endPos.x;
+            ry = endPos.y;
+            rz = endPos.z;
+            minDelta = fabs(delta);
+        }
+    }
+    if (found)
+        return MoveTo(bot->GetMapId(), rx, ry, rz, false, false, false, true);
+
+    return false;
+}
+
+bool NewRpgBaseAction::MoveWorldObjectTo(ObjectGuid guid, float distance)
+{
+    if (sServerFacade.isMoving(bot))
+        return false;
+
+    WorldObject* object = GetWorldObjectByGuid(ai, bot, guid);
+    if (!object)
+        return false;
+
+    float x = object->GetPositionX();
+    float y = object->GetPositionY();
+    float z = object->GetPositionZ();
+    uint32 mapId = object->GetMapId();
+    float angle = 0.f;
+
+    Unit* unit = dynamic_cast<Unit*>(object);
+    if (!unit || !unit->IsMoving())
+        angle = object->GetAngle(bot) + (M_PI_F * irand(-25, 25) / 100.f);
+    else
+        angle = object->GetOrientation() + (M_PI_F * irand(-25, 25) / 100.f);
+
+    float rnd = rand_norm_f();
+    x += cos(angle) * distance * rnd;
+    y += sin(angle) * distance * rnd;
+    // No CheckCollisionAndGetValidCoords in cmangos — just use map height to ground target.
+    float groundZ = bot->GetMap()->GetHeight(x, y, z + 5.f);
+    if (groundZ > INVALID_HEIGHT)
+        z = groundZ;
+
+    return MoveTo(mapId, x, y, z, false, false, false, true);
+}
+
+bool NewRpgBaseAction::MoveRandomNear(float moveStep)
+{
+    if (sServerFacade.isMoving(bot))
+        return false;
+
+    const float x = bot->GetPositionX();
+    const float y = bot->GetPositionY();
+    const float z = bot->GetPositionZ();
+
+    const uint32 typeOk = PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_SHORT;
+
+    for (int attempt = 0; attempt < 8; ++attempt)
+    {
+        float distance = (0.4f + rand_norm_f() * 0.6f) * moveStep;
+        float angle = rand_norm_f() * 2.f * M_PI_F;
+        float dx = x + distance * cos(angle);
+        float dy = y + distance * sin(angle);
+        float dz = z;
+
+        PathFinder path(bot);
+        path.calculate(dx, dy, dz);
+        PathType type = path.getPathType();
+        bool canReach = !(type & (~typeOk));
+        if (!canReach)
+            continue;
+
+        if (bot->IsInWater())  // skip if current position is water — conservative check
+            continue;
+
+        if (MoveTo(bot->GetMapId(), dx, dy, dz, false, false, false, true))
+            return true;
+    }
+    return false;
+}
+
+bool NewRpgBaseAction::ForceToWait(uint32 duration)
+{
+    // Signal the engine to idle for ~duration ms by setting action duration.
+    SetDuration(duration);
+    return true;
+}
+
+// ─── Quest helpers ───────────────────────────────────────────────────────────
+
+bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
+{
+    WorldObject* object = GetWorldObjectByGuid(ai, bot, guid);
+    if (!object || !CanInteractWithQuestGiver(object))
+        return false;
+
+    bot->PrepareQuestMenu(guid);
+    QuestMenu& menu = bot->GetPlayerMenu()->GetQuestMenu();
+    if (!menu.MenuItemCount())
+        return true;
+
+    for (uint32 idx = 0; idx < menu.MenuItemCount(); ++idx)
+    {
+        QuestMenuItem const& item = menu.GetItem(idx);
+        Quest const* quest = sObjectMgr.GetQuestTemplate(item.m_qId);
+        if (!quest)
+            continue;
+
+        QuestStatus status = bot->GetQuestStatus(item.m_qId);
+
+        if (status == QUEST_STATUS_NONE &&
+            bot->CanTakeQuest(quest, false) &&
+            bot->CanAddQuest(quest, false) &&
+            IsQuestWorthDoing(quest) &&
+            IsQuestCapableDoing(quest))
+        {
+            AcceptQuest(quest, guid);
+            if (ai->GetMaster())
+                ai->TellPlayerNoFacing(GetMaster(),"Quest accepted " + ChatHelper::formatQuest(quest));
+            BroadcastHelper::BroadcastQuestAccepted(ai, bot, quest);
+            ai->rpgStatistic.questAccepted++;
+            sLog.outDebug("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
+        }
+
+        if (status == QUEST_STATUS_COMPLETE && bot->CanRewardQuest(quest, false))
+        {
+            TurnInQuest(quest, guid);
+            if (ai->GetMaster())
+                ai->TellPlayerNoFacing(GetMaster(),"Quest rewarded " + ChatHelper::formatQuest(quest));
+            BroadcastHelper::BroadcastQuestTurnedIn(ai, bot, quest);
+            ai->rpgStatistic.questRewarded++;
+            sLog.outDebug("[New RPG] %s turned in quest %u", bot->GetName(), quest->GetQuestId());
+        }
+    }
+    return true;
+}
+
+bool NewRpgBaseAction::CanInteractWithQuestGiver(Object* questGiver)
+{
+    switch (questGiver->GetTypeId())
+    {
+        case TYPEID_UNIT:
+        {
+            ObjectGuid guid = questGiver->GetObjectGuid();
+            if (!guid)
+                return false;
+            if (!bot->IsInWorld() || bot->IsBeingTeleported())
+                return false;
+            if (bot->IsTaxiFlying())
+                return false;
+
+            Creature* creature = ai->GetAnyTypeCreature(guid);
+            if (!creature)
+                return false;
+
+            if (!bot->IsAlive() &&
+                !creature->GetCreatureInfo()->HasFlag(CreatureTypeFlags::VISIBLE_TO_GHOSTS))
+                return false;
+
+            if (!creature->IsAlive() &&
+                !creature->GetCreatureInfo()->HasFlag(CreatureTypeFlags::INTERACT_WHILE_DEAD))
+                return false;
+
+            if (!creature->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER))
+                return false;
+
+            if (sServerFacade.IsCharmed(creature))
+                return false;
+
+            if (!sServerFacade.IsFriendlyTo(bot, creature))
+                return false;
+
+            return true;
+        }
+        case TYPEID_GAMEOBJECT:
+        {
+            ObjectGuid guid = questGiver->GetObjectGuid();
+            if (GameObject* go = bot->GetMap()->GetGameObject(guid))
+            {
+                if (go->GetGoType() == GAMEOBJECT_TYPE_QUESTGIVER)
+                    return true;
+            }
+            return false;
+        }
+        default:
+            break;
+    }
+    return false;
+}
+
+bool NewRpgBaseAction::AcceptQuest(Quest const* quest, ObjectGuid guid)
+{
+    WorldPacket p(CMSG_QUESTGIVER_ACCEPT_QUEST);
+    uint32 unk1 = 0;
+    p << guid << quest->GetQuestId() << unk1;
+    p.rpos(0);
+    bot->GetSession()->HandleQuestgiverAcceptQuestOpcode(p);
+    return true;
+}
+
+bool NewRpgBaseAction::TurnInQuest(Quest const* quest, ObjectGuid guid)
+{
+    uint32 questId = quest->GetQuestId();
+    if (bot->GetQuestRewardStatus(questId))
+        return false;
+    if (!bot->CanRewardQuest(quest, false))
+        return false;
+
+    bot->PlayDistanceSound(621);
+
+    // Find the quest giver object for RewardQuest.
+    WorldObject* questGiverObj = GetWorldObjectByGuid(ai, bot, guid);
+    if (!questGiverObj)
+        return false;
+
+    Object* questGiverAsObject = dynamic_cast<Object*>(questGiverObj);
+
+    uint32 rewardIdx = (quest->GetRewChoiceItemsCount() <= 1) ? 0 : BestRewardIndex(quest);
+    bot->RewardQuest(quest, rewardIdx, questGiverAsObject, false);
+    return true;
+}
+
+uint32 NewRpgBaseAction::BestRewardIndex(Quest const* quest)
+{
+    if (quest->GetRewChoiceItemsCount() <= 1)
+        return 0;
+
+    // Pick the reward with the best ItemUsage (EQUIP > BAD_EQUIP > others > NONE).
+    ItemUsage bestUsage = ItemUsage::ITEM_USAGE_NONE;
+    for (uint8 i = 0; i < quest->GetRewChoiceItemsCount(); ++i)
+    {
+        ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", quest->RewChoiceItemId[i]);
+        if (usage == ItemUsage::ITEM_USAGE_EQUIP)
+        {
+            bestUsage = ItemUsage::ITEM_USAGE_EQUIP;
+            break;
+        }
+        if (usage == ItemUsage::ITEM_USAGE_BAD_EQUIP && bestUsage != ItemUsage::ITEM_USAGE_EQUIP)
+            bestUsage = usage;
+        else if (usage != ItemUsage::ITEM_USAGE_NONE && bestUsage == ItemUsage::ITEM_USAGE_NONE)
+            bestUsage = usage;
+    }
+
+    uint32 best = 0;
+    for (uint8 i = 0; i < quest->GetRewChoiceItemsCount(); ++i)
+    {
+        ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", quest->RewChoiceItemId[i]);
+        if (usage == bestUsage)
+        {
+            best = i;
+            break;
+        }
+    }
+    return best;
+}
+
+bool NewRpgBaseAction::IsQuestWorthDoing(Quest const* quest)
+{
+    int32 lowLevelDiff = sWorld.getConfig(CONFIG_INT32_QUEST_LOW_LEVEL_HIDE_DIFF);
+    if ((int32)bot->GetLevel() > (int32)bot->GetQuestLevelForPlayer(quest) + lowLevelDiff)
+        return false;
+    if (quest->IsRepeatable())
+        return false;
+    // No IsSeasonal() in cmangos vanilla — skip seasonal check.
+    return true;
+}
+
+bool NewRpgBaseAction::IsQuestCapableDoing(Quest const* quest)
+{
+    if ((int32)bot->GetLevel() + 3 < (int32)bot->GetQuestLevelForPlayer(quest))
+        return false;
+    if (quest->GetType() != 0)
+        return false;
+    if (quest->GetSuggestedPlayers() >= 2)
+        return false;
+    return true;
+}
+
+bool NewRpgBaseAction::OrganizeQuestLog()
+{
+    int32 freeSlots = 0;
+    for (uint16 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
+        if (!bot->GetQuestSlotQuestId(i))
+            ++freeSlots;
+
+    if (freeSlots >= 2)
+        return false;
+
+    int32 dropped = 0;
+
+    // Pass 1: drop quests not worth/capable of doing, or failed.
+    for (uint16 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
+    {
+        uint32 questId = bot->GetQuestSlotQuestId(i);
+        if (!questId)
+            continue;
+        Quest const* quest = sObjectMgr.GetQuestTemplate(questId);
+        if (!quest)
+            continue;
+        if (!IsQuestWorthDoing(quest) || !IsQuestCapableDoing(quest) ||
+            bot->GetQuestStatus(questId) == QUEST_STATUS_FAILED)
+        {
+            sLog.outDebug("[New RPG] %s drop quest %u", bot->GetName(), questId);
+            WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
+            packet << (uint8)i;
+            bot->GetSession()->HandleQuestLogRemoveQuest(packet);
+            if (ai->GetMaster())
+                ai->TellPlayerNoFacing(GetMaster(),"Quest dropped " + ChatHelper::formatQuest(quest));
+            ai->rpgStatistic.questDropped++;
+            ++dropped;
+        }
+    }
+    if (dropped >= 8) return true;
+
+    // Pass 2: drop quests in a different zone.
+    for (uint16 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
+    {
+        uint32 questId = bot->GetQuestSlotQuestId(i);
+        if (!questId)
+            continue;
+        Quest const* quest = sObjectMgr.GetQuestTemplate(questId);
+        if (!quest)
+            continue;
+        int32 zoneSort = quest->GetZoneOrSort();
+        int32 botZone = (int32)bot->GetZoneId();
+        if (zoneSort < 0 || (zoneSort > 0 && zoneSort != botZone))
+        {
+            sLog.outDebug("[New RPG] %s drop quest %u (zone mismatch)", bot->GetName(), questId);
+            WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
+            packet << (uint8)i;
+            bot->GetSession()->HandleQuestLogRemoveQuest(packet);
+            if (ai->GetMaster())
+                ai->TellPlayerNoFacing(GetMaster(),"Quest dropped " + ChatHelper::formatQuest(quest));
+            ai->rpgStatistic.questDropped++;
+            ++dropped;
+        }
+    }
+    if (dropped >= 8) return true;
+
+    // Pass 3: clear remaining quests.
+    for (uint16 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
+    {
+        uint32 questId = bot->GetQuestSlotQuestId(i);
+        if (!questId)
+            continue;
+        Quest const* quest = sObjectMgr.GetQuestTemplate(questId);
+        sLog.outDebug("[New RPG] %s drop quest %u (full clear)", bot->GetName(), questId);
+        WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
+        packet << (uint8)i;
+        bot->GetSession()->HandleQuestLogRemoveQuest(packet);
+        if (ai->GetMaster() && quest)
+            ai->TellPlayerNoFacing(GetMaster(),"Quest dropped " + ChatHelper::formatQuest(quest));
+        ai->rpgStatistic.questDropped++;
+    }
+    return true;
+}
+
+bool NewRpgBaseAction::SearchQuestGiverAndAcceptOrReward()
+{
+    OrganizeQuestLog();
+    if (ObjectGuid npcOrGo = ChooseNpcOrGoToInteract(true, 80.f))
+    {
+        WorldObject* object = GetWorldObjectByGuid(ai, bot, npcOrGo);
+        if (object && CanInteractWithQuestGiver(object))
+        {
+            InteractWithNpcOrGoForQuest(npcOrGo);
+            ForceToWait(5000);
+            return true;
+        }
+        return MoveWorldObjectTo(npcOrGo);
+    }
+    return false;
+}
+
+ObjectGuid NewRpgBaseAction::ChooseNpcOrGoToInteract(bool questgiverOnly, float distanceLimit)
+{
+    std::list<ObjectGuid> possibleTargets = AI_VALUE(std::list<ObjectGuid>, "possible rpg targets");
+    std::list<ObjectGuid> possibleGOs     = AI_VALUE(std::list<ObjectGuid>, "nearest game objects no los");
+
+    if (possibleTargets.empty() && possibleGOs.empty())
+        return ObjectGuid();
+
+    WorldObject* nearestObject = nullptr;
+
+    for (ObjectGuid& guid : possibleTargets)
+    {
+        WorldObject* object = GetWorldObjectByGuid(ai, bot, guid);
+        if (!object || !object->IsInWorld())
+            continue;
+        if (distanceLimit && bot->GetDistance(object) > distanceLimit)
+            continue;
+        if (CanInteractWithQuestGiver(object) && HasQuestToAcceptOrReward(object))
+        {
+            if (!nearestObject || bot->GetDistance(nearestObject) > bot->GetDistance(object))
+                nearestObject = object;
+            break;
+        }
+    }
+
+    for (ObjectGuid& guid : possibleGOs)
+    {
+        WorldObject* object = GetWorldObjectByGuid(ai, bot, guid);
+        if (!object || !object->IsInWorld())
+            continue;
+        if (distanceLimit && bot->GetDistance(object) > distanceLimit)
+            continue;
+        if (CanInteractWithQuestGiver(object) && HasQuestToAcceptOrReward(object))
+        {
+            if (!nearestObject || bot->GetDistance(nearestObject) > bot->GetDistance(object))
+                nearestObject = object;
+            break;
+        }
+    }
+
+    if (nearestObject)
+        return nearestObject->GetObjectGuid();
+
+    if (questgiverOnly)
+        return ObjectGuid();
+
+    if (possibleTargets.empty())
+        return ObjectGuid();
+
+    // Pick a random nearby NPC.
+    uint32 idx = urand(0, (uint32)possibleTargets.size() - 1);
+    auto it = possibleTargets.begin();
+    std::advance(it, idx);
+    ObjectGuid guid = *it;
+    WorldObject* object = GetWorldObjectByGuid(ai, bot, guid);
+    if (object && object->IsInWorld())
+        return guid;
+
+    return ObjectGuid();
+}
+
+bool NewRpgBaseAction::HasQuestToAcceptOrReward(WorldObject* object)
+{
+    ObjectGuid guid = object->GetObjectGuid();
+    bot->PrepareQuestMenu(guid);
+    QuestMenu& menu = bot->GetPlayerMenu()->GetQuestMenu();
+    if (!menu.MenuItemCount())
+        return false;
+
+    // Check for completable quests first.
+    for (uint32 idx = 0; idx < menu.MenuItemCount(); ++idx)
+    {
+        QuestMenuItem const& item = menu.GetItem(idx);
+        Quest const* quest = sObjectMgr.GetQuestTemplate(item.m_qId);
+        if (!quest) continue;
+        QuestStatus status = bot->GetQuestStatus(item.m_qId);
+        if (status == QUEST_STATUS_COMPLETE && bot->CanRewardQuest(quest, 0, false))
+            return true;
+    }
+
+    // Then check for new quests.
+    for (uint32 idx = 0; idx < menu.MenuItemCount(); ++idx)
+    {
+        QuestMenuItem const& item = menu.GetItem(idx);
+        Quest const* quest = sObjectMgr.GetQuestTemplate(item.m_qId);
+        if (!quest) continue;
+        QuestStatus status = bot->GetQuestStatus(item.m_qId);
+        if (status == QUEST_STATUS_NONE &&
+            bot->CanTakeQuest(quest, false) &&
+            bot->CanAddQuest(quest, false) &&
+            IsQuestWorthDoing(quest) &&
+            IsQuestCapableDoing(quest))
+            return true;
+    }
+    return false;
+}
+
+// ─── Quest POI — cmangos Classic replacement ─────────────────────────────────
+// No server-side POI table in vanilla. Use TravelMgr creature/GO spawn positions.
+
+bool NewRpgBaseAction::GetQuestPOIPosAndObjectiveIdx(uint32 questId, WorldPosition& outPos, int32& outObjIdx)
+{
+    Quest const* quest = sObjectMgr.GetQuestTemplate(questId);
+    if (!quest)
+        return false;
+
+    auto it = bot->getQuestStatusMap().find(questId);
+    if (it == bot->getQuestStatusMap().end())
+        return false;
+
+    const QuestStatusData& qsd = it->second;
+    WorldPosition botPos(bot);
+    PlayerTravelInfo info(bot);
+
+    // QUEST_STATUS_COMPLETE → find QuestTaker (turn-in NPC) destinations.
+    if (qsd.m_status == QUEST_STATUS_COMPLETE)
+    {
+        DestinationList dests = sTravelMgr.GetDestinations(
+            info,
+            (uint32)TravelDestinationPurpose::QuestTaker,
+            { (int32)questId },
+            true,
+            2000.f);
+
+        for (TravelDestination* dest : dests)
+        {
+            const std::vector<WorldPosition*>& pts = dest->GetPoints();
+            for (WorldPosition* pt : pts)
+            {
+                if (pt && pt->getMapId() == bot->GetMapId())
+                {
+                    outPos    = *pt;
+                    outObjIdx = -1;  // -1 = turn-in objective
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    if (qsd.m_status != QUEST_STATUS_INCOMPLETE)
+        return false;
+
+    // QUEST_STATUS_INCOMPLETE → find positions for incomplete objectives.
+    // Try creature/GO objectives.
+    for (int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
+    {
+        if (!quest->ReqCreatureOrGOId[i])
+            continue;
+        if (qsd.m_creatureOrGOcount[i] >= quest->ReqCreatureOrGOCount[i])
+            continue;
+
+        // Determine TravelDestinationPurpose bit for objective slot i.
+        uint32 purposeBit = (uint32)TravelDestinationPurpose::QuestObjective1 << i;
+
+        DestinationList dests = sTravelMgr.GetDestinations(
+            info,
+            purposeBit,
+            { (int32)questId },
+            true,
+            2000.f);
+
+        for (TravelDestination* dest : dests)
+        {
+            const std::vector<WorldPosition*>& pts = dest->GetPoints();
+            for (WorldPosition* pt : pts)
+            {
+                if (pt && pt->getMapId() == bot->GetMapId())
+                {
+                    outPos    = *pt;
+                    outObjIdx = i;
+                    return true;
+                }
+            }
+        }
+    }
+
+    // Try item collection objectives (map to QuestObjective slots).
+    for (int i = 0; i < QUEST_ITEM_OBJECTIVES_COUNT; ++i)
+    {
+        if (!quest->ReqItemId[i])
+            continue;
+        if (qsd.m_itemcount[i] >= quest->ReqItemCount[i])
+            continue;
+
+        // Item objectives share slots after creature objectives in the QuestObjective purpose bits.
+        int slotIdx = QUEST_OBJECTIVES_COUNT + i;
+        uint32 purposeBit = (uint32)TravelDestinationPurpose::QuestObjective1 << std::min(i, (int)QUEST_OBJECTIVES_COUNT - 1);
+
+        DestinationList dests = sTravelMgr.GetDestinations(
+            info,
+            purposeBit,
+            { (int32)questId },
+            true,
+            2000.f);
+
+        for (TravelDestination* dest : dests)
+        {
+            const std::vector<WorldPosition*>& pts = dest->GetPoints();
+            for (WorldPosition* pt : pts)
+            {
+                if (pt && pt->getMapId() == bot->GetMapId())
+                {
+                    outPos    = *pt;
+                    outObjIdx = slotIdx;
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+// ─── Position selectors ──────────────────────────────────────────────────────
+
+static bool IsInCapitalCity(Player* bot)
+{
+    AreaTableEntry const* zone = GetAreaEntryByAreaID(bot->GetZoneId());
+    return zone && (zone->flags & AREA_FLAG_CAPITAL);
+}
+
+WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
+{
+    WorldPosition botPos(bot);
+    PlayerTravelInfo info(bot);
+    bool inCity = IsInCapitalCity(bot);
+
+    float hiRange = bot->GetLevel() < 5 ? 165.f : 500.f;
+    float loRange = bot->GetLevel() < 5 ? 835.f : 2500.f;
+
+    std::vector<uint32> partitions = { (uint32)hiRange, (uint32)loRange };
+
+    PartitionedTravelList parts = sTravelMgr.GetPartitions(
+        botPos, partitions, info,
+        (uint32)TravelDestinationPurpose::Grind,
+        {}, true, loRange);
+
+    std::vector<WorldPosition> hiLocs, loLocs;
+    for (auto& [distKey, pointList] : parts)
+    {
+        for (auto& [dest, wp, dist] : pointList)
+        {
+            if (!wp || wp->getMapId() != bot->GetMapId())
+                continue;
+            if (!inCity &&
+                sTerrainMgr.GetZoneId(bot->GetMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
+                continue;
+            if (dist <= hiRange)
+                hiLocs.push_back(*wp);
+            if (dist <= loRange)
+                loLocs.push_back(*wp);
+        }
+    }
+
+    WorldPosition dest{};
+    if (urand(1, 100) <= 50 && !hiLocs.empty())
+        dest = hiLocs[urand(0, (uint32)hiLocs.size() - 1)];
+    else if (!loLocs.empty())
+        dest = loLocs[urand(0, (uint32)loLocs.size() - 1)];
+
+    sLog.outDebug("[New RPG] Bot %s select random grind pos Map:%u X:%.1f Y:%.1f Z:%.1f (%zu+%zu available)",
+        bot->GetName(), dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(),
+        hiLocs.size(), loLocs.size() > hiLocs.size() ? loLocs.size() - hiLocs.size() : 0);
+    return dest;
+}
+
+WorldPosition NewRpgBaseAction::SelectRandomCampPos(Player* bot)
+{
+    WorldPosition botPos(bot);
+    PlayerTravelInfo info(bot);
+    bool inCity = IsInCapitalCity(bot);
+
+    float range = bot->GetLevel() <= 5 ? 500.f : 2500.f;
+    std::vector<uint32> partitions = { (uint32)range };
+
+    PartitionedTravelList parts = sTravelMgr.GetPartitions(
+        botPos, partitions, info,
+        (uint32)TravelDestinationPurpose::GenericRpg,
+        {}, true, range);
+
+    std::vector<WorldPosition> locs;
+    for (auto& [distKey, pointList] : parts)
+    {
+        for (auto& [dest, wp, dist] : pointList)
+        {
+            if (!wp || wp->getMapId() != bot->GetMapId())
+                continue;
+            if (dist < 50.f)
+                continue;
+            if (!inCity &&
+                sTerrainMgr.GetZoneId(bot->GetMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
+                continue;
+            locs.push_back(*wp);
+        }
+    }
+
+    WorldPosition dest{};
+    if (!locs.empty())
+        dest = locs[urand(0, (uint32)locs.size() - 1)];
+
+    sLog.outDebug("[New RPG] Bot %s select random camp pos Map:%u X:%.1f Y:%.1f Z:%.1f (%zu available)",
+        bot->GetName(), dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), locs.size());
+    return dest;
+}
+
+// ─── Flight taxi helpers ─────────────────────────────────────────────────────
+
+bool NewRpgBaseAction::SelectRandomFlightTaxiNode(ObjectGuid& outFlightMaster, std::vector<uint32>& outPath)
+{
+    // Find a nearby flight master NPC.
+    std::list<ObjectGuid> nearNpcs = AI_VALUE(std::list<ObjectGuid>, "nearest npcs");
+    Creature* flightNpc = nullptr;
+    for (ObjectGuid& g : nearNpcs)
+    {
+        Creature* npc = bot->GetNPCIfCanInteractWith(g, UNIT_NPC_FLAG_FLIGHTMASTER);
+        if (npc)
+        {
+            flightNpc = npc;
+            outFlightMaster = g;
+            break;
+        }
+    }
+    if (!flightNpc)
+        return false;
+
+    // Resolve the taxi node at this flight master's position.
+    uint32 curloc = sObjectMgr.GetNearestTaxiNode(
+        flightNpc->GetPositionX(), flightNpc->GetPositionY(), flightNpc->GetPositionZ(),
+        flightNpc->GetMapId(), bot->GetTeam());
+    if (!curloc)
+        return false;
+
+    // Collect all paths that depart from this node and whose destination
+    // node is known to the bot.
+    std::vector<uint32> availablePathIds;
+    for (uint32 i = 1; i < sTaxiPathStore.GetNumRows(); ++i)
+    {
+        TaxiPathEntry const* entry = sTaxiPathStore.LookupEntry(i);
+        if (!entry || entry->from != curloc)
+            continue;
+        if (!bot->m_taxi.IsTaximaskNodeKnown(entry->to))
+            continue;
+        availablePathIds.push_back(i);
+    }
+
+    if (availablePathIds.empty())
+        return false;
+
+    uint32 pathId = availablePathIds[urand(0, (uint32)availablePathIds.size() - 1)];
+    TaxiPathEntry const* chosen = sTaxiPathStore.LookupEntry(pathId);
+    if (!chosen)
+        return false;
+
+    outPath = { chosen->from, chosen->to };
+
+    sLog.outDebug("[New RPG] Bot %s select random flight taxi node from:%u (node %u) to:%u (%zu available)",
+        bot->GetName(), outFlightMaster.GetEntry(), chosen->from, chosen->to, availablePathIds.size());
+    return true;
+}
+
+// ─── Status selection helpers ─────────────────────────────────────────────────
+
+static std::vector<float> GenerateRandomWeights(int n)
+{
+    std::vector<float> weights(n);
+    float sum = 0.f;
+    for (int i = 0; i < n; ++i) { weights[i] = rand_norm_f(); sum += weights[i]; }
+    for (int i = 0; i < n; ++i) weights[i] /= sum;
+    return weights;
+}
+
+bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateStatus)
+{
+    std::vector<NewRpgStatus> available;
+    uint32 probSum = 0;
+
+    for (NewRpgStatus status : candidateStatus)
+    {
+        if (sPlayerbotAIConfig.RpgStatusProbWeight[status] == 0)
+            continue;
+        if (CheckRpgStatusAvailable(status))
+        {
+            available.push_back(status);
+            probSum += sPlayerbotAIConfig.RpgStatusProbWeight[status];
+        }
+    }
+
+    if (available.empty() || probSum == 0)
+    {
+        ai->rpgInfo.ChangeToRest();
+        bot->SetStandState(UNIT_STAND_STATE_SIT);
+        return true;
+    }
+
+    uint32 roll = urand(1, probSum);
+    uint32 acc  = 0;
+    NewRpgStatus chosen = RPG_STATUS_END;
+    for (NewRpgStatus status : available)
+    {
+        acc += sPlayerbotAIConfig.RpgStatusProbWeight[status];
+        if (acc >= roll) { chosen = status; break; }
+    }
+
+    switch (chosen)
+    {
+        case RPG_WANDER_RANDOM:
+            ai->rpgInfo.ChangeToWanderRandom();
+            return true;
+
+        case RPG_WANDER_NPC:
+            ai->rpgInfo.ChangeToWanderNpc();
+            return true;
+
+        case RPG_GO_GRIND:
+        {
+            WorldPosition pos = SelectRandomGrindPos(bot);
+            if (pos != WorldPosition()) { ai->rpgInfo.ChangeToGoGrind(pos); return true; }
+            return false;
+        }
+
+        case RPG_GO_CAMP:
+        {
+            WorldPosition pos = SelectRandomCampPos(bot);
+            if (pos != WorldPosition()) { ai->rpgInfo.ChangeToGoCamp(pos); return true; }
+            return false;
+        }
+
+        case RPG_DO_QUEST:
+        {
+            for (uint8 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
+            {
+                uint32 questId = bot->GetQuestSlotQuestId(slot);
+                if (!questId) continue;
+
+                WorldPosition poiPos;
+                int32 poiObjIdx;
+                if (GetQuestPOIPosAndObjectiveIdx(questId, poiPos, poiObjIdx))
+                {
+                    Quest const* quest = sObjectMgr.GetQuestTemplate(questId);
+                    if (quest) { ai->rpgInfo.ChangeToDoQuest(questId, quest); return true; }
+                }
+            }
+            return false;
+        }
+
+        case RPG_TRAVEL_FLIGHT:
+        {
+            ObjectGuid flightMaster;
+            std::vector<uint32> path;
+            if (SelectRandomFlightTaxiNode(flightMaster, path))
+            {
+                ai->rpgInfo.ChangeToTravelFlight(flightMaster, path);
+                return true;
+            }
+            return false;
+        }
+
+        case RPG_IDLE:
+            ai->rpgInfo.ChangeToIdle();
+            return true;
+
+        case RPG_REST:
+        default:
+            ai->rpgInfo.ChangeToRest();
+            bot->SetStandState(UNIT_STAND_STATE_SIT);
+            return true;
+    }
+    return false;
+}
+
+bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
+{
+    switch (status)
+    {
+        case RPG_IDLE:
+        case RPG_REST:
+            return true;
+
+        case RPG_WANDER_RANDOM:
+        {
+            Unit* target = AI_VALUE(Unit*, "grind target");
+            return target != nullptr;
+        }
+
+        case RPG_GO_GRIND:
+            return SelectRandomGrindPos(bot) != WorldPosition();
+
+        case RPG_GO_CAMP:
+            return SelectRandomCampPos(bot) != WorldPosition();
+
+        case RPG_WANDER_NPC:
+        {
+            std::list<ObjectGuid> targets = AI_VALUE(std::list<ObjectGuid>, "possible rpg targets");
+            return targets.size() >= 3;
+        }
+
+        case RPG_DO_QUEST:
+        {
+            for (uint8 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
+            {
+                uint32 questId = bot->GetQuestSlotQuestId(slot);
+                if (!questId) continue;
+                WorldPosition pos;
+                int32 objIdx;
+                if (GetQuestPOIPosAndObjectiveIdx(questId, pos, objIdx))
+                    return true;
+            }
+            return false;
+        }
+
+        case RPG_TRAVEL_FLIGHT:
+        {
+            ObjectGuid fm;
+            std::vector<uint32> path;
+            return SelectRandomFlightTaxiNode(fm, path);
+        }
+
+        default:
+            return false;
+    }
 }

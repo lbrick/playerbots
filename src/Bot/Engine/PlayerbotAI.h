@@ -682,6 +682,7 @@ public:
     // New RPG state machine (see src/Ai/World/Rpg/)
     NewRpgInfo     rpgInfo;
     NewRpgStatistic rpgStatistic;
+    std::set<uint32> lowPriorityQuest;  // quests that have been abandoned; avoid retrying
 
 #ifdef BUILD_ELUNA
     MaNGOS::unique_weak_ptr<PlayerbotAI> GetWeakPtr() const { return m_weakRef; }

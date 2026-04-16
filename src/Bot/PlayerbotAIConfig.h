@@ -4,6 +4,7 @@
 #include "src/Mgr/Talentspec.h"
 #include "Globals/SharedDefines.h"
 #include "SystemConfig.h"
+namespace ai { enum NewRpgStatus : int; }
 
 class Player;
 class PlayerbotMgr;
@@ -225,6 +226,7 @@ public:
 	std::list<uint32> pvpProhibitedZoneIds;
     bool enableGreet;
     bool enableNewRpgStrategy;
+    std::unordered_map<ai::NewRpgStatus, uint32> RpgStatusProbWeight;
     bool randomBotShowHelmet;
     bool randomBotShowCloak;
     bool disableRandomLevels;

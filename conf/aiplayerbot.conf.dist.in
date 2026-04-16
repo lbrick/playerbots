@@ -190,6 +190,16 @@ AiPlayerbot.EnableGreet = 1
 # Disable to fall back to legacy RPG behaviour.
 AiPlayerbot.EnableNewRpgStrategy = 1
 
+# Relative probability weights for each RPG state when transitioning from IDLE.
+# Higher values make that state more likely to be chosen.
+AiPlayerbot.RpgStatusProbWeight.WanderRandom = 15
+AiPlayerbot.RpgStatusProbWeight.WanderNpc    = 20
+AiPlayerbot.RpgStatusProbWeight.GoGrind      = 15
+AiPlayerbot.RpgStatusProbWeight.GoCamp       = 10
+AiPlayerbot.RpgStatusProbWeight.DoQuest      = 60
+AiPlayerbot.RpgStatusProbWeight.TravelFlight = 15
+AiPlayerbot.RpgStatusProbWeight.Rest         = 5
+
 # Show helmet and cloak on randombots (reset required)
 AiPlayerbot.RandomBotShowHelmet = 1
 AiPlayerbot.RandomBotShowCloak = 1

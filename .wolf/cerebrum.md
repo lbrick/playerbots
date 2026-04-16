@@ -2,7 +2,7 @@
 
 > OpenWolf's learning memory. Updated automatically as the AI learns from interactions.
 > Do not edit manually unless correcting an error.
-> Last updated: 2026-04-15
+> Last updated: 2026-04-16
 
 ## User Preferences
 
@@ -37,6 +37,24 @@
 <!-- Format: [YYYY-MM-DD] Description of what went wrong and what to do instead. -->
 
 - **[2026-04-16] NewRpgInfo.h include path:** Uses `src/Util/WorldPosition.h` (with src/ prefix) — matches project include convention. Do NOT use bare `WorldPosition.h`.
+- **[2026-04-16] PlayerbotAIConfig.h cannot include headers that pull PathFinder:** Any header that transitively includes `PathFinder.h` → `MoveMapSharedDefines.h` → `Detour/Include/DetourNavMesh.h` will fail in `mangosd` TU (no Detour include path there). Use `namespace ai { enum NewRpgStatus : int; }` forward declaration instead of including `NewRpgInfo.h` in PlayerbotAIConfig.h.
+- **[2026-04-16] AC variable name `botAI` is `ai` in cmangos:** All AC code using `botAI->` must use `ai->` in cmangos. When doing bulk replaces, use `replace_all` carefully to avoid substring collision (e.g. `PlayerbotAI` becoming `Playerai`).
+- **[2026-04-16] bot->IsInFlight() does not exist in cmangos:** Use `bot->IsTaxiFlying()` instead.
+- **[2026-04-16] bot->Dismount() does not exist in cmangos:** Use `bot->Unmount()` instead.
+- **[2026-04-16] WorldTimer.h not needed as explicit include:** `WorldTimer` comes via `playerbot.h`. Adding `#include "Server/WorldTimer.h"` directly will fail (wrong path). Just use `WorldTimer::getMSTime()` and `WorldTimer::getMSTimeDiff()` — available through the PCH/playerbot.h chain.
+- **[2026-04-16] ObjectAccessor not used in cmangos playerbots:** Use `bot->GetMap()->GetWorldObject(guid)`, `bot->GetMap()->GetCreature(guid)`, `bot->GetMap()->GetGameObject(guid)` instead of `ObjectAccessor::Get*` methods.
+
+## Key Learnings (AC → cmangos API mapping)
+
+- **Timer:** `getMSTime()` → `WorldTimer::getMSTime()`. `GetMSTimeDiffToNow(t)` → `WorldTimer::getMSTimeDiff(t, WorldTimer::getMSTime())`.
+- **ObjectMgr:** `sObjectMgr->GetQuestTemplate(id)` → `sObjectMgr.GetQuestTemplate(id)` (no arrow — global instance not pointer in cmangos).
+- **Quest status fields:** `q_status.CreatureOrGOCount[i]` → `q_status.m_creatureOrGOcount[i]`. `q_status.ItemCount[i]` → `q_status.m_itemcount[i]`. `quest->RequiredNpcOrGoCount[i]` → `quest->ReqCreatureOrGOCount[i]`. `quest->RequiredItemCount[i]` → `quest->ReqItemCount[i]`.
+- **WorldPosition distance:** Use `WorldPosition(bot).distance(dest)` to get distance from bot to a WorldPosition. `WorldPosition::distance(const WorldPosition&)` returns `float`.
+- **lowPriorityQuest:** Not in cmangos PlayerbotAI by default — added `std::set<uint32> lowPriorityQuest` to PlayerbotAI.h alongside rpgInfo/rpgStatistic.
+- **GetQuestPOIPosAndObjectiveIdx signature:** cmangos version returns single result via `WorldPosition& outPos, int32& outObjIdx` out-params (not a vector). AC returned `std::vector<POIInfo>`.
+- **Logging:** `LOG_DEBUG("playerbots", ...)` → `sLog.outDebug(...)` with printf-style format (not fmtlib).
+- **Shapeshift removal:** `ai->RemoveShapeshift()` — method exists on PlayerbotAI.
+- **ActivateTaxiPathTo:** `bot->ActivateTaxiPathTo(std::vector<uint32> nodes, Creature* npc, uint32 spellid)` — same signature in cmangos. Use `0` for spellid.
 
 ## Decision Log
 

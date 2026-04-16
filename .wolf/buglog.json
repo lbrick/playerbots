@@ -1,4 +1,53 @@
 {
   "version": 1,
-  "bugs": []
+  "bugs": [
+    {
+      "id": "bug-001",
+      "timestamp": "2026-04-16",
+      "error_message": "unknown type name 'NewRpgStatus'; did you mean 'ai::NewRpgStatus'?",
+      "file": "src/Bot/PlayerbotAIConfig.h",
+      "root_cause": "PlayerbotAIConfig.h included NewRpgInfo.h which pulls WorldPosition.h → PathFinder.h → MoveMapSharedDefines.h → Detour/Include/DetourNavMesh.h. The Detour include path is not available in mangosd TU. The enum needed qualifying as ai::NewRpgStatus.",
+      "fix": "Removed #include 'src/Ai/World/Rpg/NewRpgInfo.h' from PlayerbotAIConfig.h. Replaced with forward declaration: namespace ai { enum NewRpgStatus : int; }. Added #include + using namespace ai in PlayerbotAIConfig.cpp only.",
+      "tags": ["include-chain", "forward-declaration", "detour", "PlayerbotAIConfig"],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16"
+    },
+    {
+      "id": "bug-002",
+      "timestamp": "2026-04-16",
+      "error_message": "use of undeclared identifier 'botAI' (many instances in NewRpgBaseAction.cpp)",
+      "file": "src/Ai/World/Rpg/Action/NewRpgBaseAction.cpp",
+      "root_cause": "AC code uses variable name 'botAI' for PlayerbotAI* pointer. cmangos action base class uses 'ai'. Bulk copy of AC source brought 'botAI' references throughout.",
+      "fix": "replace_all 'botAI' → 'ai'. Side effect: 'PlayerbotAI' became 'Playerai' due to substring collision. Fixed with second replace_all 'Playerai' → 'PlayerbotAI'.",
+      "tags": ["variable-name", "ac-to-cmangos", "replace-all", "substring-collision"],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16"
+    },
+    {
+      "id": "bug-003",
+      "timestamp": "2026-04-16",
+      "error_message": "member function 'IsInFlight' not found in 'Player' / no member named 'Dismount'",
+      "file": "src/Ai/World/Rpg/Action/NewRpgAction.cpp",
+      "root_cause": "AC Player API uses IsInFlight() and Dismount(). cmangos Player has IsTaxiFlying() and Unmount() respectively.",
+      "fix": "bot->IsInFlight() → bot->IsTaxiFlying(). bot->Dismount() → bot->Unmount().",
+      "tags": ["ac-to-cmangos", "player-api", "taxi", "mount"],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16"
+    },
+    {
+      "id": "bug-004",
+      "timestamp": "2026-04-16",
+      "error_message": "fatal error: 'Server/WorldTimer.h' file not found",
+      "file": "src/Ai/World/Rpg/Action/NewRpgAction.cpp",
+      "root_cause": "Attempted to include WorldTimer.h directly. It is available via playerbot.h chain — no direct include needed.",
+      "fix": "Removed #include 'Server/WorldTimer.h'. WorldTimer::getMSTime() / getMSTimeDiff() work without explicit include.",
+      "tags": ["include", "WorldTimer", "playerbot.h"],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16"
+    }
+  ]
 }

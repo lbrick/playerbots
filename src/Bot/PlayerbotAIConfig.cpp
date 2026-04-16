@@ -10,6 +10,8 @@
 #include "src/Ai/Base/actions/CheatAction.h"
 
 #include "src/Mgr/TravelMgr.h"
+#include "src/Ai/World/Rpg/NewRpgInfo.h"
+using namespace ai;
 
 #include <iostream>
 #include <numeric>
@@ -461,6 +463,13 @@ bool PlayerbotAIConfig::Initialize()
 	//SPP switches
     enableGreet = config.GetBoolDefault("AiPlayerbot.EnableGreet", false);
     enableNewRpgStrategy = config.GetBoolDefault("AiPlayerbot.EnableNewRpgStrategy", true);
+    RpgStatusProbWeight[RPG_WANDER_RANDOM]  = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.WanderRandom", 15);
+    RpgStatusProbWeight[RPG_WANDER_NPC]     = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.WanderNpc",    20);
+    RpgStatusProbWeight[RPG_GO_GRIND]       = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.GoGrind",      15);
+    RpgStatusProbWeight[RPG_GO_CAMP]        = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.GoCamp",       10);
+    RpgStatusProbWeight[RPG_DO_QUEST]       = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.DoQuest",      60);
+    RpgStatusProbWeight[RPG_TRAVEL_FLIGHT]  = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.TravelFlight", 15);
+    RpgStatusProbWeight[RPG_REST]           = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.Rest",          5);
 	disableRandomLevels = config.GetBoolDefault("AiPlayerbot.DisableRandomLevels", false);
     instantRandomize = config.GetBoolDefault("AiPlayerbot.InstantRandomize", true);
     randomBotRandomPassword = config.GetBoolDefault("AiPlayerbot.RandomBotRandomPassword", true);
