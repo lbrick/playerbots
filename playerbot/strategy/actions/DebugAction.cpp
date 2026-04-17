@@ -2737,7 +2737,8 @@ bool DebugAction::HandlePosition(Event& event, Player* requester, const std::str
             LastMovement& moveData = *ai->GetAiObjectContext()->GetValue<LastMovement&>("last movement");
             std::ostringstream out;
             out << "Last movement: ";
-            WorldPosition().printWKT(moveData.lastPath.getPointPath(), out, 1);
+            out << moveData.lastMoveShort.getX() << ", " << moveData.lastMoveShort.getY() << ", " << moveData.lastMoveShort.getZ();
+            out << " (map: " << moveData.lastMoveShort.getMapId() << ")";
             ai->TellPlayer(requester, out.str());
             return true;
         }
@@ -5119,6 +5120,7 @@ bool DebugAction::HandleCombat(Event& event, Player* requester, const std::strin
 
     return true;
 }
+
 
 bool DebugAction::HandleNodes(Event& event, Player* requester, const std::string& text)
 {
