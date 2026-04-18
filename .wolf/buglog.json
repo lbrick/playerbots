@@ -49,5 +49,17 @@
       "occurrences": 1,
       "last_seen": "2026-04-16"
     }
+  ,{
+      "id": "bug-005",
+      "timestamp": "2026-04-18",
+      "error_message": "GO-too-far log prints garbage count like 654864228 times",
+      "file": "src/Ai/World/Rpg/Action/NewRpgBaseAction.cpp",
+      "root_cause": "uint32& failCount referenced a std::map entry that was erased on the same call before the log read the reference — dangling reference, UB garbage value.",
+      "fix": "Changed 'uint32& failCount = ++ai->questGoFailCount[id]' to 'uint32 failCount = ++ai->questGoFailCount[id]'. Value copy before erase — log reads safe copy.",
+      "tags": ["dangling-reference", "std::map", "UB", "quest-loop-guard"],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18"
+    }
   ]
 }

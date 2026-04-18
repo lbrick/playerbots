@@ -20,7 +20,8 @@ enum NewRpgStatus : int
     RPG_DO_QUEST       = 5,
     RPG_TRAVEL_FLIGHT  = 6,
     RPG_REST           = 7,
-    RPG_STATUS_END     = 8,
+    RPG_CHANGE_ZONE    = 8,
+    RPG_STATUS_END     = 9,
 };
 
 using NewRpgStatusTransitionProb = std::vector<std::vector<int>>;
@@ -72,6 +73,13 @@ struct NewRpgInfo
     {
         Rest() = default;
     };
+    // RPG_CHANGE_ZONE
+    struct ChangeZone
+    {
+        WorldPosition dest{};
+        std::vector<WorldPosition> waypoints{};  // TravelNode multi-hop path; empty = direct
+        bool waypointsBuilt{false};              // true after first TravelNode build — no rebuild
+    };
     struct Idle
     {
     };
@@ -93,7 +101,8 @@ struct NewRpgInfo
         WanderRandom,
         DoQuest,
         Rest,
-        TravelFlight
+        TravelFlight,
+        ChangeZone
     >;
     RpgData data;
 
@@ -106,6 +115,7 @@ struct NewRpgInfo
     void ChangeToDoQuest(uint32 questId, Quest const* quest);
     void ChangeToTravelFlight(ObjectGuid fromFlightMaster, std::vector<uint32> path);
     void ChangeToRest();
+    void ChangeToChangeZone(WorldPosition dest);
     void ChangeToIdle();
     bool CanChangeTo(NewRpgStatus status);
     void Reset();

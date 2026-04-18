@@ -2,7 +2,7 @@
 
 > OpenWolf's learning memory. Updated automatically as the AI learns from interactions.
 > Do not edit manually unless correcting an error.
-> Last updated: 2026-04-16
+> Last updated: 2026-04-18
 
 ## User Preferences
 
@@ -55,6 +55,16 @@
 - **Logging:** `LOG_DEBUG("playerbots", ...)` → `sLog.outDebug(...)` with printf-style format (not fmtlib).
 - **Shapeshift removal:** `ai->RemoveShapeshift()` — method exists on PlayerbotAI.
 - **ActivateTaxiPathTo:** `bot->ActivateTaxiPathTo(std::vector<uint32> nodes, Creature* npc, uint32 spellid)` — same signature in cmangos. Use `0` for spellid.
+
+## Key Learnings (New RPG runtime behavior — from live log analysis)
+
+- **`zone routing` log fires in `CheckRpgStatusAvailable`**, not at CHANGE_ZONE execution. Pattern for confirming CHANGE_ZONE selected: `zone routing: zone X > zone Y` immediately followed by `zone score cache hit` on same tick.
+- **mmap tile loading limitation:** PathFinder only routes through loaded tiles. Cross-continent paths fail → `MoveFarTo` returns false → `MoveRandomNear(10.0f)` → bot barely moves → stuck-teleport fires ~90s. This is expected; cross-continent CHANGE_ZONE always ends via teleport.
+- **TravelMgr returns bad-terrain positions:** `select random camp/grind pos` can return positions at Z=300-500 (cliff tops, mountain peaks). Bot pathfinds to these and gets stuck in infinite teleport loop. Any fix must handle this case.
+- **Infinite teleport loop pattern:** Bot gets camp/grind pos at bad terrain → `MoveFarTo` fails → teleports to exact pos → arrives, transitions to wander → wander fails → idle → re-scores → same zone wins → same bad pos → repeat every ~2 min forever. Worst observed: Kritholfon 40 teleports, Damaderon 39 teleports in 7-hour session.
+- **Short-distance stuck teleports:** `MoveFarTo` triggers stuck detection even for 10-15 yard targets when pathfinder can't navigate a wall/step. Damaderon teleporting 11 yards every ~90s for hours.
+- **Zone arrival stats (7-hour session):** 543 teleports, 48 zone routings, 11 arrivals (23%). Low arrival rate due to bad-terrain loop bots consuming all teleports.
+- **Quest system healthy:** 537 accepts, 110 abandonments, 309 low-priority marks — working as intended.
 
 ## Decision Log
 

@@ -18,3 +18,12 @@
 | 14:45 | Created compatibility shim headers for core game includes at old playerbot/ ahbot/ paths | playerbot/*.h, ahbot/AhBot.h | full build clean — playerbots+game+mangosd all built | ~150 |
 | 08:28 | Restructured BWL and MC raids to AC-style Action/Strategy/Trigger subdir layout | src/Ai/Raid/BlackwingLair/, src/Ai/Raid/MoltenCore/ | complete | ~3000 |
 | 09:23 | Restructured Karazhan, Naxxramas, OnyxiasLair raids to AC-style Action/Strategy/Trigger subdir layout | src/Ai/Raid/{Karazhan,Naxxramas,OnyxiasLair}/ | complete | ~2500 |
+| 22:55 | Phase 4 complete: NewRpgGoChangeZoneAction + timeout + trigger/strategy/context wiring | NewRpgAction.h/.cpp, NewRpgStrategy.cpp, ActionContext.h, TriggerContext.h | built clean | ~800 |
+| 23:30 | Created PHASE_4_5_FINDINGS.md — log analysis + 5 issues + fix plan | PHASE_4_5_FINDINGS.md | created | ~600 |
+| 23:41 | Phase 4.5 fixes: arrived-zone log unconditional, universal strategy wiring, GO fail loop guard | NewRpgAction.cpp, AiFactory.cpp, PlayerbotAI.h, NewRpgBaseAction.cpp | built clean | ~400 |
+| 11:52 | extended log analysis 7h session - found infinite teleport loop bug, short-dist teleport bug, updated PHASE_4_5_FINDINGS with Phase 5 plan | PHASE_4_5_FINDINGS.md, .wolf/cerebrum.md | analysis complete | ~3k |
+| 12:19 | created PHASE_5_PLAN.md with 4 phases, 5.1 teleport loop fix (pos-level not zone), 5.2 mount, 5.3 flight, 5.4 waypoints | PHASE_5_PLAN.md | created | ~1k |
+| 12:29 | Phase 5.1 impl: badPositions on PlayerbotAI, IsPosBad helper, short-dist guard <20yd, filter in all SelectRandom*/SelectBestZone, cache-hit guard | PlayerbotAI.h, NewRpgBaseAction.h/.cpp | built clean | ~2k |
+| 13:47 | Phase 5.2/5.3/5.4 impl: TryMount, flight suppress, TravelNode waypoints | NewRpgInfo.h, NewRpgBaseAction.h/.cpp, NewRpgAction.cpp | build OK zero errors | ~800 |
+| 15:48 | Phase 6 plan written from Run1-3 observations | PHASE_6_PLAN.md | created | ~600 |
+| 15:53 | Updated Phase 6 plan: replaced Z-height guard with PathFinder+IsMMapIsLoaded approach | PHASE_6_PLAN.md | updated | ~400 |

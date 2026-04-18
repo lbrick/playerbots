@@ -403,6 +403,7 @@ namespace ai
             creators["new rpg wander npc"]     = [](PlayerbotAI* ai) { return new NewRpgWanderNpcAction(ai); };
             creators["new rpg do quest"]       = [](PlayerbotAI* ai) { return new NewRpgDoQuestAction(ai); };
             creators["new rpg travel flight"]  = [](PlayerbotAI* ai) { return new NewRpgTravelFlightAction(ai); };
+            creators["new rpg go change zone"] = [](PlayerbotAI* ai) { return new NewRpgGoChangeZoneAction(ai); };
         }
     };
 };

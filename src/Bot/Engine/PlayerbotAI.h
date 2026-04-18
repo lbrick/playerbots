@@ -683,6 +683,21 @@ public:
     NewRpgInfo     rpgInfo;
     NewRpgStatistic rpgStatistic;
     std::set<uint32> lowPriorityQuest;  // quests that have been abandoned; avoid retrying
+    std::unordered_map<uint32, uint32> questGoFailCount;  // consecutive GO-too-far failures per questId
+    std::vector<WorldPosition> badPositions;  // positions that triggered stuck-teleport; filtered from selection
+    uint32 currentStayZoneId{0};     // zone bot is currently staying in (resets on CHANGE_ZONE arrival)
+    uint32 currentStayBadCount{0};   // bad positions accumulated this stay; escape trigger for 7.1
+
+    // Zone routing cache — invalidated on level-up or map change
+    struct ZoneScoreCache {
+        uint32 cachedLevel{0};
+        uint32 cachedMapId{0};
+        uint32 bestZoneId{0};
+        WorldPosition bestZonePos{};
+        float bestZoneScore{0.0f};
+        uint32 cachedAt{0};
+        static constexpr uint32 TTL = 5 * 60 * 1000;
+    } zoneScoreCache;
 
 #ifdef BUILD_ELUNA
     MaNGOS::unique_weak_ptr<PlayerbotAI> GetWeakPtr() const { return m_weakRef; }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include "src/Ai/Base/actions/MovementActions.h"
 #include "src/Ai/World/Rpg/NewRpgInfo.h"
 
@@ -18,6 +19,7 @@ public:
 protected:
     /* MOVEMENT */
     bool MoveFarTo(WorldPosition dest);
+    bool TryMount();
     bool MoveWorldObjectTo(ObjectGuid guid, float distance = INTERACTION_DISTANCE);
     bool MoveRandomNear(float moveStep = 50.0f);
     bool ForceToWait(uint32 duration);
@@ -37,11 +39,16 @@ protected:
 
     /* INTERNAL HELPERS */
     bool GetQuestPOIPosAndObjectiveIdx(uint32 questId, WorldPosition& outPos, int32& outObjIdx);
-    static WorldPosition SelectRandomGrindPos(Player* bot);
-    static WorldPosition SelectRandomCampPos(Player* bot);
+    WorldPosition SelectRandomGrindPos(Player* bot);
+    WorldPosition SelectRandomCampPos(Player* bot);
     bool SelectRandomFlightTaxiNode(ObjectGuid& flightMaster, std::vector<uint32>& path);
+    bool IsPosBad(const WorldPosition& pos) const;
+    void PushBadPosition(const WorldPosition& pos);
     bool RandomChangeStatus(std::vector<NewRpgStatus> candidateStatus);
     bool CheckRpgStatusAvailable(NewRpgStatus status);
+
+    std::unordered_map<uint32, float> ScoreZonesForBot(Player* bot);
+    WorldPosition SelectBestZoneForBot(Player* bot);
 
 protected:
     const float  pathFinderDis = 70.0f;

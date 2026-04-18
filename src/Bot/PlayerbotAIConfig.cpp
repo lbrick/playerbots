@@ -470,6 +470,7 @@ bool PlayerbotAIConfig::Initialize()
     RpgStatusProbWeight[RPG_DO_QUEST]       = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.DoQuest",      80);
     RpgStatusProbWeight[RPG_TRAVEL_FLIGHT]  = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.TravelFlight", 15);
     RpgStatusProbWeight[RPG_REST]           = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.Rest",          5);
+    RpgStatusProbWeight[RPG_CHANGE_ZONE]    = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.ChangeZone",    20);
 	disableRandomLevels = config.GetBoolDefault("AiPlayerbot.DisableRandomLevels", false);
     instantRandomize = config.GetBoolDefault("AiPlayerbot.InstantRandomize", true);
     randomBotRandomPassword = config.GetBoolDefault("AiPlayerbot.RandomBotRandomPassword", true);

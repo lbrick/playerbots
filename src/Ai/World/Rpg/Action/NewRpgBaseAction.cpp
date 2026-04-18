@@ -12,6 +12,7 @@
 #include "src/Util/ChatHelper.h"
 #include "src/Ai/Base/values/TravelValues.h"
 #include "src/Mgr/TravelMgr.h"
+#include "src/Mgr/TravelNode.h"
 
 using namespace ai;
 
@@ -52,6 +53,15 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     // Already at destination — no movement needed, let caller transition state.
     if (disToDest < 10.0f)
         return false;
+
+    // Short-distance: skip PathFinder and stuck detection to avoid teleport-on-tiny-gap.
+    // Just issue a direct MoveTo; caller will fall through to MoveRandomNear if needed.
+    if (disToDest < 20.0f)
+    {
+        MoveTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), false, false, false, true);
+        return false;
+    }
+
     if (disToDest + 5.0f < ai->rpgInfo.nearestMoveFarDis)
     {
         ai->rpgInfo.nearestMoveFarDis = disToDest;
@@ -73,6 +83,12 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             dest.getX(), dest.getY(), dest.getZ(), dest.getMapId(),
             zoneName.c_str(), bot->GetZoneId());
 
+        PushBadPosition(dest);
+        uint32 botZone = bot->GetZoneId();
+        if (ai->currentStayZoneId == 0)
+            ai->currentStayZoneId = botZone;
+        if (botZone == ai->currentStayZoneId)
+            ai->currentStayBadCount++;
         return bot->TeleportTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), bot->GetOrientation());
     }
 
@@ -137,6 +153,31 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         return MoveTo(bot->GetMapId(), rx, ry, rz, false, false, false, true);
 
     return false;
+}
+
+bool NewRpgBaseAction::IsPosBad(const WorldPosition& pos) const
+{
+    for (const WorldPosition& bad : ai->badPositions)
+        if (bad.getMapId() == pos.getMapId() && bad.distance(pos) < 50.0f)
+            return true;
+    return false;
+}
+
+void NewRpgBaseAction::PushBadPosition(const WorldPosition& pos)
+{
+    ai->badPositions.push_back(pos);
+    if (ai->badPositions.size() > 200)
+        ai->badPositions.erase(ai->badPositions.begin(), ai->badPositions.begin() + 50);
+}
+
+bool NewRpgBaseAction::TryMount()
+{
+    if (bot->IsMounted() || bot->IsInCombat() || bot->IsTaxiFlying())
+        return false;
+    bool result = ai->DoSpecificAction("check mount state");
+    if (result)
+        sLog.outDebug("[New RPG] %s TryMount fired for CHANGE_ZONE", bot->GetName());
+    return result;
 }
 
 bool NewRpgBaseAction::MoveWorldObjectTo(ObjectGuid guid, float distance)
@@ -258,8 +299,19 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 }
                 else
                 {
-                    sLog.outDebug("[New RPG] %s accept quest %u failed (GO too far), will retry on approach",
-                                  bot->GetName(), quest->GetQuestId());
+                    uint32 failCount = ++ai->questGoFailCount[item.m_qId];
+                    if (failCount >= 5)
+                    {
+                        ai->lowPriorityQuest.insert(item.m_qId);
+                        ai->questGoFailCount.erase(item.m_qId);
+                        sLog.outDebug("[New RPG] %s accept quest %u failed (GO too far) %u times, marked low priority",
+                                      bot->GetName(), quest->GetQuestId(), failCount);
+                    }
+                    else
+                    {
+                        sLog.outDebug("[New RPG] %s accept quest %u failed (GO too far), will retry on approach",
+                                      bot->GetName(), quest->GetQuestId());
+                    }
                 }
             }
             else
@@ -268,6 +320,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                     ai->TellPlayerNoFacing(GetMaster(),"Quest accepted " + ChatHelper::formatQuest(quest));
                 BroadcastHelper::BroadcastQuestAccepted(ai, bot, quest);
                 ai->rpgStatistic.questAccepted++;
+                ai->questGoFailCount.erase(item.m_qId);
                 sLog.outDebug("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
             }
         }
@@ -780,6 +833,8 @@ WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
             if (!inCity &&
                 sTerrainMgr.GetZoneId(botPos.getMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
                 continue;
+            if (IsPosBad(*wp))
+                continue;
             if (dist <= hiRange)
                 hiLocs.push_back(*wp);
             if (dist <= loRange)
@@ -792,6 +847,19 @@ WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
         dest = hiLocs[urand(0, (uint32)hiLocs.size() - 1)];
     else if (!loLocs.empty())
         dest = loLocs[urand(0, (uint32)loLocs.size() - 1)];
+
+    if (dest != WorldPosition())
+    {
+        PathFinder pf(bot);
+        pf.calculate(dest.getX(), dest.getY(), dest.getZ(), false);
+        if (pf.getPathType() & PATHFIND_NOPATH)
+        {
+            PushBadPosition(dest);
+            sLog.outDebug("[New RPG] %s grind pos (%.1f %.1f %.1f) off nav mesh, marked bad",
+                          bot->GetName(), dest.getX(), dest.getY(), dest.getZ());
+            return WorldPosition();
+        }
+    }
 
     sLog.outDebug("[New RPG] Bot %s select random grind pos Map:%u X:%.1f Y:%.1f Z:%.1f (%zu+%zu available)",
         bot->GetName(), dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(),
@@ -827,6 +895,8 @@ WorldPosition NewRpgBaseAction::SelectRandomCampPos(Player* bot)
             if (!inCity &&
                 sTerrainMgr.GetZoneId(botPos.getMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
                 continue;
+            if (IsPosBad(*wp))
+                continue;
             locs.push_back(*wp);
         }
     }
@@ -834,6 +904,19 @@ WorldPosition NewRpgBaseAction::SelectRandomCampPos(Player* bot)
     WorldPosition dest{};
     if (!locs.empty())
         dest = locs[urand(0, (uint32)locs.size() - 1)];
+
+    if (dest != WorldPosition())
+    {
+        PathFinder pf(bot);
+        pf.calculate(dest.getX(), dest.getY(), dest.getZ(), false);
+        if (pf.getPathType() & PATHFIND_NOPATH)
+        {
+            PushBadPosition(dest);
+            sLog.outDebug("[New RPG] %s camp pos (%.1f %.1f %.1f) off nav mesh, marked bad",
+                          bot->GetName(), dest.getX(), dest.getY(), dest.getZ());
+            return WorldPosition();
+        }
+    }
 
     sLog.outDebug("[New RPG] Bot %s select random camp pos Map:%u X:%.1f Y:%.1f Z:%.1f (%zu available)",
         bot->GetName(), dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), locs.size());
@@ -1016,6 +1099,17 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
             return false;
         }
 
+        case RPG_CHANGE_ZONE:
+        {
+            WorldPosition dest = SelectBestZoneForBot(bot);
+            if (dest != WorldPosition())
+            {
+                ai->rpgInfo.ChangeToChangeZone(dest);
+                return true;
+            }
+            return false;
+        }
+
         case RPG_IDLE:
             ai->rpgInfo.ChangeToIdle();
             return true;
@@ -1044,10 +1138,26 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
         }
 
         case RPG_GO_GRIND:
+        {
+            if (ai->currentStayBadCount >= 5)
+            {
+                sLog.outDebug("[New RPG] %s zone %u has %u bad pos this stay, forcing escape",
+                              bot->GetName(), ai->currentStayZoneId, ai->currentStayBadCount);
+                return false;
+            }
             return SelectRandomGrindPos(bot) != WorldPosition();
+        }
 
         case RPG_GO_CAMP:
+        {
+            if (ai->currentStayBadCount >= 5)
+            {
+                sLog.outDebug("[New RPG] %s zone %u has %u bad pos this stay, forcing escape",
+                              bot->GetName(), ai->currentStayZoneId, ai->currentStayBadCount);
+                return false;
+            }
             return SelectRandomCampPos(bot) != WorldPosition();
+        }
 
         case RPG_WANDER_NPC:
         {
@@ -1077,7 +1187,223 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
             return SelectRandomFlightTaxiNode(fm, path);
         }
 
+        case RPG_CHANGE_ZONE:
+        {
+            bool hasDoable = false;
+            uint8 bLevel = bot->GetLevel();
+            for (uint8 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
+            {
+                uint32 qId = bot->GetQuestSlotQuestId(slot);
+                if (!qId || ai->lowPriorityQuest.count(qId)) continue;
+                Quest const* q = sObjectMgr.GetQuestTemplate(qId);
+                if (q && (int32)q->GetQuestLevel() <= (int32)bLevel + 3) { hasDoable = true; break; }
+            }
+            if (hasDoable) return false;
+            WorldPosition dest = SelectBestZoneForBot(bot);
+            if (dest == WorldPosition()) return false;
+            // If dest is far and a flight master is nearby, suppress CHANGE_ZONE
+            // so RPG_TRAVEL_FLIGHT gets selected instead (bot flies toward dest zone).
+            if (WorldPosition(bot).distance(dest) > 1000.0f)
+            {
+                ObjectGuid fm;
+                std::vector<uint32> path;
+                if (SelectRandomFlightTaxiNode(fm, path))
+                    return false;
+            }
+            return true;
+        }
+
         default:
             return false;
     }
+}
+
+// ─── Zone Scoring ─────────────────────────────────────────────────────────────
+
+std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot)
+{
+    WorldPosition botPos(bot);
+    PlayerTravelInfo info(bot);
+    uint32 mapId = botPos.getMapId();
+
+    float maxRange = 50000.0f;
+    std::vector<uint32> partitions = { (uint32)maxRange };
+
+    std::unordered_map<uint32, float> zoneScores;
+
+    // Grind destinations at bot level (IsPossible already level-filters)
+    PartitionedTravelList grindParts = sTravelMgr.GetPartitions(
+        botPos, partitions, info,
+        (uint32)TravelDestinationPurpose::Grind,
+        {}, true, maxRange);
+
+    for (auto& [distKey, pointList] : grindParts)
+    {
+        for (auto& [dest, wp, dist] : pointList)
+        {
+            if (!wp || wp->getMapId() != mapId) continue;
+            if (wp->getZ() < 0.0f) continue;
+            uint32 zone = sTerrainMgr.GetZoneId(mapId, wp->getX(), wp->getY(), wp->getZ());
+            if (!zone) continue;
+            zoneScores[zone] += 3.0f - (dist / 10000.0f);
+        }
+    }
+
+    // Quest givers with quests bot can pick up
+    PartitionedTravelList questGiverParts = sTravelMgr.GetPartitions(
+        botPos, partitions, info,
+        (uint32)TravelDestinationPurpose::QuestGiver,
+        {}, false, maxRange);
+
+    for (auto& [distKey, pointList] : questGiverParts)
+    {
+        for (auto& [dest, wp, dist] : pointList)
+        {
+            if (!wp || wp->getMapId() != mapId) continue;
+            if (wp->getZ() < 0.0f) continue;
+            auto* qDest = dynamic_cast<QuestRelationTravelDestination*>(dest);
+            if (!qDest) continue;
+            Quest const* quest = sObjectMgr.GetQuestTemplate(qDest->GetQuestId());
+            if (!quest) continue;
+            uint8 bLevel = bot->GetLevel();
+            if ((int32)quest->GetQuestLevel() > (int32)bLevel + 2) continue;
+            if ((int32)quest->GetMinLevel() > (int32)bLevel) continue;
+            if (bot->GetQuestStatus(qDest->GetQuestId()) != QUEST_STATUS_NONE) continue;
+            uint32 zone = sTerrainMgr.GetZoneId(mapId, wp->getX(), wp->getY(), wp->getZ());
+            if (!zone) continue;
+            zoneScores[zone] += 10.0f - (dist / 10000.0f);
+        }
+    }
+
+    // Quest objectives in log (incomplete quests at bot level)
+    PartitionedTravelList questObjParts = sTravelMgr.GetPartitions(
+        botPos, partitions, info,
+        (uint32)TravelDestinationPurpose::QuestAllObjective,
+        {}, false, maxRange);
+
+    for (auto& [distKey, pointList] : questObjParts)
+    {
+        for (auto& [dest, wp, dist] : pointList)
+        {
+            if (!wp || wp->getMapId() != mapId) continue;
+            if (wp->getZ() < 0.0f) continue;
+            auto* qDest = dynamic_cast<QuestObjectiveTravelDestination*>(dest);
+            if (!qDest) continue;
+            uint32 qId = qDest->GetQuestId();
+            if (ai->lowPriorityQuest.count(qId)) continue;
+            if (bot->GetQuestStatus(qId) != QUEST_STATUS_INCOMPLETE) continue;
+            Quest const* quest = sObjectMgr.GetQuestTemplate(qId);
+            if (!quest) continue;
+            if ((int32)quest->GetQuestLevel() > (int32)bot->GetLevel() + 3) continue;
+            uint32 zone = sTerrainMgr.GetZoneId(mapId, wp->getX(), wp->getY(), wp->getZ());
+            if (!zone) continue;
+            zoneScores[zone] += 8.0f - (dist / 10000.0f);
+        }
+    }
+
+    // Penalize zones where bot has accumulated 3+ bad positions this session
+    for (auto& [zone, score] : zoneScores)
+    {
+        uint32 zoneBadCount = 0;
+        for (const WorldPosition& bad : ai->badPositions)
+        {
+            if (bad.getMapId() == mapId &&
+                sTerrainMgr.GetZoneId(mapId, bad.getX(), bad.getY(), bad.getZ()) == zone)
+                zoneBadCount++;
+        }
+        if (zoneBadCount >= 3)
+            score *= 0.1f;
+    }
+
+    return zoneScores;
+}
+
+WorldPosition NewRpgBaseAction::SelectBestZoneForBot(Player* bot)
+{
+    auto& cache = ai->zoneScoreCache;
+    uint32 now      = WorldTimer::getMSTime();
+    uint32 curLevel = bot->GetLevel();
+    uint32 curMap   = WorldPosition(bot).getMapId();
+
+    bool cacheValid = cache.cachedLevel == curLevel
+                   && cache.cachedMapId == curMap
+                   && WorldTimer::getMSTimeDiff(cache.cachedAt, now) < PlayerbotAI::ZoneScoreCache::TTL;
+
+    if (cacheValid)
+    {
+        // Invalidate if cached dest was subsequently marked bad (e.g. teleport fired there).
+        if (cache.bestZonePos != WorldPosition() && IsPosBad(cache.bestZonePos))
+        {
+            cache = {};
+        }
+        else
+        {
+            sLog.outDebug("[New RPG] %s zone score cache hit: zone %u score %.1f",
+                          bot->GetName(), cache.bestZoneId, cache.bestZoneScore);
+            return cache.bestZonePos;
+        }
+    }
+
+    std::unordered_map<uint32, float> scores = ScoreZonesForBot(bot);
+
+    uint32 currentZone  = bot->GetZoneId();
+    float  currentScore = scores.count(currentZone) ? scores[currentZone] : 0.0f;
+    uint32 bestZone     = currentZone;
+    float  bestScore    = currentScore;
+
+    for (auto& [zone, score] : scores)
+    {
+        if (score > bestScore)
+        {
+            bestScore = score;
+            bestZone  = zone;
+        }
+    }
+
+    constexpr float CHANGE_THRESHOLD = 20.0f;
+    if (bestZone == currentZone || bestScore - currentScore < CHANGE_THRESHOLD)
+    {
+        cache = { curLevel, curMap, currentZone, WorldPosition(), currentScore, now };
+        return WorldPosition();
+    }
+
+    // Find a WorldPosition in the best zone to travel to
+    WorldPosition botPos(bot);
+    PlayerTravelInfo info(bot);
+    float maxRange = 50000.0f;
+    std::vector<uint32> partitions = { (uint32)maxRange };
+
+    PartitionedTravelList grindParts = sTravelMgr.GetPartitions(
+        botPos, partitions, info,
+        (uint32)TravelDestinationPurpose::Grind,
+        {}, true, maxRange);
+
+    std::vector<WorldPosition> candidates;
+    for (auto& [distKey, pointList] : grindParts)
+    {
+        for (auto& [dest, wp, dist] : pointList)
+        {
+            if (!wp || wp->getMapId() != botPos.getMapId()) continue;
+            if (wp->getZ() < 0.0f) continue;
+            if (IsPosBad(*wp)) continue;
+            uint32 zone = sTerrainMgr.GetZoneId(wp->getMapId(), wp->getX(), wp->getY(), wp->getZ());
+            if (zone == bestZone)
+                candidates.push_back(*wp);
+        }
+    }
+
+    if (candidates.empty())
+    {
+        cache = { curLevel, curMap, currentZone, WorldPosition(), currentScore, now };
+        return WorldPosition();
+    }
+
+    WorldPosition dest = candidates[urand(0, (uint32)candidates.size() - 1)];
+
+    sLog.outDebug("[New RPG] %s zone routing: zone %u (score %.1f) > zone %u (score %.1f), target Map:%u %.1f %.1f %.1f",
+                  bot->GetName(), bestZone, bestScore, currentZone, currentScore,
+                  dest.getMapId(), dest.getX(), dest.getY(), dest.getZ());
+
+    cache = { curLevel, curMap, bestZone, dest, bestScore, now };
+    return dest;
 }

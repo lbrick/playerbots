@@ -70,4 +70,11 @@ public:
     bool Execute(Event& event) override;
 };
 
+class NewRpgGoChangeZoneAction : public NewRpgBaseAction
+{
+public:
+    NewRpgGoChangeZoneAction(PlayerbotAI* ai) : NewRpgBaseAction(ai, "new rpg go change zone") {}
+    bool Execute(Event& event) override;
+};
+
 } // namespace ai

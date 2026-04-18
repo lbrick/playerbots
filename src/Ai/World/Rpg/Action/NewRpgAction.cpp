@@ -2,6 +2,10 @@
 #include "NewRpgAction.h"
 #include "src/Ai/World/Rpg/NewRpgInfo.h"
 #include "src/Util/BroadcastHelper.h"
+#include "src/Mgr/TravelNode.h"
+#include "MotionGenerators/MoveMap.h"
+#include "Server/DBCStructure.h"
+#include "Server/DBCStores.h"
 
 using namespace ai;
 
@@ -15,7 +19,7 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
     {
         case RPG_IDLE:
             return RandomChangeStatus({RPG_GO_CAMP, RPG_GO_GRIND, RPG_WANDER_RANDOM, RPG_WANDER_NPC,
-                                       RPG_DO_QUEST, RPG_TRAVEL_FLIGHT, RPG_REST});
+                                       RPG_DO_QUEST, RPG_TRAVEL_FLIGHT, RPG_REST, RPG_CHANGE_ZONE});
 
         case RPG_GO_GRIND:
         {
@@ -78,6 +82,16 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         {
             if (info.HasStatusPersisted(statusRestDuration))
             {
+                info.ChangeToIdle();
+                return true;
+            }
+            break;
+        }
+        case RPG_CHANGE_ZONE:
+        {
+            if (info.HasStatusPersisted(30 * 60 * 1000))
+            {
+                sLog.outDebug("[New RPG] %s CHANGE_ZONE timed out, returning to idle", bot->GetName());
                 info.ChangeToIdle();
                 return true;
             }
@@ -394,4 +408,138 @@ bool NewRpgTravelFlightAction::Execute(Event& /*event*/)
         ai->rpgInfo.ChangeToIdle();
     }
     return true;
+}
+
+// ─── NewRpgGoChangeZoneAction ─────────────────────────────────────────────────
+
+bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
+{
+    auto* dataPtr = std::get_if<NewRpgInfo::ChangeZone>(&ai->rpgInfo.data);
+    if (!dataPtr)
+        return false;
+
+    WorldPosition dest = dataPtr->dest;
+    float dist = WorldPosition(bot).distance(dest);
+    sLog.outDebug("[New RPG] %s change zone action: dist=%.1f to Map:%u %.1f %.1f %.1f",
+                  bot->GetName(), dist, dest.getMapId(), dest.getX(), dest.getY(), dest.getZ());
+
+    if (dist < 50.0f)
+    {
+        uint32 newZone = bot->GetZoneId();
+        std::vector<uint32> toRemove;
+        for (uint32 qId : ai->lowPriorityQuest)
+        {
+            Quest const* q = sObjectMgr.GetQuestTemplate(qId);
+            if (!q) continue;
+            int32 zoneSort = q->GetZoneOrSort();
+            if (zoneSort <= 0 || (uint32)zoneSort == newZone)
+                toRemove.push_back(qId);
+        }
+        for (uint32 qId : toRemove)
+            ai->lowPriorityQuest.erase(qId);
+
+        sLog.outDebug("[New RPG] %s arrived zone %u, cleared %zu lowPriorityQuest entries",
+                      bot->GetName(), newZone, toRemove.size());
+
+        // Reset per-stay bad count for the new zone (7.1)
+        ai->currentStayZoneId = newZone;
+        ai->currentStayBadCount = 0;
+
+        // Learn nearby taxi nodes on zone arrival (7.5)
+        WorldPosition botPos(bot);
+        for (uint32 i = 1; i < sTaxiNodesStore.GetNumRows(); ++i)
+        {
+            TaxiNodesEntry const* node = sTaxiNodesStore.LookupEntry(i);
+            if (!node || node->map_id != bot->GetMapId())
+                continue;
+            WorldPosition nodePos(node->map_id, node->x, node->y, node->z);
+            if (botPos.distance(nodePos) > 500.0f)
+                continue;
+            if (!bot->m_taxi.IsTaximaskNodeKnown(i))
+            {
+                bot->m_taxi.SetTaximaskNode(i);
+                sLog.outDebug("[New RPG] %s learned taxi node %u on arrival zone %u",
+                              bot->GetName(), i, newZone);
+            }
+        }
+
+        ai->zoneScoreCache = {};
+        ai->rpgInfo.ChangeToIdle();
+        return true;
+    }
+
+    // 5.2 — mount up when far from dest
+    if (dist > 50.0f)
+        TryMount();
+
+    // 5.4 — populate TravelNode waypoints once when far (no rebuild — prevents bad node re-entry)
+    if (!dataPtr->waypointsBuilt && dist > 500.0f)
+    {
+        dataPtr->waypointsBuilt = true;
+        std::vector<WorldPosition> startPath;
+        TravelNodeRoute route = sTravelNodeMap.getRoute(WorldPosition(bot), dest, startPath, bot);
+        std::vector<TravelNode*>& nodes = route.getNodes();
+        if (!nodes.empty())
+        {
+            // 7.2.1 diagnostic: dump badPositions to compare mapId vs TravelNode mapId
+            for (const WorldPosition& bad : ai->badPositions)
+                sLog.outDebug("[New RPG] %s badPos (%.1f %.1f %.1f mapId=%u)",
+                              bot->GetName(), bad.getX(), bad.getY(), bad.getZ(), bad.getMapId());
+
+            for (TravelNode* node : nodes)
+            {
+                WorldPosition nodePos = *node->getPosition();
+                sLog.outDebug("[New RPG] %s TravelNode candidate (%.1f %.1f %.1f mapId=%u)",
+                              bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
+                // 7.2.2: normalize mapId to bot's current map — TravelNode positions may carry
+                // mapId from a different continent than where the stuck-teleport stored the bad pos
+                nodePos.setMapId(bot->GetMapId());
+                if (IsPosBad(nodePos))
+                {
+                    sLog.outDebug("[New RPG] %s TravelNode candidate filtered (IsPosBad after mapId normalize to %u)",
+                                  bot->GetName(), bot->GetMapId());
+                    continue;
+                }
+                if (!nodePos.isMmapLoaded(0))
+                    continue;
+                dataPtr->waypoints.push_back(nodePos);
+            }
+            dataPtr->waypoints.push_back(dest);
+            sLog.outDebug("[New RPG] %s CHANGE_ZONE built %zu waypoints via TravelNode",
+                          bot->GetName(), dataPtr->waypoints.size());
+        }
+    }
+
+    // Follow waypoints if available — prune any that became bad since list was built
+    // Normalize mapId before IsPosBad: TravelNode waypoints may have been stored with a
+    // different mapId than what stuck-teleport wrote into badPositions (7.3.2 fix)
+    while (!dataPtr->waypoints.empty())
+    {
+        WorldPosition& front = dataPtr->waypoints.front();
+        WorldPosition check = front;
+        check.setMapId(bot->GetMapId());
+        if (!IsPosBad(check))
+            break;
+        dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+    }
+
+    if (!dataPtr->waypoints.empty())
+    {
+        WorldPosition& wp = dataPtr->waypoints.front();
+        if (WorldPosition(bot).distance(wp) < 30.0f)
+        {
+            dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+            return true;
+        }
+        if (MoveFarTo(wp))
+            return true;
+        // Waypoint unreachable — discard and try next
+        dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+        return true;
+    }
+
+    if (MoveFarTo(dest))
+        return true;
+
+    return MoveRandomNear(10.0f);
 }

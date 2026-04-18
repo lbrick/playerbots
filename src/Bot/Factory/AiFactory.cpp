@@ -967,8 +967,6 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
                 nonCombatEngine->addStrategy("tfish");
                 nonCombatEngine->addStrategy("rpg");
                 nonCombatEngine->removeStrategy("rpg craft");
-                if (sPlayerbotAIConfig.enableNewRpgStrategy)
-                    nonCombatEngine->addStrategy("new rpg");
             }
 
             if (sPlayerbotAIConfig.randomBotJoinBG)
@@ -982,6 +980,8 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
             }
 
             nonCombatEngine->ChangeStrategy(sPlayerbotAIConfig.randomBotNonCombatStrategies);
+            if (sPlayerbotAIConfig.enableNewRpgStrategy)
+                nonCombatEngine->addStrategy("new rpg");  // after ChangeStrategy — not suppressible by config
         }
         else 
         {
@@ -1002,8 +1002,6 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
                             nonCombatEngine->addStrategy("tfish");
                             nonCombatEngine->addStrategy("rpg");
                             nonCombatEngine->removeStrategy("rpg craft");
-                            if (sPlayerbotAIConfig.enableNewRpgStrategy)
-                                nonCombatEngine->addStrategy("new rpg");
                         }
 
                         if (!master || master->GetPlayerbotAI())
@@ -1012,6 +1010,8 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
                         }
 
                         nonCombatEngine->ChangeStrategy(sPlayerbotAIConfig.randomBotNonCombatStrategies);
+                        if (sPlayerbotAIConfig.enableNewRpgStrategy)
+                            nonCombatEngine->addStrategy("new rpg");  // after ChangeStrategy — not suppressible by config
                     }
                     else
                     {
