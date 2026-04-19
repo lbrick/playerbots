@@ -77,8 +77,13 @@ struct NewRpgInfo
     struct ChangeZone
     {
         WorldPosition dest{};
-        std::vector<WorldPosition> waypoints{};  // TravelNode multi-hop path; empty = direct
-        bool waypointsBuilt{false};              // true after first TravelNode build — no rebuild
+        struct Waypoint
+        {
+            WorldPosition pos;
+            bool teleport{false};  // true = TeleportTo (transport dock-to-dock), false = MoveFarTo
+        };
+        std::vector<Waypoint> waypoints{};   // TravelNode multi-hop path; empty = direct
+        bool waypointsBuilt{false};          // true after first TravelNode build — no rebuild
     };
     struct Idle
     {

@@ -2570,6 +2570,12 @@ void TravelNodeMap::generateNodes()
     generateAreaTriggerNodes();
     sLog.outString("-Generating transport nodes");
     generateTransportNodes();
+    {
+        uint32 transportCount = 0;
+        for (TravelNode* n : getNodes())
+            if (n->isTransport()) transportCount++;
+        sLog.outString("BOAT-1 diagnostic: Transport nodes generated: %u", transportCount);
+    }
     sLog.outString("-Generating zone mean nodes");
     generateZoneMeanNodes();
     sLog.outString("-Generating static portal nodes");

@@ -93,11 +93,12 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             ai->currentStayBadCount++;
 
         // 8.1: evict the failed dest from CHANGE_ZONE waypoints — prevents stuck attractor loop
+        // BOAT-5: use .pos from Waypoint struct
         if (auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&ai->rpgInfo.data))
         {
             if (!cz->waypoints.empty())
             {
-                WorldPosition check = cz->waypoints.front();
+                WorldPosition check = cz->waypoints.front().pos;
                 check.setMapId(bot->GetMapId());
                 if (check.distance(dest) < 5.0f)
                 {
@@ -852,7 +853,7 @@ WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
         {
             if (!wp || wp->getMapId() != botPos.getMapId())
                 continue;
-            if (wp->getZ() < 0.0f)
+            if (wp->getZ() < 0.0f || wp->getZ() > 450.0f)
                 continue;
             if (!inCity &&
                 sTerrainMgr.GetZoneId(botPos.getMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
@@ -912,7 +913,7 @@ WorldPosition NewRpgBaseAction::SelectRandomCampPos(Player* bot)
         {
             if (!wp || wp->getMapId() != botPos.getMapId())
                 continue;
-            if (wp->getZ() < 0.0f)
+            if (wp->getZ() < 0.0f || wp->getZ() > 450.0f)
                 continue;
             if (dist < 50.f)
                 continue;

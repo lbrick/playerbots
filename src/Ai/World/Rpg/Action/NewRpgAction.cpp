@@ -474,7 +474,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     if (dist > 50.0f)
         TryMount();
 
-    // 5.4 — populate TravelNode waypoints once when far (no rebuild — prevents bad node re-entry)
+    // Populate TravelNode waypoints once when far (no rebuild — prevents bad node re-entry)
     if (!dataPtr->waypointsBuilt && dist > 500.0f)
     {
         dataPtr->waypointsBuilt = true;
@@ -483,42 +483,83 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         std::vector<TravelNode*>& nodes = route.getNodes();
         if (!nodes.empty())
         {
-            // 7.2.1 diagnostic: dump badPositions to compare mapId vs TravelNode mapId
             for (const WorldPosition& bad : ai->badPositions)
                 NEWRPG_LOG("[New RPG] %s badPos (%.1f %.1f %.1f mapId=%u)",
                               bot->GetName(), bad.getX(), bad.getY(), bad.getZ(), bad.getMapId());
 
-            for (TravelNode* node : nodes)
+            for (size_t i = 0; i < nodes.size(); ++i)
             {
+                TravelNode* node = nodes[i];
                 WorldPosition nodePos = *node->getPosition();
                 NEWRPG_LOG("[New RPG] %s TravelNode candidate (%.1f %.1f %.1f mapId=%u)",
                               bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
-                // 7.2.2: normalize mapId to bot's current map — TravelNode positions may carry
-                // mapId from a different continent than where the stuck-teleport stored the bad pos
-                nodePos.setMapId(bot->GetMapId());
-                if (IsPosBad(nodePos))
+
+                // BOAT-3: detect transport link to next node (boat/zeppelin)
+                bool isTransportLeg = false;
+                TravelNode* nextNode = (i + 1 < nodes.size()) ? nodes[i + 1] : nullptr;
+                if (nextNode)
                 {
-                    NEWRPG_LOG("[New RPG] %s TravelNode candidate filtered (IsPosBad after mapId normalize to %u)",
-                                  bot->GetName(), bot->GetMapId());
-                    continue;
+                    auto* links = node->getLinks();
+                    auto linkIt = links->find(nextNode);
+                    if (linkIt != links->end() && linkIt->second->getPathType() == TravelNodePathType::transport)
+                        isTransportLeg = true;
                 }
-                if (!nodePos.isMmapLoaded(0))
-                    continue;
-                dataPtr->waypoints.push_back(nodePos);
+
+                if (!isTransportLeg)
+                {
+                    // Normal node: normalize mapId, apply Z guard + IsPosBad + isMmapLoaded
+                    nodePos.setMapId(bot->GetMapId());
+                    if (nodePos.getZ() < 0.0f || nodePos.getZ() > 450.0f)
+                    {
+                        NEWRPG_LOG("[New RPG] %s TravelNode candidate filtered (invalid Z %.1f)",
+                                      bot->GetName(), nodePos.getZ());
+                        continue;
+                    }
+                    if (IsPosBad(nodePos))
+                    {
+                        NEWRPG_LOG("[New RPG] %s TravelNode candidate filtered (IsPosBad after mapId normalize to %u)",
+                                      bot->GetName(), bot->GetMapId());
+                        continue;
+                    }
+                    if (!nodePos.isMmapLoaded(0))
+                        continue;
+                    dataPtr->waypoints.push_back({nodePos, false});
+                }
+                else
+                {
+                    // Transport leg: preserve real mapId, skip mmap check (dock at water/air level)
+                    if (IsPosBad(nodePos)) continue;
+                    dataPtr->waypoints.push_back({nodePos, false});
+                    NEWRPG_LOG("[New RPG] %s TravelNode transport source dock (%.1f %.1f %.1f map=%u)",
+                                  bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
+
+                    // Next node = destination dock — add as teleport waypoint, skip in outer loop
+                    if (nextNode)
+                    {
+                        WorldPosition destDock = *nextNode->getPosition();
+                        dataPtr->waypoints.push_back({destDock, true});
+                        NEWRPG_LOG("[New RPG] %s TravelNode transport dest dock (%.1f %.1f %.1f map=%u) [teleport]",
+                                      bot->GetName(), destDock.getX(), destDock.getY(), destDock.getZ(), destDock.getMapId());
+                        ++i;
+                    }
+                }
             }
-            dataPtr->waypoints.push_back(dest);
+            dataPtr->waypoints.push_back({dest, false});
             NEWRPG_LOG("[New RPG] %s CHANGE_ZONE built %zu waypoints via TravelNode",
                           bot->GetName(), dataPtr->waypoints.size());
         }
     }
 
-    // Follow waypoints if available — prune any that became bad since list was built
-    // Normalize mapId before IsPosBad: TravelNode waypoints may have been stored with a
-    // different mapId than what stuck-teleport wrote into badPositions (7.3.2 fix)
+    // Prune waypoints that became bad since list was built.
+    // Normalize mapId before IsPosBad — TravelNode waypoints may carry different mapId
+    // than what stuck-teleport wrote into badPositions (7.3.2 fix).
+    // Skip teleport waypoints — they have valid cross-map mapIds by design.
     while (!dataPtr->waypoints.empty())
     {
-        WorldPosition& front = dataPtr->waypoints.front();
-        WorldPosition check = front;
+        auto& front = dataPtr->waypoints.front();
+        if (front.teleport)
+            break;
+        WorldPosition check = front.pos;
         check.setMapId(bot->GetMapId());
         if (!IsPosBad(check))
             break;
@@ -536,7 +577,23 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 
     if (!dataPtr->waypoints.empty())
     {
-        WorldPosition& wp = dataPtr->waypoints.front();
+        auto& front = dataPtr->waypoints.front();
+        WorldPosition& wp = front.pos;
+
+        // BOAT-4: transport teleport handler — walk to source dock, then TeleportTo dest dock
+        if (front.teleport)
+        {
+            float distToDock = WorldPosition(bot).distance(wp);
+            if (distToDock > 20.0f)
+                return MoveFarTo(wp);
+
+            NEWRPG_LOG("[New RPG] %s transport teleport to (%.1f %.1f %.1f map=%u)",
+                          bot->GetName(), wp.getX(), wp.getY(), wp.getZ(), wp.getMapId());
+            dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+            ai->rpgInfo.SetMoveFarTo(WorldPosition());
+            return bot->TeleportTo(wp.getMapId(), wp.getX(), wp.getY(), wp.getZ(), bot->GetOrientation());
+        }
+
         if (WorldPosition(bot).distance(wp) < 30.0f)
         {
             dataPtr->waypoints.erase(dataPtr->waypoints.begin());
@@ -544,9 +601,16 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         }
         if (MoveFarTo(wp))
             return true;
-        // Waypoint unreachable — discard and try next
         dataPtr->waypoints.erase(dataPtr->waypoints.begin());
         return true;
+    }
+
+    // BUG-E: if dest itself is bad (short-dist path, no waypoints built), reset to IDLE
+    if (IsPosBad(dest))
+    {
+        NEWRPG_LOG("[New RPG] %s CHANGE_ZONE dest is bad — resetting to IDLE", bot->GetName());
+        ai->rpgInfo.Reset();
+        return false;
     }
 
     if (MoveFarTo(dest))
