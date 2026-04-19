@@ -533,7 +533,8 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     if (IsPosBad(nodePos)) continue;
 
                     // TRANSPORT-1/2: validate dest dock before committing — reject bad DB nodes
-                    // (underground Z=-32.5, sea-level Z=0.0 on main world map)
+                    // Only sea-level (Z~0 on main world) and above-world (Z>450) are bad.
+                    // Underground elevator docks (Z~-40) are legitimate and must pass through.
                     if (nextNode)
                     {
                         WorldPosition destDock = *nextNode->getPosition();
@@ -549,8 +550,8 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                         }
 
                         bool onMainWorld = (destDock.getMapId() == 0 || destDock.getMapId() == 1);
-                        bool badDest = destDock.getZ() < -5.0f || destDock.getZ() > 450.0f ||
-                                       (onMainWorld && destDock.getZ() < 2.0f);
+                        bool badDest = destDock.getZ() > 450.0f ||
+                                       (onMainWorld && destDock.getZ() > -5.0f && destDock.getZ() < 2.0f);
                         if (badDest)
                         {
                             NEWRPG_LOG("[New RPG] %s TravelNode transport dest dock invalid Z=%.1f (%.1f %.1f map=%u) — skipping leg",
@@ -560,12 +561,21 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                             continue;
                         }
 
+                        bool isElevator = (destDock.getZ() < -5.0f);
                         dataPtr->waypoints.push_back({nodePos, false});
-                        NEWRPG_LOG("[New RPG] %s TravelNode transport source dock (%.1f %.1f %.1f map=%u)",
-                                      bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
+                        if (isElevator)
+                            NEWRPG_LOG("[New RPG] %s elevator route: walking to lift at (%.1f %.1f %.1f map=%u)",
+                                          bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
+                        else
+                            NEWRPG_LOG("[New RPG] %s TravelNode transport source dock (%.1f %.1f %.1f map=%u)",
+                                          bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
                         dataPtr->waypoints.push_back({destDock, true});
-                        NEWRPG_LOG("[New RPG] %s TravelNode transport dest dock (%.1f %.1f %.1f map=%u) [teleport]",
-                                      bot->GetName(), destDock.getX(), destDock.getY(), destDock.getZ(), destDock.getMapId());
+                        if (isElevator)
+                            NEWRPG_LOG("[New RPG] %s elevator route: dest platform (%.1f %.1f %.1f map=%u) [teleport]",
+                                          bot->GetName(), destDock.getX(), destDock.getY(), destDock.getZ(), destDock.getMapId());
+                        else
+                            NEWRPG_LOG("[New RPG] %s TravelNode transport dest dock (%.1f %.1f %.1f map=%u) [teleport]",
+                                          bot->GetName(), destDock.getX(), destDock.getY(), destDock.getZ(), destDock.getMapId());
                         ++i;
                     }
                 }
@@ -613,9 +623,10 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             if (distToDock > 20.0f)
                 return MoveFarTo(wp);
 
-            // TRANSPORT-1/2: second-layer guard — reject any bad dest that slipped through build
+            // TRANSPORT-1/2: second-layer guard — reject bad sea-level docks (Z~0 on main world)
+            // Elevator docks (Z~-40) are legitimate and must pass through
             bool onMainWorld = (wp.getMapId() == 0 || wp.getMapId() == 1);
-            if (wp.getZ() < -5.0f || wp.getZ() > 450.0f || (onMainWorld && wp.getZ() < 2.0f))
+            if (wp.getZ() > 450.0f || (onMainWorld && wp.getZ() > -5.0f && wp.getZ() < 2.0f))
             {
                 NEWRPG_LOG("[New RPG] %s transport teleport dest invalid Z=%.1f (%.1f %.1f map=%u) — resetting",
                               bot->GetName(), wp.getZ(), wp.getX(), wp.getY(), wp.getMapId());
@@ -624,8 +635,13 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 return false;
             }
 
-            NEWRPG_LOG("[New RPG] %s transport teleport to (%.1f %.1f %.1f map=%u)",
-                          bot->GetName(), wp.getX(), wp.getY(), wp.getZ(), wp.getMapId());
+            bool isElevator = (wp.getZ() < -5.0f);
+            if (isElevator)
+                NEWRPG_LOG("[New RPG] %s elevator teleport to platform (%.1f %.1f %.1f map=%u)",
+                              bot->GetName(), wp.getX(), wp.getY(), wp.getZ(), wp.getMapId());
+            else
+                NEWRPG_LOG("[New RPG] %s transport teleport to (%.1f %.1f %.1f map=%u)",
+                              bot->GetName(), wp.getX(), wp.getY(), wp.getZ(), wp.getMapId());
             dataPtr->waypoints.erase(dataPtr->waypoints.begin());
             ai->rpgInfo.SetMoveFarTo(WorldPosition());
             return bot->TeleportTo(wp.getMapId(), wp.getX(), wp.getY(), wp.getZ(), bot->GetOrientation());
