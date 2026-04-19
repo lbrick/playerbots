@@ -27,3 +27,4 @@
 | 13:47 | Phase 5.2/5.3/5.4 impl: TryMount, flight suppress, TravelNode waypoints | NewRpgInfo.h, NewRpgBaseAction.h/.cpp, NewRpgAction.cpp | build OK zero errors | ~800 |
 | 15:48 | Phase 6 plan written from Run1-3 observations | PHASE_6_PLAN.md | created | ~600 |
 | 15:53 | Updated Phase 6 plan: replaced Z-height guard with PathFinder+IsMMapIsLoaded approach | PHASE_6_PLAN.md | updated | ~400 |
+| 08:41 | Phase 11 fixes: BUG-1 threshold 500→150, BUG-2 rejectedTransportDocks cache, OBS-5 debug log removed | NewRpgAction.cpp, NewRpgInfo.h | building | ~800 |

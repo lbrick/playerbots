@@ -60,6 +60,30 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-18"
+    },
+    {
+      "id": "bug-006",
+      "timestamp": "2026-04-20",
+      "error_message": "CHANGE_ZONE short-dist branch fires at up to 479 yards — bots en-route trigger it, waypoints never built, loop every 3s",
+      "file": "src/Ai/World/Rpg/Action/NewRpgAction.cpp",
+      "root_cause": "Waypoint build condition dist>500.0f too wide — bots within 150-500 yards skip waypoint building, fall into direct MoveFarTo loop with waypointsBuilt=0",
+      "fix": "Changed threshold 500.0f to 150.0f — bots at 150-500 yards now get TravelNode route built",
+      "tags": ["BUG-E", "CHANGE_ZONE", "short-dist", "waypoints", "threshold"],
+      "related_bugs": ["bug-007"],
+      "occurrences": 655,
+      "last_seen": "2026-04-20"
+    },
+    {
+      "id": "bug-007",
+      "timestamp": "2026-04-20",
+      "error_message": "Yamelia/Kaadze repeatedly re-select same bad transport dock node after BOAT-3 guard rejects it (9+ hits per bot per run)",
+      "file": "src/Ai/World/Rpg/Action/NewRpgAction.cpp, src/Ai/World/Rpg/NewRpgInfo.h",
+      "root_cause": "No per-bot memory of rejected transport legs — waypointsBuilt resets on prune, same bad destDock re-selected on every route rebuild",
+      "fix": "Added rejectedTransportDocks vector to ChangeZone struct; BOAT-3 guard pushes rejected destDock into cache; route builder skips any destDock within 1 yard of cached rejection",
+      "tags": ["BUG-2", "transport", "BOAT-3", "route-cache"],
+      "related_bugs": ["bug-006"],
+      "occurrences": 75,
+      "last_seen": "2026-04-20"
     }
   ]
 }

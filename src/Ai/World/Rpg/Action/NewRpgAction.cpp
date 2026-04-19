@@ -474,8 +474,10 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     if (dist > 50.0f)
         TryMount();
 
-    // Populate TravelNode waypoints once when far (no rebuild — prevents bad node re-entry)
-    if (!dataPtr->waypointsBuilt && dist > 500.0f)
+    // Populate TravelNode waypoints once when not near dest (no rebuild — prevents bad node re-entry)
+    // BUG-1: reduced from 500→150 yards — bots at 150-500 now get TravelNode route built instead
+    // of falling through to direct MoveFarTo, which caused looping at up to 479-yard distances
+    if (!dataPtr->waypointsBuilt && dist > 150.0f)
     {
         dataPtr->waypointsBuilt = true;
         std::vector<WorldPosition> startPath;
@@ -529,14 +531,38 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 {
                     // Transport leg: preserve real mapId, skip mmap check (dock at water/air level)
                     if (IsPosBad(nodePos)) continue;
-                    dataPtr->waypoints.push_back({nodePos, false});
-                    NEWRPG_LOG("[New RPG] %s TravelNode transport source dock (%.1f %.1f %.1f map=%u)",
-                                  bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
 
-                    // Next node = destination dock — add as teleport waypoint, skip in outer loop
+                    // TRANSPORT-1/2: validate dest dock before committing — reject bad DB nodes
+                    // (underground Z=-32.5, sea-level Z=0.0 on main world map)
                     if (nextNode)
                     {
                         WorldPosition destDock = *nextNode->getPosition();
+
+                        // BUG-2: skip previously rejected destDocks (persists across waypoint rebuilds)
+                        bool alreadyRejected = false;
+                        for (const auto& rej : dataPtr->rejectedTransportDocks)
+                            if (rej.distance(destDock) < 1.0f) { alreadyRejected = true; break; }
+                        if (alreadyRejected)
+                        {
+                            ++i;
+                            continue;
+                        }
+
+                        bool onMainWorld = (destDock.getMapId() == 0 || destDock.getMapId() == 1);
+                        bool badDest = destDock.getZ() < -5.0f || destDock.getZ() > 450.0f ||
+                                       (onMainWorld && destDock.getZ() < 2.0f);
+                        if (badDest)
+                        {
+                            NEWRPG_LOG("[New RPG] %s TravelNode transport dest dock invalid Z=%.1f (%.1f %.1f map=%u) — skipping leg",
+                                          bot->GetName(), destDock.getZ(), destDock.getX(), destDock.getY(), destDock.getMapId());
+                            dataPtr->rejectedTransportDocks.push_back(destDock);  // BUG-2: cache rejection
+                            ++i;  // consume nextNode
+                            continue;
+                        }
+
+                        dataPtr->waypoints.push_back({nodePos, false});
+                        NEWRPG_LOG("[New RPG] %s TravelNode transport source dock (%.1f %.1f %.1f map=%u)",
+                                      bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
                         dataPtr->waypoints.push_back({destDock, true});
                         NEWRPG_LOG("[New RPG] %s TravelNode transport dest dock (%.1f %.1f %.1f map=%u) [teleport]",
                                       bot->GetName(), destDock.getX(), destDock.getY(), destDock.getZ(), destDock.getMapId());
@@ -586,6 +612,17 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             float distToDock = WorldPosition(bot).distance(wp);
             if (distToDock > 20.0f)
                 return MoveFarTo(wp);
+
+            // TRANSPORT-1/2: second-layer guard — reject any bad dest that slipped through build
+            bool onMainWorld = (wp.getMapId() == 0 || wp.getMapId() == 1);
+            if (wp.getZ() < -5.0f || wp.getZ() > 450.0f || (onMainWorld && wp.getZ() < 2.0f))
+            {
+                NEWRPG_LOG("[New RPG] %s transport teleport dest invalid Z=%.1f (%.1f %.1f map=%u) — resetting",
+                              bot->GetName(), wp.getZ(), wp.getX(), wp.getY(), wp.getMapId());
+                dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+                ai->rpgInfo.Reset();
+                return false;
+            }
 
             NEWRPG_LOG("[New RPG] %s transport teleport to (%.1f %.1f %.1f map=%u)",
                           bot->GetName(), wp.getX(), wp.getY(), wp.getZ(), wp.getMapId());
