@@ -1,5 +1,7 @@
 #include "src/Bot/Engine/playerbot.h"
 #include "NewRpgAction.h"
+
+#define NEWRPG_LOG(...) do { if (!sPlayerbotAIConfig.logFilterPlayerBot) sLog.outDebug(__VA_ARGS__); } while(0)
 #include "src/Ai/World/Rpg/NewRpgInfo.h"
 #include "src/Util/BroadcastHelper.h"
 #include "src/Mgr/TravelNode.h"
@@ -91,7 +93,7 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         {
             if (info.HasStatusPersisted(30 * 60 * 1000))
             {
-                sLog.outDebug("[New RPG] %s CHANGE_ZONE timed out, returning to idle", bot->GetName());
+                NEWRPG_LOG("[New RPG] %s CHANGE_ZONE timed out, returning to idle", bot->GetName());
                 info.ChangeToIdle();
                 return true;
             }
@@ -264,7 +266,7 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
             // re-selected or re-accepted until the bot resets (e.g. logs out).
             ai->lowPriorityQuest.insert(questId);
             ai->rpgStatistic.questAbandoned++;
-            sLog.outDebug("[New RPG] %s no POI for quest %u, marked low priority", bot->GetName(), questId);
+            NEWRPG_LOG("[New RPG] %s no POI for quest %u, marked low priority", bot->GetName(), questId);
             ai->rpgInfo.ChangeToIdle();
             return true;
         }
@@ -307,7 +309,7 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         {
             ai->lowPriorityQuest.insert(questId);
             ai->rpgStatistic.questAbandoned++;
-            sLog.outDebug("[New RPG] %s marked as abandoned quest %u", bot->GetName(), questId);
+            NEWRPG_LOG("[New RPG] %s marked as abandoned quest %u", bot->GetName(), questId);
             ai->rpgInfo.ChangeToIdle();
             return true;
         }
@@ -361,7 +363,7 @@ bool NewRpgDoQuestAction::DoCompletedQuest(NewRpgInfo::DoQuest& data)
     {
         ai->lowPriorityQuest.insert(questId);
         ai->rpgStatistic.questAbandoned++;
-        sLog.outDebug("[New RPG] %s marked as abandoned quest (reward) %u", bot->GetName(), questId);
+        NEWRPG_LOG("[New RPG] %s marked as abandoned quest (reward) %u", bot->GetName(), questId);
         ai->rpgInfo.ChangeToIdle();
         return true;
     }
@@ -402,7 +404,7 @@ bool NewRpgTravelFlightAction::Execute(Event& /*event*/)
 
     if (!bot->ActivateTaxiPathTo(nodes, flightMaster, 0))
     {
-        sLog.outDebug("[New RPG] %s activate taxi path (from node %u to %u) failed",
+        NEWRPG_LOG("[New RPG] %s activate taxi path (from node %u to %u) failed",
                       bot->GetName(), nodes.empty() ? 0 : nodes[0],
                       nodes.empty() ? 0 : nodes[nodes.size() - 1]);
         ai->rpgInfo.ChangeToIdle();
@@ -420,7 +422,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 
     WorldPosition dest = dataPtr->dest;
     float dist = WorldPosition(bot).distance(dest);
-    sLog.outDebug("[New RPG] %s change zone action: dist=%.1f to Map:%u %.1f %.1f %.1f",
+    NEWRPG_LOG("[New RPG] %s change zone action: dist=%.1f to Map:%u %.1f %.1f %.1f",
                   bot->GetName(), dist, dest.getMapId(), dest.getX(), dest.getY(), dest.getZ());
 
     if (dist < 50.0f)
@@ -438,7 +440,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         for (uint32 qId : toRemove)
             ai->lowPriorityQuest.erase(qId);
 
-        sLog.outDebug("[New RPG] %s arrived zone %u, cleared %zu lowPriorityQuest entries",
+        NEWRPG_LOG("[New RPG] %s arrived zone %u, cleared %zu lowPriorityQuest entries",
                       bot->GetName(), newZone, toRemove.size());
 
         // Reset per-stay bad count for the new zone (7.1)
@@ -458,7 +460,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             if (!bot->m_taxi.IsTaximaskNodeKnown(i))
             {
                 bot->m_taxi.SetTaximaskNode(i);
-                sLog.outDebug("[New RPG] %s learned taxi node %u on arrival zone %u",
+                NEWRPG_LOG("[New RPG] %s learned taxi node %u on arrival zone %u",
                               bot->GetName(), i, newZone);
             }
         }
@@ -483,20 +485,20 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         {
             // 7.2.1 diagnostic: dump badPositions to compare mapId vs TravelNode mapId
             for (const WorldPosition& bad : ai->badPositions)
-                sLog.outDebug("[New RPG] %s badPos (%.1f %.1f %.1f mapId=%u)",
+                NEWRPG_LOG("[New RPG] %s badPos (%.1f %.1f %.1f mapId=%u)",
                               bot->GetName(), bad.getX(), bad.getY(), bad.getZ(), bad.getMapId());
 
             for (TravelNode* node : nodes)
             {
                 WorldPosition nodePos = *node->getPosition();
-                sLog.outDebug("[New RPG] %s TravelNode candidate (%.1f %.1f %.1f mapId=%u)",
+                NEWRPG_LOG("[New RPG] %s TravelNode candidate (%.1f %.1f %.1f mapId=%u)",
                               bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
                 // 7.2.2: normalize mapId to bot's current map — TravelNode positions may carry
                 // mapId from a different continent than where the stuck-teleport stored the bad pos
                 nodePos.setMapId(bot->GetMapId());
                 if (IsPosBad(nodePos))
                 {
-                    sLog.outDebug("[New RPG] %s TravelNode candidate filtered (IsPosBad after mapId normalize to %u)",
+                    NEWRPG_LOG("[New RPG] %s TravelNode candidate filtered (IsPosBad after mapId normalize to %u)",
                                   bot->GetName(), bot->GetMapId());
                     continue;
                 }
@@ -505,7 +507,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 dataPtr->waypoints.push_back(nodePos);
             }
             dataPtr->waypoints.push_back(dest);
-            sLog.outDebug("[New RPG] %s CHANGE_ZONE built %zu waypoints via TravelNode",
+            NEWRPG_LOG("[New RPG] %s CHANGE_ZONE built %zu waypoints via TravelNode",
                           bot->GetName(), dataPtr->waypoints.size());
         }
     }
@@ -521,6 +523,15 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         if (!IsPosBad(check))
             break;
         dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+    }
+
+    // 8.3 BUG-C guard: if waypoints were built but fully pruned, reset to rebuild next tick
+    if (dataPtr->waypoints.empty() && dataPtr->waypointsBuilt)
+    {
+        dataPtr->waypointsBuilt = false;
+        NEWRPG_LOG("[New RPG] %s CHANGE_ZONE waypoints empty after prune — resetting to rebuild",
+                      bot->GetName());
+        return false;
     }
 
     if (!dataPtr->waypoints.empty())

@@ -976,6 +976,9 @@ AiPlayerbot.UseKnockback = 1
 #AiPlayerbot.LogValuesPerTick = 0
 #AiPlayerbot.RandomChangeMultiplier = 1
 
+# Filter playerbot debug log output. 1 = suppress [New RPG] debug logs (default). 0 = show all (use for observation runs).
+AiPlayerbot.LogFilter_PlayerBot = 1
+
 # Command server port, 0 - disabled
 #AiPlayerbot.CommandServerPort = 8888
 

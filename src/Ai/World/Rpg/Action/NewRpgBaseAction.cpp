@@ -1,6 +1,8 @@
 #include "src/Bot/Engine/playerbot.h"
 #include "NewRpgBaseAction.h"
 
+#define NEWRPG_LOG(...) do { if (!sPlayerbotAIConfig.logFilterPlayerBot) sLog.outDebug(__VA_ARGS__); } while(0)
+
 #include "Server/DBCStructure.h"
 #include "Server/DBCStores.h"
 #include "Server/DBCEnums.h"
@@ -77,7 +79,7 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         AreaTableEntry const* areaEntry = GetAreaEntryByAreaID(bot->GetZoneId());
         std::string zoneName = areaEntry ? ai->GetLocalizedAreaName(areaEntry) : "unknown";
 
-        sLog.outDebug("[New RPG] Teleport %s from (%.1f,%.1f,%.1f,%u) to (%.1f,%.1f,%.1f,%u) stuck moving far - Zone: %s (%u)",
+        NEWRPG_LOG("[New RPG] Teleport %s from (%.1f,%.1f,%.1f,%u) to (%.1f,%.1f,%.1f,%u) stuck moving far - Zone: %s (%u)",
             bot->GetName(),
             bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot->GetMapId(),
             dest.getX(), dest.getY(), dest.getZ(), dest.getMapId(),
@@ -89,6 +91,28 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             ai->currentStayZoneId = botZone;
         if (botZone == ai->currentStayZoneId)
             ai->currentStayBadCount++;
+
+        // 8.1: evict the failed dest from CHANGE_ZONE waypoints — prevents stuck attractor loop
+        if (auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&ai->rpgInfo.data))
+        {
+            if (!cz->waypoints.empty())
+            {
+                WorldPosition check = cz->waypoints.front();
+                check.setMapId(bot->GetMapId());
+                if (check.distance(dest) < 5.0f)
+                {
+                    cz->waypoints.erase(cz->waypoints.begin());
+                    if (cz->waypoints.empty())
+                        cz->waypointsBuilt = false;
+                }
+            }
+            else if (cz->waypointsBuilt)
+            {
+                // No waypoints left but stuck on direct dest — force fresh route build
+                cz->waypointsBuilt = false;
+            }
+        }
+
         return bot->TeleportTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), bot->GetOrientation());
     }
 
@@ -176,7 +200,7 @@ bool NewRpgBaseAction::TryMount()
         return false;
     bool result = ai->DoSpecificAction("check mount state");
     if (result)
-        sLog.outDebug("[New RPG] %s TryMount fired for CHANGE_ZONE", bot->GetName());
+        NEWRPG_LOG("[New RPG] %s TryMount fired for CHANGE_ZONE", bot->GetName());
     return result;
 }
 
@@ -294,7 +318,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 if (!isGameObject)
                 {
                     ai->lowPriorityQuest.insert(item.m_qId);
-                    sLog.outDebug("[New RPG] %s accept quest %u failed (cannot interact), marked low priority",
+                    NEWRPG_LOG("[New RPG] %s accept quest %u failed (cannot interact), marked low priority",
                                   bot->GetName(), quest->GetQuestId());
                 }
                 else
@@ -304,12 +328,12 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                     {
                         ai->lowPriorityQuest.insert(item.m_qId);
                         ai->questGoFailCount.erase(item.m_qId);
-                        sLog.outDebug("[New RPG] %s accept quest %u failed (GO too far) %u times, marked low priority",
+                        NEWRPG_LOG("[New RPG] %s accept quest %u failed (GO too far) %u times, marked low priority",
                                       bot->GetName(), quest->GetQuestId(), failCount);
                     }
                     else
                     {
-                        sLog.outDebug("[New RPG] %s accept quest %u failed (GO too far), will retry on approach",
+                        NEWRPG_LOG("[New RPG] %s accept quest %u failed (GO too far), will retry on approach",
                                       bot->GetName(), quest->GetQuestId());
                     }
                 }
@@ -321,7 +345,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 BroadcastHelper::BroadcastQuestAccepted(ai, bot, quest);
                 ai->rpgStatistic.questAccepted++;
                 ai->questGoFailCount.erase(item.m_qId);
-                sLog.outDebug("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
+                NEWRPG_LOG("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
             }
         }
 
@@ -332,7 +356,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 ai->TellPlayerNoFacing(GetMaster(),"Quest rewarded " + ChatHelper::formatQuest(quest));
             BroadcastHelper::BroadcastQuestTurnedIn(ai, bot, quest);
             ai->rpgStatistic.questRewarded++;
-            sLog.outDebug("[New RPG] %s turned in quest %u", bot->GetName(), quest->GetQuestId());
+            NEWRPG_LOG("[New RPG] %s turned in quest %u", bot->GetName(), quest->GetQuestId());
         }
     }
     return true;
@@ -503,7 +527,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
         if (!IsQuestWorthDoing(quest) || !IsQuestCapableDoing(quest) ||
             bot->GetQuestStatus(questId) == QUEST_STATUS_FAILED)
         {
-            sLog.outDebug("[New RPG] %s drop quest %u", bot->GetName(), questId);
+            NEWRPG_LOG("[New RPG] %s drop quest %u", bot->GetName(), questId);
             ai->lowPriorityQuest.insert(questId);
             WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
             packet << (uint8)i;
@@ -532,7 +556,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
         int32 botZone = (int32)bot->GetZoneId();
         if (zoneSort > 0 && zoneSort != botZone)
         {
-            sLog.outDebug("[New RPG] %s drop quest %u (zone mismatch: quest zone %d, bot zone %d)",
+            NEWRPG_LOG("[New RPG] %s drop quest %u (zone mismatch: quest zone %d, bot zone %d)",
                           bot->GetName(), questId, zoneSort, botZone);
             ai->lowPriorityQuest.insert(questId);
             WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
@@ -553,7 +577,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
         if (!questId)
             continue;
         Quest const* quest = sObjectMgr.GetQuestTemplate(questId);
-        sLog.outDebug("[New RPG] %s drop quest %u (full clear)", bot->GetName(), questId);
+        NEWRPG_LOG("[New RPG] %s drop quest %u (full clear)", bot->GetName(), questId);
         ai->lowPriorityQuest.insert(questId);
         WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
         packet << (uint8)i;
@@ -855,13 +879,13 @@ WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
         if (pf.getPathType() & PATHFIND_NOPATH)
         {
             PushBadPosition(dest);
-            sLog.outDebug("[New RPG] %s grind pos (%.1f %.1f %.1f) off nav mesh, marked bad",
+            NEWRPG_LOG("[New RPG] %s grind pos (%.1f %.1f %.1f) off nav mesh, marked bad",
                           bot->GetName(), dest.getX(), dest.getY(), dest.getZ());
             return WorldPosition();
         }
     }
 
-    sLog.outDebug("[New RPG] Bot %s select random grind pos Map:%u X:%.1f Y:%.1f Z:%.1f (%zu+%zu available)",
+    NEWRPG_LOG("[New RPG] Bot %s select random grind pos Map:%u X:%.1f Y:%.1f Z:%.1f (%zu+%zu available)",
         bot->GetName(), dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(),
         hiLocs.size(), loLocs.size() > hiLocs.size() ? loLocs.size() - hiLocs.size() : 0);
     return dest;
@@ -912,13 +936,13 @@ WorldPosition NewRpgBaseAction::SelectRandomCampPos(Player* bot)
         if (pf.getPathType() & PATHFIND_NOPATH)
         {
             PushBadPosition(dest);
-            sLog.outDebug("[New RPG] %s camp pos (%.1f %.1f %.1f) off nav mesh, marked bad",
+            NEWRPG_LOG("[New RPG] %s camp pos (%.1f %.1f %.1f) off nav mesh, marked bad",
                           bot->GetName(), dest.getX(), dest.getY(), dest.getZ());
             return WorldPosition();
         }
     }
 
-    sLog.outDebug("[New RPG] Bot %s select random camp pos Map:%u X:%.1f Y:%.1f Z:%.1f (%zu available)",
+    NEWRPG_LOG("[New RPG] Bot %s select random camp pos Map:%u X:%.1f Y:%.1f Z:%.1f (%zu available)",
         bot->GetName(), dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), locs.size());
     return dest;
 }
@@ -973,7 +997,7 @@ bool NewRpgBaseAction::SelectRandomFlightTaxiNode(ObjectGuid& outFlightMaster, s
 
     outPath = { chosen->from, chosen->to };
 
-    sLog.outDebug("[New RPG] Bot %s select random flight taxi node from:%u (node %u) to:%u (%zu available)",
+    NEWRPG_LOG("[New RPG] Bot %s select random flight taxi node from:%u (node %u) to:%u (%zu available)",
         bot->GetName(), outFlightMaster.GetEntry(), chosen->from, chosen->to, availablePathIds.size());
     return true;
 }
@@ -1141,7 +1165,7 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
         {
             if (ai->currentStayBadCount >= 5)
             {
-                sLog.outDebug("[New RPG] %s zone %u has %u bad pos this stay, forcing escape",
+                NEWRPG_LOG("[New RPG] %s zone %u has %u bad pos this stay, forcing escape",
                               bot->GetName(), ai->currentStayZoneId, ai->currentStayBadCount);
                 return false;
             }
@@ -1152,7 +1176,7 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
         {
             if (ai->currentStayBadCount >= 5)
             {
-                sLog.outDebug("[New RPG] %s zone %u has %u bad pos this stay, forcing escape",
+                NEWRPG_LOG("[New RPG] %s zone %u has %u bad pos this stay, forcing escape",
                               bot->GetName(), ai->currentStayZoneId, ai->currentStayBadCount);
                 return false;
             }
@@ -1301,18 +1325,24 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
         }
     }
 
-    // Penalize zones where bot has accumulated 3+ bad positions this session
+    // Pre-build zone bad count map — O(N) total, not O(zones × N) (8.5 perf fix)
+    std::unordered_map<uint32, uint32> zoneBadCounts;
+    for (const WorldPosition& bad : ai->badPositions)
+    {
+        if (bad.getMapId() != mapId) continue;
+        uint32 z = sTerrainMgr.GetZoneId(mapId, bad.getX(), bad.getY(), bad.getZ());
+        if (z) zoneBadCounts[z]++;
+    }
+
+    // Apply penalty — proportional per bad pos + hard floor for heavily trapped zones (8.2 BUG-B fix)
     for (auto& [zone, score] : zoneScores)
     {
-        uint32 zoneBadCount = 0;
-        for (const WorldPosition& bad : ai->badPositions)
-        {
-            if (bad.getMapId() == mapId &&
-                sTerrainMgr.GetZoneId(mapId, bad.getX(), bad.getY(), bad.getZ()) == zone)
-                zoneBadCount++;
-        }
-        if (zoneBadCount >= 3)
-            score *= 0.1f;
+        auto it = zoneBadCounts.find(zone);
+        if (it == zoneBadCounts.end()) continue;
+        uint32 badCount = it->second;
+        score -= static_cast<float>(badCount) * 10.0f;
+        if (badCount >= 5)
+            score = std::min(score, -50.0f);
     }
 
     return zoneScores;
@@ -1338,7 +1368,7 @@ WorldPosition NewRpgBaseAction::SelectBestZoneForBot(Player* bot)
         }
         else
         {
-            sLog.outDebug("[New RPG] %s zone score cache hit: zone %u score %.1f",
+            NEWRPG_LOG("[New RPG] %s zone score cache hit: zone %u score %.1f",
                           bot->GetName(), cache.bestZoneId, cache.bestZoneScore);
             return cache.bestZonePos;
         }
@@ -1400,7 +1430,7 @@ WorldPosition NewRpgBaseAction::SelectBestZoneForBot(Player* bot)
 
     WorldPosition dest = candidates[urand(0, (uint32)candidates.size() - 1)];
 
-    sLog.outDebug("[New RPG] %s zone routing: zone %u (score %.1f) > zone %u (score %.1f), target Map:%u %.1f %.1f %.1f",
+    NEWRPG_LOG("[New RPG] %s zone routing: zone %u (score %.1f) > zone %u (score %.1f), target Map:%u %.1f %.1f %.1f",
                   bot->GetName(), bestZone, bestScore, currentZone, currentScore,
                   dest.getMapId(), dest.getX(), dest.getY(), dest.getZ());
 
