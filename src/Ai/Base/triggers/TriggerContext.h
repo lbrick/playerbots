@@ -17,6 +17,7 @@
 #include "src/Ai/Raid/OnyxiasLair/Trigger/RaidOnyTriggers.h"
 #include "src/Ai/Dungeon/RagefireChasm/Trigger/RfcTriggers.h"
 #include "src/Ai/Dungeon/WailingCaverns/Trigger/WcTriggers.h"
+#include "src/Ai/Dungeon/Deadmines/Trigger/DmTriggers.h"
 #include "src/Ai/Raid/MoltenCore/Trigger/RaidMcTriggers.h"
 #include "src/Ai/Raid/BlackwingLair/Trigger/RaidBwlTriggers.h"
 #include "src/Ai/Raid/Karazhan/Trigger/RaidKaraTriggers.h"
@@ -323,6 +324,26 @@ namespace ai
             creators["start mutanus fight"]     = [](PlayerbotAI* ai) { return new MutanusStartFightTrigger(ai); };
             creators["end mutanus fight"]       = [](PlayerbotAI* ai) { return new MutanusEndFightTrigger(ai); };
             creators["mutanus aoe"]             = [](PlayerbotAI* ai) { return new MutanusAoeTrigger(ai); };
+            creators["enter deadmines"]                  = [](PlayerbotAI* ai) { return new DeadminesEnterDungeonTrigger(ai); };
+            creators["leave deadmines"]                  = [](PlayerbotAI* ai) { return new DeadminesLeaveDungeonTrigger(ai); };
+            creators["start rhahkzor fight"]             = [](PlayerbotAI* ai) { return new RhahkzorStartFightTrigger(ai); };
+            creators["end rhahkzor fight"]               = [](PlayerbotAI* ai) { return new RhahkzorEndFightTrigger(ai); };
+            creators["rhahkzor slam"]                    = [](PlayerbotAI* ai) { return new RhahkzorSlamTrigger(ai); };
+            creators["start sneed shredder fight"]       = [](PlayerbotAI* ai) { return new SneedShredderStartFightTrigger(ai); };
+            creators["end sneed shredder fight"]         = [](PlayerbotAI* ai) { return new SneedShredderEndFightTrigger(ai); };
+            creators["sneed shredder saw blade"]         = [](PlayerbotAI* ai) { return new SneedShredderSawBladeTrigger(ai); };
+            creators["start sneed fight"]                = [](PlayerbotAI* ai) { return new SneedStartFightTrigger(ai); };
+            creators["end sneed fight"]                  = [](PlayerbotAI* ai) { return new SneedEndFightTrigger(ai); };
+            creators["start gilnid fight"]               = [](PlayerbotAI* ai) { return new GilnidStartFightTrigger(ai); };
+            creators["end gilnid fight"]                 = [](PlayerbotAI* ai) { return new GilnidEndFightTrigger(ai); };
+            creators["gilnid molten metal"]              = [](PlayerbotAI* ai) { return new GilnidMoltenMetalTrigger(ai); };
+            creators["start smite fight"]                = [](PlayerbotAI* ai) { return new SmiteStartFightTrigger(ai); };
+            creators["end smite fight"]                  = [](PlayerbotAI* ai) { return new SmiteEndFightTrigger(ai); };
+            creators["smite hammer phase"]               = [](PlayerbotAI* ai) { return new SmiteHammerPhaseTrigger(ai); };
+            creators["start cookie fight"]               = [](PlayerbotAI* ai) { return new CookieStartFightTrigger(ai); };
+            creators["end cookie fight"]                 = [](PlayerbotAI* ai) { return new CookieEndFightTrigger(ai); };
+            creators["start vancleef fight"]             = [](PlayerbotAI* ai) { return new VanCleefStartFightTrigger(ai); };
+            creators["end vancleef fight"]               = [](PlayerbotAI* ai) { return new VanCleefEndFightTrigger(ai); };
             creators["start oggleflint fight"]  = [](PlayerbotAI* ai) { return new OggleflintStartFightTrigger(ai); };
             creators["end oggleflint fight"]    = [](PlayerbotAI* ai) { return new OggleflintEndFightTrigger(ai); };
             creators["start taragaman fight"]   = [](PlayerbotAI* ai) { return new TaragamanStartFightTrigger(ai); };

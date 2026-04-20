@@ -583,3 +583,19 @@
 
 - `NewRpgTriggers.h` — NewRpgStatusTrigger: single trigger class parameterised by NewRpgStatus enum value (~96 tok)
 - `NewRpgTriggers.cpp` — IsActive() checks ai->rpgInfo.GetStatus() == status (~55 tok)
+
+## src/Ai/Dungeon/Deadmines/
+
+- `DM_PLAN.md` — Deadmines implementation plan: bosses, NPC IDs (pending verify), triggers, actions, strategies, DoD checklist (~1800 tok)
+
+## src/Ai/Dungeon/Deadmines/Action/
+
+(empty — DmActions.h to be created)
+
+## src/Ai/Dungeon/Deadmines/Trigger/
+
+(empty — DmTriggers.h to be created)
+
+## src/Ai/Dungeon/Deadmines/Strategy/
+
+(empty — DmStrategy.h + DmStrategy.cpp to be created)

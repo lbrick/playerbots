@@ -76,6 +76,7 @@
 #include "src/Ai/Raid/OnyxiasLair/Action/RaidOnyActions.h"
 #include "src/Ai/Dungeon/RagefireChasm/Action/RfcActions.h"
 #include "src/Ai/Dungeon/WailingCaverns/Action/WcActions.h"
+#include "src/Ai/Dungeon/Deadmines/Action/DmActions.h"
 #include "src/Ai/Raid/MoltenCore/Action/RaidMcActions.h"
 #include "src/Ai/Raid/BlackwingLair/Action/RaidBwlActions.h"
 #include "src/Ai/Raid/Karazhan/Action/RaidKaraActions.h"
@@ -372,6 +373,26 @@ namespace ai
             creators["enable mutanus fight strategy"]    = [](PlayerbotAI* ai) { return new MutanusEnableFightStrategyAction(ai); };
             creators["disable mutanus fight strategy"]   = [](PlayerbotAI* ai) { return new MutanusDisableFightStrategyAction(ai); };
             creators["mutanus move away from aoe"]       = [](PlayerbotAI* ai) { return new MutanusMoveAwayFromAoeAction(ai); };
+            creators["enable deadmines strategy"]                    = [](PlayerbotAI* ai) { return new DeadminesEnableStrategyAction(ai); };
+            creators["disable deadmines strategy"]                   = [](PlayerbotAI* ai) { return new DeadminesDisableStrategyAction(ai); };
+            creators["enable rhahkzor fight strategy"]               = [](PlayerbotAI* ai) { return new RhahkzorEnableFightStrategyAction(ai); };
+            creators["disable rhahkzor fight strategy"]              = [](PlayerbotAI* ai) { return new RhahkzorDisableFightStrategyAction(ai); };
+            creators["rhahkzor move away from slam"]                 = [](PlayerbotAI* ai) { return new RhahkzorMoveAwayFromSlamAction(ai); };
+            creators["enable sneed shredder fight strategy"]         = [](PlayerbotAI* ai) { return new SneedShredderEnableFightStrategyAction(ai); };
+            creators["disable sneed shredder fight strategy"]        = [](PlayerbotAI* ai) { return new SneedShredderDisableFightStrategyAction(ai); };
+            creators["sneed shredder move away from saw blade"]      = [](PlayerbotAI* ai) { return new SneedShredderMoveAwayFromSawBladeAction(ai); };
+            creators["enable sneed fight strategy"]                  = [](PlayerbotAI* ai) { return new SneedEnableFightStrategyAction(ai); };
+            creators["disable sneed fight strategy"]                 = [](PlayerbotAI* ai) { return new SneedDisableFightStrategyAction(ai); };
+            creators["enable gilnid fight strategy"]                 = [](PlayerbotAI* ai) { return new GilnidEnableFightStrategyAction(ai); };
+            creators["disable gilnid fight strategy"]                = [](PlayerbotAI* ai) { return new GilnidDisableFightStrategyAction(ai); };
+            creators["gilnid move away from molten metal"]           = [](PlayerbotAI* ai) { return new GilnidMoveAwayFromMoltenMetalAction(ai); };
+            creators["enable smite fight strategy"]                  = [](PlayerbotAI* ai) { return new SmiteEnableFightStrategyAction(ai); };
+            creators["disable smite fight strategy"]                 = [](PlayerbotAI* ai) { return new SmiteDisableFightStrategyAction(ai); };
+            creators["smite move away from hammer"]                  = [](PlayerbotAI* ai) { return new SmiteMoveAwayFromHammerAction(ai); };
+            creators["enable cookie fight strategy"]                 = [](PlayerbotAI* ai) { return new CookieEnableFightStrategyAction(ai); };
+            creators["disable cookie fight strategy"]                = [](PlayerbotAI* ai) { return new CookieDisableFightStrategyAction(ai); };
+            creators["enable vancleef fight strategy"]               = [](PlayerbotAI* ai) { return new VanCleefEnableFightStrategyAction(ai); };
+            creators["disable vancleef fight strategy"]              = [](PlayerbotAI* ai) { return new VanCleefDisableFightStrategyAction(ai); };
             creators["enable ragefire chasm strategy"]  = [](PlayerbotAI* ai) { return new RagefireChasmEnableStrategyAction(ai); };
             creators["disable ragefire chasm strategy"] = [](PlayerbotAI* ai) { return new RagefireChasmDisableStrategyAction(ai); };
             creators["enable oggleflint fight strategy"]  = [](PlayerbotAI* ai) { return new OggleflintEnableFightStrategyAction(ai); };
