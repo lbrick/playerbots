@@ -7,6 +7,7 @@
 ## User Preferences
 
 - **Raid layout:** Prefers AC-style subdirectory split per raid — Action/, Strategy/, Trigger/ subdirs with Raid{Short}{Type} file naming (e.g. RaidBwlActions.h, RaidMcStrategy.cpp). Trigger IsActive() implementations go in .cpp, not inline in headers. Strategy .cpp keeps inline multiplier classes if they're only used locally. CMakeLists uses GLOB_RECURSE for restructured raids.
+- **Plan before code:** Always write the plan document FIRST before making any code changes. For dungeons this means writing `<DUNGEON>_PLAN.md` (boss table, file list, registration checklist, DoD) before creating any source files.
 
 ## Key Learnings
 

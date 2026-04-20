@@ -101,6 +101,14 @@ file(GLOB_RECURSE Ai_MoltenCore    ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Molte
 file(GLOB_RECURSE Ai_Naxxramas     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Naxxramas/*.cpp     ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/Naxxramas/*.h)
 file(GLOB_RECURSE Ai_OnyxiasLair   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/OnyxiasLair/*.cpp   ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Raid/OnyxiasLair/*.h)
 
+# ── Ai Dungeon ───────────────────────────────────────────────────────────────
+
+file(GLOB_RECURSE Ai_Dungeon_RFC ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Dungeon/RagefireChasm/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Dungeon/RagefireChasm/*.h)
+file(GLOB_RECURSE Ai_Dungeon_WC  ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Dungeon/WailingCaverns/*.cpp  ${CMAKE_CURRENT_SOURCE_DIR}/src/Ai/Dungeon/WailingCaverns/*.h)
+
+source_group("Ai\\Dungeon\\RagefireChasm" FILES ${Ai_Dungeon_RFC})
+source_group("Ai\\Dungeon\\WailingCaverns" FILES ${Ai_Dungeon_WC})
+
 source_group("Ai\\Raid\\BlackwingLair" FILES ${Ai_BlackwingLair})
 source_group("Ai\\Raid\\Karazhan"      FILES ${Ai_Karazhan})
 source_group("Ai\\Raid\\MoltenCore"    FILES ${Ai_MoltenCore})
@@ -141,6 +149,9 @@ set(LIBRARY_SRCS
     ${Ai_Shaman}
     ${Ai_Warlock}
     ${Ai_Warrior}
+    # Ai Dungeon
+    ${Ai_Dungeon_RFC}
+    ${Ai_Dungeon_WC}
     # Ai Raid
     ${Ai_BlackwingLair}
     ${Ai_Karazhan}

@@ -8,6 +8,14 @@ void DungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 {
     // Add this combat triggers in case the bot gets summoned into the dungeon and goes straight into combat
     triggers.push_back(new TriggerNode(
+        "enter ragefire chasm",
+        NextAction::array(0, new NextAction("enable ragefire chasm strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter wailing caverns",
+        NextAction::array(0, new NextAction("enable wailing caverns strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
         "enter onyxia's lair",
         NextAction::array(0, new NextAction("enable onyxia's lair strategy", 100.0f), NULL)));
 
@@ -26,6 +34,22 @@ void DungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 
 void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {
+    triggers.push_back(new TriggerNode(
+        "enter ragefire chasm",
+        NextAction::array(0, new NextAction("enable ragefire chasm strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave ragefire chasm",
+        NextAction::array(0, new NextAction("disable ragefire chasm strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter wailing caverns",
+        NextAction::array(0, new NextAction("enable wailing caverns strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave wailing caverns",
+        NextAction::array(0, new NextAction("disable wailing caverns strategy", 100.0f), NULL)));
+
     triggers.push_back(new TriggerNode(
         "enter onyxia's lair",
         NextAction::array(0, new NextAction("enable onyxia's lair strategy", 100.0f), NULL)));

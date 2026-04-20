@@ -156,6 +156,20 @@ namespace ai
         uint32 itemID;
     };
 
+    // Fires when current target is casting a specific spell (by ID).
+    // Use as base class for dungeon-specific interrupt priority triggers.
+    class TargetCastingSpellTrigger : public Trigger
+    {
+    public:
+        TargetCastingSpellTrigger(PlayerbotAI* ai, std::string name, uint32 spellId)
+            : Trigger(ai, name, 1), spellId(spellId) {}
+
+        bool IsActive() override;
+
+    private:
+        uint32 spellId;
+    };
+
     class ItemBuffReadyTrigger : public ItemReadyTrigger
     {
     public:

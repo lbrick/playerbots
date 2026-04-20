@@ -277,3 +277,22 @@ bool MoveAwayFromCreature::IsHazardNearby(const WorldPosition& point, const std:
 
     return false;
 }
+bool InterruptEnemyCastAction::Execute(Event& event)
+{
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target)
+        return false;
+
+    // Priority order: melee interrupts first (instant/low-cd), then ranged
+    static const std::vector<std::string> interruptSpells = {
+        "kick", "pummel", "shield bash", "counterspell",
+        "wind shear", "spell lock", "hammer of justice", "earth shock"
+    };
+
+    for (const auto& spell : interruptSpells)
+    {
+        if (ai->CanCastSpell(spell, target, 0))
+            return ai->CastSpell(spell, target);
+    }
+    return false;
+}

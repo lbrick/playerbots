@@ -15,6 +15,8 @@
 #include "BotStateTriggers.h"
 #include "PullTriggers.h"
 #include "src/Ai/Raid/OnyxiasLair/Trigger/RaidOnyTriggers.h"
+#include "src/Ai/Dungeon/RagefireChasm/Trigger/RfcTriggers.h"
+#include "src/Ai/Dungeon/WailingCaverns/Trigger/WcTriggers.h"
 #include "src/Ai/Raid/MoltenCore/Trigger/RaidMcTriggers.h"
 #include "src/Ai/Raid/BlackwingLair/Trigger/RaidBwlTriggers.h"
 #include "src/Ai/Raid/Karazhan/Trigger/RaidKaraTriggers.h"
@@ -288,6 +290,10 @@ namespace ai
             creators["perception"] = [](PlayerbotAI* ai) { return new PerceptionTrigger(ai); };
 
             // Dungeon Triggers
+            creators["enter ragefire chasm"] = [](PlayerbotAI* ai) { return new RagefireChasmEnterDungeonTrigger(ai); };
+            creators["leave ragefire chasm"] = [](PlayerbotAI* ai) { return new RagefireChasmLeaveDungeonTrigger(ai); };
+            creators["enter wailing caverns"] = [](PlayerbotAI* ai) { return new WailingCavernsEnterDungeonTrigger(ai); };
+            creators["leave wailing caverns"] = [](PlayerbotAI* ai) { return new WailingCavernsLeaveDungeonTrigger(ai); };
             creators["enter onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairEnterDungeonTrigger(ai); };
             creators["leave onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairLeaveDungeonTrigger(ai); };
             creators["enter molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreEnterDungeonTrigger(ai); };
@@ -300,6 +306,32 @@ namespace ai
             creators["leave blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairLeaveDungeonTrigger(ai); };
 
             // Dungeon Boss Triggers
+            creators["target casting druid slumber"] = [](PlayerbotAI* ai) { return new DruidSlumberCastingTrigger(ai); };
+            creators["start kresh fight"]       = [](PlayerbotAI* ai) { return new KreshStartFightTrigger(ai); };
+            creators["end kresh fight"]         = [](PlayerbotAI* ai) { return new KreshEndFightTrigger(ai); };
+            creators["start anacondra fight"]   = [](PlayerbotAI* ai) { return new AnacondraStartFightTrigger(ai); };
+            creators["end anacondra fight"]     = [](PlayerbotAI* ai) { return new AnacondraEndFightTrigger(ai); };
+            creators["start cobrahn fight"]     = [](PlayerbotAI* ai) { return new CobrahnStartFightTrigger(ai); };
+            creators["end cobrahn fight"]       = [](PlayerbotAI* ai) { return new CobrahnEndFightTrigger(ai); };
+            creators["start pythas fight"]      = [](PlayerbotAI* ai) { return new PythasStartFightTrigger(ai); };
+            creators["end pythas fight"]        = [](PlayerbotAI* ai) { return new PythasEndFightTrigger(ai); };
+            creators["start serpentis fight"]   = [](PlayerbotAI* ai) { return new SerpentisStartFightTrigger(ai); };
+            creators["end serpentis fight"]     = [](PlayerbotAI* ai) { return new SerpentisEndFightTrigger(ai); };
+            creators["start verdan fight"]      = [](PlayerbotAI* ai) { return new VerdanStartFightTrigger(ai); };
+            creators["end verdan fight"]        = [](PlayerbotAI* ai) { return new VerdanEndFightTrigger(ai); };
+            creators["verdan grasping vines"]   = [](PlayerbotAI* ai) { return new VerdanGraspingVinesTrigger(ai); };
+            creators["start mutanus fight"]     = [](PlayerbotAI* ai) { return new MutanusStartFightTrigger(ai); };
+            creators["end mutanus fight"]       = [](PlayerbotAI* ai) { return new MutanusEndFightTrigger(ai); };
+            creators["mutanus aoe"]             = [](PlayerbotAI* ai) { return new MutanusAoeTrigger(ai); };
+            creators["start oggleflint fight"]  = [](PlayerbotAI* ai) { return new OggleflintStartFightTrigger(ai); };
+            creators["end oggleflint fight"]    = [](PlayerbotAI* ai) { return new OggleflintEndFightTrigger(ai); };
+            creators["start taragaman fight"]   = [](PlayerbotAI* ai) { return new TaragamanStartFightTrigger(ai); };
+            creators["end taragaman fight"]     = [](PlayerbotAI* ai) { return new TaragamanEndFightTrigger(ai); };
+            creators["taragaman firenova"]      = [](PlayerbotAI* ai) { return new TaragamanFirenovaTrigger(ai); };
+            creators["start jergosh fight"]     = [](PlayerbotAI* ai) { return new JergoshStartFightTrigger(ai); };
+            creators["end jergosh fight"]       = [](PlayerbotAI* ai) { return new JergoshEndFightTrigger(ai); };
+            creators["start bazzalan fight"]    = [](PlayerbotAI* ai) { return new BazzalanStartFightTrigger(ai); };
+            creators["end bazzalan fight"]      = [](PlayerbotAI* ai) { return new BazzalanEndFightTrigger(ai); };
             creators["start onyxia fight"] = [](PlayerbotAI* ai) { return new OnyxiaStartFightTrigger(ai); };
             creators["end onyxia fight"] = [](PlayerbotAI* ai) { return new OnyxiaEndFightTrigger(ai); };
 

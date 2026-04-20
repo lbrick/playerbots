@@ -29,3 +29,7 @@
 | 15:53 | Updated Phase 6 plan: replaced Z-height guard with PathFinder+IsMMapIsLoaded approach | PHASE_6_PLAN.md | updated | ~400 |
 | 08:41 | Phase 11 fixes: BUG-1 threshold 500→150, BUG-2 rejectedTransportDocks cache, OBS-5 debug log removed | NewRpgAction.cpp, NewRpgInfo.h | building | ~800 |
 | 10:01 | BOAT-4 guard fix: removed z<-5 condition, added elevator teleport log | NewRpgAction.cpp:628 | build OK | ~200 |
+| 13:11 | Phase 11 Run 1 complete — manual stop T+184, wrote final findings | PHASE_11_OBSERVATION_RUN1.md | done | ~500 |
+| 13:24 | RFC dungeon impl: 4 files created, CMakeLists updated, all 4 registration files updated, build clean | src/Ai/Dungeon/RagefireChasm/* CMakeLists.txt TriggerContext.h ActionContext.h StrategyContext.h DungeonStrategy.cpp | success | ~3500 |
+| 13:36 | WC dungeon impl: WC_PLAN.md written first, NPC IDs DB-verified, 4 code files + 5 registrations, build clean | src/Ai/Dungeon/WailingCaverns/* CMakeLists.txt TriggerContext.h ActionContext.h StrategyContext.h DungeonStrategy.cpp | success | ~3000 |
+| 13:51 | WC interrupt mechanic: TargetCastingSpellTrigger + InterruptEnemyCastAction added to base; DruidSlumber wired at instance level | DungeonTriggers.h/cpp DungeonActions.h/cpp WcTriggers.h WcStrategy.cpp TriggerContext.h ActionContext.h | build clean | ~1500 |

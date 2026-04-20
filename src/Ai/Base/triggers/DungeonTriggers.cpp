@@ -294,3 +294,16 @@ bool ItemBuffReadyTrigger::IsActive()
 
     return false;
 }
+
+bool TargetCastingSpellTrigger::IsActive()
+{
+    Unit* target = GetTarget();
+    if (!target || !target->IsNonMeleeSpellCasted(false))
+        return false;
+
+    Spell* spell = target->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+    if (!spell)
+        spell = target->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
+
+    return spell && spell->m_spellInfo && spell->m_spellInfo->Id == spellId;
+}

@@ -50,6 +50,8 @@
 
 #include "generic/DungeonStrategy.h"
 #include "src/Ai/Raid/OnyxiasLair/Strategy/RaidOnyStrategy.h"
+#include "src/Ai/Dungeon/RagefireChasm/Strategy/RfcStrategy.h"
+#include "src/Ai/Dungeon/WailingCaverns/Strategy/WcStrategy.h"
 #include "src/Ai/Raid/MoltenCore/Strategy/RaidMcStrategy.h"
 #include "src/Ai/Raid/BlackwingLair/Strategy/RaidBwlStrategy.h"
 #include "src/Ai/Raid/Karazhan/Strategy/RaidKaraStrategy.h"
@@ -162,6 +164,8 @@ namespace ai
 
             // Dungeon Strategies
             creators["dungeon"] = [](PlayerbotAI* ai) { return new DungeonStrategy(ai); };
+            creators["wailing caverns"] = [](PlayerbotAI* ai) { return new WailingCavernsDungeonStrategy(ai); };
+            creators["ragefire chasm"] = [](PlayerbotAI* ai) { return new RagefireChasmDungeonStrategy(ai); };
             creators["onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairDungeonStrategy(ai); };
             creators["molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreDungeonStrategy(ai); };
             creators["blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairDungeonStrategy(ai); };
@@ -170,6 +174,17 @@ namespace ai
             creators["new rpg"] = [](PlayerbotAI* ai) { return new NewRpgStrategy(ai); };
 
             // Dungeon Boss Strategies
+            creators["kresh"]      = [](PlayerbotAI* ai) { return new KreshFightStrategy(ai); };
+            creators["anacondra"]  = [](PlayerbotAI* ai) { return new AnacondraFightStrategy(ai); };
+            creators["cobrahn"]    = [](PlayerbotAI* ai) { return new CobrahnFightStrategy(ai); };
+            creators["pythas"]     = [](PlayerbotAI* ai) { return new PythasFightStrategy(ai); };
+            creators["serpentis"]  = [](PlayerbotAI* ai) { return new SerpenatisFightStrategy(ai); };
+            creators["verdan"]     = [](PlayerbotAI* ai) { return new VerdanFightStrategy(ai); };
+            creators["mutanus"]    = [](PlayerbotAI* ai) { return new MutanusFightStrategy(ai); };
+            creators["oggleflint"] = [](PlayerbotAI* ai) { return new OggleflintFightStrategy(ai); };
+            creators["taragaman"] = [](PlayerbotAI* ai) { return new TaragamanFightStrategy(ai); };
+            creators["jergosh"] = [](PlayerbotAI* ai) { return new JergoshFightStrategy(ai); };
+            creators["bazzalan"] = [](PlayerbotAI* ai) { return new BazzalanFightStrategy(ai); };
             creators["onyxia"] = [](PlayerbotAI* ai) { return new OnyxiaFightStrategy(ai); };
             creators["magmadar"] = [](PlayerbotAI* ai) { return new MagmadarFightStrategy(ai); };
             creators["suppression room"] = [](PlayerbotAI* ai) { return new SuppressionRoomStrategy(ai); };

@@ -53,4 +53,13 @@ namespace ai
         uint32 creatureID;
         float range;
     };
+
+    // Class-agnostic interrupt action for dungeon strategies.
+    // Tries each known interrupt ability in priority order; casts first available.
+    class InterruptEnemyCastAction : public Action
+    {
+    public:
+        InterruptEnemyCastAction(PlayerbotAI* ai) : Action(ai, "interrupt enemy cast") {}
+        bool Execute(Event& event) override;
+    };
 }
