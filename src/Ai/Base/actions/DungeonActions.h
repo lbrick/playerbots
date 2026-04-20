@@ -1,5 +1,6 @@
 #pragma once
 #include "MovementActions.h"
+#include "ChangeStrategyAction.h"
 #include "src/Ai/Base/values/HazardsValue.h"
 
 namespace ai
@@ -52,6 +53,20 @@ namespace ai
     private:
         uint32 creatureID;
         float range;
+    };
+
+    // Logged wrapper around ChangeAllStrategyAction — logs strategy change to Server.log.
+    // All dungeon enable/disable strategy actions should extend this instead of ChangeAllStrategyAction.
+    class LoggedChangeAllStrategyAction : public ChangeAllStrategyAction
+    {
+    public:
+        LoggedChangeAllStrategyAction(PlayerbotAI* ai, std::string name, std::string strategy)
+            : ChangeAllStrategyAction(ai, name, strategy) {}
+        bool Execute(Event& event) override
+        {
+            sLog.outDetail("Bot %s: dungeon strategy action [%s]", ai->GetBot()->GetName(), getName().c_str());
+            return ChangeAllStrategyAction::Execute(event);
+        }
     };
 
     // Class-agnostic interrupt action for dungeon strategies.

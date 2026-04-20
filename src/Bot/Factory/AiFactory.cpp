@@ -675,6 +675,8 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
             combatEngine->addStrategies("behind", "stealth", "poisons", "buff", NULL);
         }
     }
+
+    combatEngine->addStrategy("dungeon");
 }
 
 Engine* AiFactory::createCombatEngine(Player* player, PlayerbotAI* const facade, AiObjectContext* AiObjectContext)
@@ -1112,6 +1114,8 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
 #endif
         }
     }
+
+    nonCombatEngine->addStrategy("dungeon");
 }
 
 Engine* AiFactory::createNonCombatEngine(Player* player, PlayerbotAI* const facade, AiObjectContext* AiObjectContext) 

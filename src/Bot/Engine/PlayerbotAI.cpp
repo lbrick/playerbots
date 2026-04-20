@@ -2402,6 +2402,10 @@ void PlayerbotAI::ResetStrategies(bool autoLoad)
     AiFactory::AddDefaultReactionStrategies(bot, this, reactionEngine);
     if (autoLoad && HasPlayerRelation()) sPlayerbotDbStore.Load(this);
 
+    // DbStore::Load calls ClearStrategies before restoring — re-add dungeon after.
+    engines[(uint8)BotState::BOT_STATE_COMBAT]->addStrategy("dungeon");
+    engines[(uint8)BotState::BOT_STATE_NON_COMBAT]->addStrategy("dungeon");
+
     for (uint8 i = 0; i < (uint8)BotState::BOT_STATE_ALL; i++)
     {
         engines[i]->initMode = false;

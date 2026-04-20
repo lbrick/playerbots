@@ -1,112 +1,111 @@
 #pragma once
 #include "src/Ai/Base/actions/DungeonActions.h"
-#include "src/Ai/Base/actions/ChangeStrategyAction.h"
 
 namespace ai
 {
     // ── Instance strategy enable/disable ────────────────────────────────────────
-    class WailingCavernsEnableStrategyAction : public ChangeAllStrategyAction
+    class WailingCavernsEnableStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         WailingCavernsEnableStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "enable wailing caverns strategy", "+wailing caverns") {}
+            : LoggedChangeAllStrategyAction(ai, "enable wailing caverns strategy", "+wailing caverns") {}
     };
 
-    class WailingCavernsDisableStrategyAction : public ChangeAllStrategyAction
+    class WailingCavernsDisableStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         WailingCavernsDisableStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "disable wailing caverns strategy", "-wailing caverns") {}
+            : LoggedChangeAllStrategyAction(ai, "disable wailing caverns strategy", "-wailing caverns") {}
     };
 
     // ── Kresh ────────────────────────────────────────────────────────────────────
-    class KreshEnableFightStrategyAction : public ChangeAllStrategyAction
+    class KreshEnableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         KreshEnableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "enable kresh fight strategy", "+kresh") {}
+            : LoggedChangeAllStrategyAction(ai, "enable kresh fight strategy", "+kresh") {}
     };
 
-    class KreshDisableFightStrategyAction : public ChangeAllStrategyAction
+    class KreshDisableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         KreshDisableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "disable kresh fight strategy", "-kresh") {}
+            : LoggedChangeAllStrategyAction(ai, "disable kresh fight strategy", "-kresh") {}
     };
 
     // ── Lady Anacondra ────────────────────────────────────────────────────────────
-    class AnacondraEnableFightStrategyAction : public ChangeAllStrategyAction
+    class AnacondraEnableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         AnacondraEnableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "enable anacondra fight strategy", "+anacondra") {}
+            : LoggedChangeAllStrategyAction(ai, "enable anacondra fight strategy", "+anacondra") {}
     };
 
-    class AnacondraDisableFightStrategyAction : public ChangeAllStrategyAction
+    class AnacondraDisableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         AnacondraDisableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "disable anacondra fight strategy", "-anacondra") {}
+            : LoggedChangeAllStrategyAction(ai, "disable anacondra fight strategy", "-anacondra") {}
     };
 
     // ── Lord Cobrahn ─────────────────────────────────────────────────────────────
-    class CobrahnEnableFightStrategyAction : public ChangeAllStrategyAction
+    class CobrahnEnableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         CobrahnEnableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "enable cobrahn fight strategy", "+cobrahn") {}
+            : LoggedChangeAllStrategyAction(ai, "enable cobrahn fight strategy", "+cobrahn") {}
     };
 
-    class CobrahnDisableFightStrategyAction : public ChangeAllStrategyAction
+    class CobrahnDisableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         CobrahnDisableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "disable cobrahn fight strategy", "-cobrahn") {}
+            : LoggedChangeAllStrategyAction(ai, "disable cobrahn fight strategy", "-cobrahn") {}
     };
 
     // ── Lord Pythas ───────────────────────────────────────────────────────────────
-    class PythasEnableFightStrategyAction : public ChangeAllStrategyAction
+    class PythasEnableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         PythasEnableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "enable pythas fight strategy", "+pythas") {}
+            : LoggedChangeAllStrategyAction(ai, "enable pythas fight strategy", "+pythas") {}
     };
 
-    class PythasDisableFightStrategyAction : public ChangeAllStrategyAction
+    class PythasDisableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         PythasDisableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "disable pythas fight strategy", "-pythas") {}
+            : LoggedChangeAllStrategyAction(ai, "disable pythas fight strategy", "-pythas") {}
     };
 
     // ── Lord Serpentis ────────────────────────────────────────────────────────────
-    class SerpentisEnableFightStrategyAction : public ChangeAllStrategyAction
+    class SerpentisEnableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         SerpentisEnableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "enable serpentis fight strategy", "+serpentis") {}
+            : LoggedChangeAllStrategyAction(ai, "enable serpentis fight strategy", "+serpentis") {}
     };
 
-    class SerpentisDisableFightStrategyAction : public ChangeAllStrategyAction
+    class SerpentisDisableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         SerpentisDisableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "disable serpentis fight strategy", "-serpentis") {}
+            : LoggedChangeAllStrategyAction(ai, "disable serpentis fight strategy", "-serpentis") {}
     };
 
     // ── Verdan the Everliving ─────────────────────────────────────────────────────
-    class VerdanEnableFightStrategyAction : public ChangeAllStrategyAction
+    class VerdanEnableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         VerdanEnableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "enable verdan fight strategy", "+verdan") {}
+            : LoggedChangeAllStrategyAction(ai, "enable verdan fight strategy", "+verdan") {}
     };
 
-    class VerdanDisableFightStrategyAction : public ChangeAllStrategyAction
+    class VerdanDisableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         VerdanDisableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "disable verdan fight strategy", "-verdan") {}
+            : LoggedChangeAllStrategyAction(ai, "disable verdan fight strategy", "-verdan") {}
     };
 
     // Verdan Grasping Vines avoidance — stay >10 yards (vines root ~8yd)
@@ -118,18 +117,18 @@ namespace ai
     };
 
     // ── Mutanus the Devourer ──────────────────────────────────────────────────────
-    class MutanusEnableFightStrategyAction : public ChangeAllStrategyAction
+    class MutanusEnableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         MutanusEnableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "enable mutanus fight strategy", "+mutanus") {}
+            : LoggedChangeAllStrategyAction(ai, "enable mutanus fight strategy", "+mutanus") {}
     };
 
-    class MutanusDisableFightStrategyAction : public ChangeAllStrategyAction
+    class MutanusDisableFightStrategyAction : public LoggedChangeAllStrategyAction
     {
     public:
         MutanusDisableFightStrategyAction(PlayerbotAI* ai)
-            : ChangeAllStrategyAction(ai, "disable mutanus fight strategy", "-mutanus") {}
+            : LoggedChangeAllStrategyAction(ai, "disable mutanus fight strategy", "-mutanus") {}
     };
 
     // Mutanus AoE avoidance — stay >12 yards (Thundercrack + Terrify ~10yd)
