@@ -31,6 +31,8 @@ namespace ai
             if (bot->isAFK())
                 bot->ToggleAFK();
 
+            ai->SavePreGroupStrategies();
+
             WorldPacket p;
             uint32 roles_mask = 0;
             p << roles_mask;
@@ -38,6 +40,12 @@ namespace ai
 
             if (!bot->GetGroup() || !bot->GetGroup()->IsMember(inviter->GetObjectGuid()))
                 return false;
+
+            if (sServerFacade.GetDistance2d(bot, inviter) > 5.0f)
+            {
+                sLog.outDetail("Bot %s: teleporting to %s on group join", bot->GetName(), inviter->GetName());
+                bot->TeleportTo(inviter->GetMapId(), inviter->GetPositionX(), inviter->GetPositionY(), inviter->GetPositionZ(), inviter->GetOrientation());
+            }
 
             if (sRandomPlayerbotMgr.IsFreeBot(bot))
             {

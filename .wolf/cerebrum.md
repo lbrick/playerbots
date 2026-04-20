@@ -77,3 +77,9 @@
 - **Build setup:** Clone `cmangos/mangos-classic` into playerbots-updates/. Symlink `mangos-classic/src/modules/PlayerBots` → cmangos-playerbots. Builddir at `playerbots-updates/builddir/`. Configure: `CC=clang CXX=clang++ cmake -DBUILD_PLAYERBOTS=ON -DFETCHCONTENT_SOURCE_DIR_PLAYERBOTS=<symlink_path> -DCMAKE_BUILD_TYPE=Release -B builddir -S mangos-classic`. Build: `cmake --build builddir -- -j$(nproc)`.
 - **Compat shims:** Core mangos game files include `playerbot/X.h` and `ahbot/AhBot.h` (old paths). Created shim headers at module root `playerbot/` and `ahbot/` that forward to new `src/` paths. Required files: `playerbot/{playerbot.h,PlayerbotAI.h,PlayerbotAIConfig.h,RandomPlayerbotMgr.h}`, `ahbot/AhBot.h`.
 - **Angle-bracket include gotcha:** One file (DebugAction.cpp) used `<playerbot/TravelNode.h>` with angle brackets — missed by sed which only targeted double-quote includes. Always check `<playerbot/` pattern too when fixing stale includes.
+
+## Key Learnings (Party join/leave behavior)
+
+- **Free bot + real player master → AiFactory branch bug:** `AddDefaultNonCombatStrategies` line 994 had `if (master->GetPlayerbotAI() || sRandomPlayerbotMgr.IsFreeBot(player))` — caused free bots to take autonomous path (rpg/grind/travel) even with real player master. Fixed to `if (master->GetPlayerbotAI())` — real player master now correctly gets player-follower config.
+- **Strategy save/restore pattern:** `m_preGroupStrategies` (string) on PlayerbotAI stores comma-separated non-combat strategies before `HandleGroupAcceptOpcode`. `RestorePreGroupStrategies()` calls `ResetStrategies()` first then `ChangeStrategy("+" + saved)`. Empty-string guard falls back to plain `ResetStrategies()`.
+- **AcceptInvitationAction teleport placement:** Teleport must come AFTER `HandleGroupAcceptOpcode` success check (group formed) but BEFORE `SetMaster` + `ResetStrategies`. Only fires if `GetDistance2d(bot, inviter) > 5.0f`.

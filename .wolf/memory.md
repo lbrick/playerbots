@@ -33,3 +33,4 @@
 | 13:24 | RFC dungeon impl: 4 files created, CMakeLists updated, all 4 registration files updated, build clean | src/Ai/Dungeon/RagefireChasm/* CMakeLists.txt TriggerContext.h ActionContext.h StrategyContext.h DungeonStrategy.cpp | success | ~3500 |
 | 13:36 | WC dungeon impl: WC_PLAN.md written first, NPC IDs DB-verified, 4 code files + 5 registrations, build clean | src/Ai/Dungeon/WailingCaverns/* CMakeLists.txt TriggerContext.h ActionContext.h StrategyContext.h DungeonStrategy.cpp | success | ~3000 |
 | 13:51 | WC interrupt mechanic: TargetCastingSpellTrigger + InterruptEnemyCastAction added to base; DruidSlumber wired at instance level | DungeonTriggers.h/cpp DungeonActions.h/cpp WcTriggers.h WcStrategy.cpp TriggerContext.h ActionContext.h | build clean | ~1500 |
+| 19:30 | party join: teleport+follow+restore impl | AcceptInvitationAction.h, LeaveGroupAction.cpp, PlayerbotAI.h/.cpp, AiFactory.cpp | working — 40 events confirmed in log | ~800 |

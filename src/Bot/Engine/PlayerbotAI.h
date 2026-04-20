@@ -615,6 +615,10 @@ public:
     void SetCheat(BotCheatMask mask) { cheatMask = mask; }
 
     void SetMaster(Player* master) { this->master = master; }
+    void SavePreGroupStrategies();
+    void RestorePreGroupStrategies();
+    void ClearPreGroupStrategies() { m_preGroupStrategies = ""; }
+    const std::string& GetPreGroupStrategies() const { return m_preGroupStrategies; }
     AiObjectContext* GetAiObjectContext() { return aiObjectContext; }
     void SetAiObjectContext(AiObjectContext* aiObjectContext) { this->aiObjectContext = aiObjectContext; }
     ChatHelper* GetChatHelper() { return &chatHelper; }
@@ -745,6 +749,7 @@ protected:
     bool m_recordMessages = false;
     std::vector<std::string> m_recordedMessages;
     Event lastEvent;
+    std::string m_preGroupStrategies;
 
 public:
     void RecordMessages(bool record) { m_recordMessages = record; if (!record) m_recordedMessages.clear(); }

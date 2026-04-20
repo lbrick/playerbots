@@ -6335,6 +6335,32 @@ std::string PlayerbotAI::GetDefaultMovementStrategy()
     return "wander";
 }
 
+void PlayerbotAI::SavePreGroupStrategies()
+{
+    std::string result;
+    for (std::string_view sv : GetStrategies(BotState::BOT_STATE_NON_COMBAT))
+    {
+        if (!result.empty()) result += ",";
+        result += std::string(sv);
+    }
+    m_preGroupStrategies = result;
+    sLog.outDetail("Bot %s: saved pre-group strategies [%s]", bot->GetName(), m_preGroupStrategies.c_str());
+}
+
+void PlayerbotAI::RestorePreGroupStrategies()
+{
+    if (m_preGroupStrategies.empty())
+    {
+        ResetStrategies();
+        return;
+    }
+    std::string saved = m_preGroupStrategies;
+    ClearPreGroupStrategies();
+    ResetStrategies();
+    ChangeStrategy("+" + saved, BotState::BOT_STATE_NON_COMBAT);
+    sLog.outDetail("Bot %s: restored pre-group strategies [%s]", bot->GetName(), saved.c_str());
+}
+
 void PlayerbotAI::EnsureDefaultMovementStrategy(Player* requester)
 {
     std::string movement = GetDefaultMovementStrategy();

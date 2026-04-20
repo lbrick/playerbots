@@ -40,8 +40,13 @@ namespace ai
             bot->GetPlayerbotAI()->SetMaster(nullptr);
         }        
 
-        if(!aiMaster)
-            ai->ResetStrategies();
+        if (!aiMaster)
+        {
+            if (!ai->GetPreGroupStrategies().empty())
+                ai->RestorePreGroupStrategies();
+            else
+                ai->ResetStrategies();
+        }
         ai->Reset();
 
         return true;
