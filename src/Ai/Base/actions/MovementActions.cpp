@@ -401,7 +401,8 @@ bool MovementAction::UseTransport(PlayerbotAI* ai, uint32 entry, WorldPosition d
             if (doTeleport)
             {
                 //bot->NearTeleportTo(onTransPos.getX(), onTransPos.getY(), onTransPos.getZ(), bot->GetOrientation());
-                bot->GetMap()->PlayerRelocation(bot, onTransPos.getX(), onTransPos.getY(), onTransPos.getZ(), bot->GetOrientation());
+                if (bot->IsInWorld() && !bot->IsBeingTeleported())
+                    bot->GetMap()->PlayerRelocation(bot, onTransPos.getX(), onTransPos.getY(), onTransPos.getZ(), bot->GetOrientation());
             }
             else
             {
@@ -1375,12 +1376,15 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool idle, 
             needFly = true;
             // only use in clear LOS betweek points
             Position pos = bot->GetPosition();
+            if (bot->IsInWorld() && !bot->IsBeingTeleported())
+            {
 #ifdef MANGOSBOT_TWO
-            if (!bot->GetMap()->IsInLineOfSight(pos.x, pos.y, pos.z + 100.f, movePosition.getX(), movePosition.getY(), movePosition.getZ() + 100.f, bot->GetPhaseMask(), true))
+                if (!bot->GetMap()->IsInLineOfSight(pos.x, pos.y, pos.z + 100.f, movePosition.getX(), movePosition.getY(), movePosition.getZ() + 100.f, bot->GetPhaseMask(), true))
 #else
-            if (!bot->GetMap()->IsInLineOfSight(pos.x, pos.y, pos.z + 100.f, movePosition.getX(), movePosition.getY(), movePosition.getZ() + 100.f, true))
+                if (!bot->GetMap()->IsInLineOfSight(pos.x, pos.y, pos.z + 100.f, movePosition.getX(), movePosition.getY(), movePosition.getZ() + 100.f, true))
 #endif
-                needFly = false;
+                    needFly = false;
+            }
 
             if (const TerrainInfo* terrain = bot->GetTerrain())
             {
@@ -2649,13 +2653,16 @@ bool MoveOutOfCollisionAction::Execute(Event& event)
     gy = botPos.getY();
     gz = botPos.getZ();
 
+    if (!bot->IsInWorld() || bot->IsBeingTeleported())
+        return false;
+
     uint32 tries = 1;
     for (; tries < 10; ++tries)
     {
         gx = botPos.getX();
         gy = botPos.getY();
         gz = botPos.getZ();
-#ifndef MANGOSBOT_TWO  
+#ifndef MANGOSBOT_TWO
         if (bot->GetMap()->GetReachableRandomPointOnGround(gx, gy, gz, ai->GetRange("follow")))
 #else
         if (bot->GetMap()->GetReachableRandomPointOnGround(bot->GetPhaseMask(), gx, gy, gz, ai->GetRange("follow")))

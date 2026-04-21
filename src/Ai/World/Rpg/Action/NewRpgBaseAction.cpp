@@ -23,6 +23,8 @@ static WorldObject* GetWorldObjectByGuid(PlayerbotAI* ai, Player* bot, ObjectGui
 {
     if (Creature* c = ai->GetAnyTypeCreature(guid))
         return c;
+    if (!bot->IsInWorld() || bot->IsBeingTeleported())
+        return nullptr;
     return bot->GetMap()->GetGameObject(guid);
 }
 
@@ -230,9 +232,12 @@ bool NewRpgBaseAction::MoveWorldObjectTo(ObjectGuid guid, float distance)
     x += cos(angle) * distance * rnd;
     y += sin(angle) * distance * rnd;
     // No CheckCollisionAndGetValidCoords in cmangos — just use map height to ground target.
-    float groundZ = bot->GetMap()->GetHeight(x, y, z + 5.f);
-    if (groundZ > INVALID_HEIGHT)
-        z = groundZ;
+    if (bot->IsInWorld() && !bot->IsBeingTeleported())
+    {
+        float groundZ = bot->GetMap()->GetHeight(x, y, z + 5.f);
+        if (groundZ > INVALID_HEIGHT)
+            z = groundZ;
+    }
 
     return MoveTo(mapId, x, y, z, false, false, false, true);
 }
@@ -315,7 +320,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 // GameObject failures are distance-based (transient) — bot just wasn't close
                 // enough. Don't mark low priority; travel system will re-approach.
                 // Creature failures (faction/phase/hostility) are permanent — mark low priority.
-                bool isGameObject = (bot->GetMap()->GetGameObject(guid) != nullptr);
+                bool isGameObject = (bot->IsInWorld() && !bot->IsBeingTeleported() && bot->GetMap()->GetGameObject(guid) != nullptr);
                 if (!isGameObject)
                 {
                     ai->lowPriorityQuest.insert(item.m_qId);
@@ -403,10 +408,13 @@ bool NewRpgBaseAction::CanInteractWithQuestGiver(Object* questGiver)
         case TYPEID_GAMEOBJECT:
         {
             ObjectGuid guid = questGiver->GetObjectGuid();
-            if (GameObject* go = bot->GetMap()->GetGameObject(guid))
+            if (bot->IsInWorld() && !bot->IsBeingTeleported())
             {
-                if (go->GetGoType() == GAMEOBJECT_TYPE_QUESTGIVER)
-                    return true;
+                if (GameObject* go = bot->GetMap()->GetGameObject(guid))
+                {
+                    if (go->GetGoType() == GAMEOBJECT_TYPE_QUESTGIVER)
+                        return true;
+                }
             }
             return false;
         }

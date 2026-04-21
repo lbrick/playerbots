@@ -84,6 +84,18 @@
       "related_bugs": ["bug-006"],
       "occurrences": 75,
       "last_seen": "2026-04-20"
+    },
+    {
+      "id": "bug-008",
+      "timestamp": "2026-04-21T00:00:00Z",
+      "error_message": "Critical Error: A condition which must never be false was found to be false. Server was shut down to protect data integrity. GetMap(): m_currMap",
+      "file": "src/Ai/World/Rpg/Action/NewRpgBaseAction.cpp, src/Ai/Base/actions/MovementActions.cpp, src/Bot/Engine/PlayerbotAI.cpp",
+      "root_cause": "Bot AI tick calls bot->GetMap() (asserting) while bot is being teleported or removed from world — m_currMap is null during this window. Preceded by AbstractPathMovementGenerator::Initialize Path empty + spline-enabled-but-not-moving warnings indicating broken movement state across map transitions.",
+      "fix": "IMPLEMENTED. 1) Added IsInWorld()/IsBeingTeleported() guard at top of PlayerbotAI::UpdateAI(). 2) Guarded all bot->GetMap() calls in NewRpgBaseAction.cpp with IsInWorld()/IsBeingTeleported() checks. 3) Guarded bot->GetMap() calls in MovementActions.cpp (PlayerRelocation, IsInLineOfSight, GetReachableRandomPointOnGround). 4) Added GetMotionMaster()->Clear() before HandleMoveWorldportAckOpcode() in HandleTeleportAck() to clear stale spline state on far teleport.",
+      "tags": ["crash", "segfault", "GetMap", "null-pointer", "assertion", "teleport", "spline", "movement", "playerbot"],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-20"
     }
   ]
 }
