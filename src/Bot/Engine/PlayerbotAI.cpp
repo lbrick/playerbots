@@ -563,7 +563,7 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
         if (bot && HasRealPlayerMaster())
             min = false;
 
-        YieldAIInternalThread(min);
+        YieldAIInternalThread(min, bot->GetGUIDLow());
     }
 }
 

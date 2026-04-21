@@ -24,7 +24,7 @@ protected:
     void SetAIInternalUpdateDelay(const uint32 delay);
     void ResetAIInternalUpdateDelay() { aiInternalUpdateDelay = 0U; }
     void IncreaseAIInternalUpdateDelay(uint32 delay);
-    void YieldAIInternalThread(bool minimal = false);
+    void YieldAIInternalThread(bool minimal = false, uint32 guidLow = 0);
     
 protected:
 	uint32 aiInternalUpdateDelay;

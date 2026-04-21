@@ -48,10 +48,12 @@ void PlayerbotAIBase::IncreaseAIInternalUpdateDelay(uint32 delay)
         sLog.outDebug( "Increase ai internal update delay: %d", aiInternalUpdateDelay);
 }
 
-void PlayerbotAIBase::YieldAIInternalThread(bool minimal)
+void PlayerbotAIBase::YieldAIInternalThread(bool minimal, uint32 guidLow)
 {
-    if (aiInternalUpdateDelay < sPlayerbotAIConfig.reactDelay)
-        aiInternalUpdateDelay = minimal ? sPlayerbotAIConfig.reactDelay * 10 : sPlayerbotAIConfig.reactDelay;
+    uint32 base = minimal ? sPlayerbotAIConfig.reactDelay * 10 : sPlayerbotAIConfig.reactDelay;
+    uint32 stagger = guidLow % 200;
+    if (aiInternalUpdateDelay < base + stagger)
+        aiInternalUpdateDelay = base + stagger;
 }
 
 bool PlayerbotAIBase::IsActive() const
