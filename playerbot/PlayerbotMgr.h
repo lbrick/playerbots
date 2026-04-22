@@ -2,7 +2,7 @@
 #define _PLAYERBOTMGR_H
 
 #include "Common.h"
-#include "playerbot/PlayerbotAIBase.h"
+#include "PlayerbotAIBase.h"
 #include "Entities/ObjectGuid.h"
 #include "Database/DatabaseEnv.h"
 #include "Globals/SharedDefines.h"
@@ -50,13 +50,10 @@ public:
     static std::string GetCommandTexts(const std::string& command);
     static std::unordered_map<std::string, std::string> GetCommandTexts();
 
-    void CreateBot(Player* master, const std::string param, std::list<std::string>& messages, ObjectGuid& guid);
     bool DeleteBot(ObjectGuid guid, bool allowInstant = true);
 #ifdef GenerateBotTests
     void DepositTestResult(const std::string& testName, const std::string& result);
 #endif
-
-    std::list<std::string> HandleGroup(Player* master, const std::string param, AccountTypes security);
 protected:
     virtual void OnBotLoginInternal(Player * const bot) = 0;
     virtual void OnBotDeleted(uint32 botGuid, uint32 accountId);
@@ -82,12 +79,31 @@ private:
     std::list<std::string> HandleRaid(Player* master, const std::string param, AccountTypes security);
     std::list<std::string> HandleRaidLeader(Player* master, const std::string param, AccountTypes security);
     std::list<std::string> HandleCreate(Player* master, const std::string param, AccountTypes security);
+    std::list<std::string> HandleGroup(Player* master, const std::string param, AccountTypes security);   
+#ifdef GenerateBotTests
+    std::list<std::string> HandleRunTest(Player* master, const std::string param, AccountTypes security);
+
+    struct PendingTest
+    {
+        std::string testName;
+        std::string result;
+        bool pending;
+        bool completed;
+        uint8 retry = 0;
+    };
+
+    void UpdatePendingTests(uint32 elapsed);
+    std::mutex testResultsMutex;
+    std::vector<PendingTest> pendingTests;
+    std::vector<PendingTest> testResults;
+#endif
 
     std::string HandleBotAlways(Player* bot, Player* master, const std::string param);
     std::string HandleBotDebug(Player* bot, Player* master, const std::string param);
     std::string HandleBotC(Player* bot, Player* master, const std::string param);
     std::string HandleConsoleWhisper(Player* bot, Player* master, const std::string param);
     std::string HandleConsoleCmd(Player* bot, Player* master, const std::string param);
+    std::string HandleBotTest(Player* bot, Player* master, const std::string param);
     std::string HandleBotDo(Player* bot, Player* master, const std::string param);
     std::string HandleBotRecord(Player* bot, Player* master, const std::string param);
     std::string HandleBotRead(Player* bot, Player* master, const std::string param);

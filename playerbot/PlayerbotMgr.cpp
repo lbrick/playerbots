@@ -12,6 +12,12 @@
 #include "strategy/actions/ChangeTalentsAction.h"
 #include "strategy/actions/InviteToGroupAction.h"
 #include "AiFactory.h"
+#include "Guilds/GuildMgr.h"
+
+#ifdef GenerateBotTests
+#include "strategy/tests/TestAction.h"
+#include "strategy/tests/TestRegistry.h"
+#endif
 
 class LoginQueryHolder;
 class CharacterHandler;
@@ -30,6 +36,9 @@ PlayerbotHolder::PlayerbotHolder() : PlayerbotAIBase()
     m_holderHandlers["rl"] = &PlayerbotHolder::HandleRaidLeader;
     m_holderHandlers["create"] = &PlayerbotHolder::HandleCreate;
     m_holderHandlers["group"] = &PlayerbotHolder::HandleGroup;
+#ifdef GenerateBotTests
+    m_holderHandlers["runtest"] = &PlayerbotHolder::HandleRunTest;
+#endif
 
     m_botCommandHandlers["add"] = &PlayerbotHolder::HandleBotAddLogin;
     m_botCommandHandlers["login"] = &PlayerbotHolder::HandleBotAddLogin;
@@ -66,6 +75,7 @@ PlayerbotHolder::PlayerbotHolder() : PlayerbotAIBase()
     m_botCommandHandlers["c"] = &PlayerbotHolder::HandleBotC;
     m_botCommandHandlers["w"] = &PlayerbotHolder::HandleConsoleWhisper;
     m_botCommandHandlers["cmd"] = &PlayerbotHolder::HandleConsoleCmd;
+    m_botCommandHandlers["test"] = &PlayerbotHolder::HandleBotTest;
     m_botCommandHandlers["do"] = &PlayerbotHolder::HandleBotDo;
     m_botCommandHandlers["record"] = &PlayerbotHolder::HandleBotRecord;
     m_botCommandHandlers["read"] = &PlayerbotHolder::HandleBotRead;
@@ -108,6 +118,9 @@ void PlayerbotHolder::MovePlayerBot(uint32 guid, PlayerbotHolder* newHolder)
 
 void PlayerbotHolder::UpdateAIInternal(uint32 elapsed, bool minimal)
 {
+#ifdef GenerateBotTests
+    UpdatePendingTests(elapsed);
+#endif
 }
 
 void PlayerbotHolder::UpdateSessions(uint32 elapsed)
@@ -226,29 +239,8 @@ void PlayerbotHolder::LogoutPlayerBot(uint32 guid, bool allowInstant, bool forDe
         // check for instant logout
         bool logout = botWorldSessionPtr->ShouldLogOut(time(nullptr));
 
-        // make instant logout for now
-        logout = true;
-
-        if (masterWorldSessionPtr && masterWorldSessionPtr->ShouldLogOut(time(nullptr)))
-            logout = true;
-        
-        if (masterWorldSessionPtr && masterWorldSessionPtr->GetState() != WORLD_SESSION_STATE_READY)
-            logout = true;
-
-        if (bot->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || bot->IsTaxiFlying() ||
-            botWorldSessionPtr->GetSecurity() >= (AccountTypes)sWorld.getConfig(CONFIG_UINT32_INSTANT_LOGOUT))
-        {
-            logout = true;
-        }
-
-        if (master && (master->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || master->IsTaxiFlying() ||
-            (masterWorldSessionPtr && masterWorldSessionPtr->GetSecurity() >= (AccountTypes)sWorld.getConfig(CONFIG_UINT32_INSTANT_LOGOUT))))
-        {
-            logout = true;
-        }
-
         // if no instant logout, request normal logout
-        if (!logout)
+        if (!allowInstant)
         {
             if (bot && (bot->IsStunnedByLogout() || bot->GetSession()->isLogingOut()))
             {
@@ -257,8 +249,13 @@ void PlayerbotHolder::LogoutPlayerBot(uint32 guid, bool allowInstant, bool forDe
             else if (bot)
             {
                 ai->TellPlayer(ai->GetMaster(), BOT_TEXT("logout_start"));
-                WorldPacket p;
-                botWorldSessionPtr->HandleLogoutRequestOpcode(p);
+
+                WorldPacket p(CMSG_LOGOUT_REQUEST);
+                std::unique_ptr<WorldPacket> packet(new WorldPacket(p));
+                botWorldSessionPtr->QueuePacket(std::move(packet));
+
+                //WorldPacket p;
+                //botWorldSessionPtr->HandleLogoutRequestOpcode(p);
                 if (!bot)
                 {
                     playerBots[guid] = nullptr;
@@ -1332,7 +1329,7 @@ std::string PlayerbotHolder::HandleBotDebug(Player* bot, Player* master, const s
     if (!ai)
         return "Bot has no AI";
 
-    ai->RecordMessages(true);
+    ai->RecordMessages(true, true);
 
     std::string command = param;
 
@@ -1445,7 +1442,6 @@ std::string PlayerbotHolder::HandleConsoleWhisper(Player* bot, Player* master, c
     return msg;
 }
 
-
 std::string PlayerbotHolder::HandleConsoleCmd(Player* bot, Player* master, const std::string param)
 {
     if (!bot)
@@ -1465,6 +1461,27 @@ std::string PlayerbotHolder::HandleConsoleCmd(Player* bot, Player* master, const
     }    
 
     return msg;
+}
+
+std::string PlayerbotHolder::HandleBotTest(Player* bot, Player* master, const std::string param)
+{
+    if (!bot)
+        return "test requires a bot";
+
+    PlayerbotAI* ai = bot->GetPlayerbotAI();
+    if (!ai)
+        return "Bot has no AI";
+
+    if (param.empty())
+    {
+        return "Usage: test <testName>. Available tests: walk_to_ironforge, flight_ratchet_to_booty_bay";
+    }
+
+    // Activate test strategy which will run the test over multiple ticks
+    std::string strategyName = "test::" + param;
+    ai->ChangeStrategy("+" + strategyName, BotState::BOT_STATE_NON_COMBAT);
+    
+    return "Test '" + param + "' started for bot " + bot->GetName();
 }
 
 std::string PlayerbotHolder::HandleBotDo(Player* bot, Player* master, const std::string param)
@@ -1502,7 +1519,7 @@ std::string PlayerbotHolder::HandleBotDo(Player* bot, Player* master, const std:
     if (!action)
         return "action not found";
 
-    ai->RecordMessages(true);
+    ai->RecordMessages(true, true);
 
     std::vector<std::string> output;
 
@@ -1542,7 +1559,7 @@ std::string PlayerbotHolder::HandleBotRecord(Player* bot, Player* master, const 
     if (!ai)
         return "Bot has no AI";
 
-    ai->RecordMessages(true);
+    ai->RecordMessages(true, !param.empty());
     return "Recording enabled on " + std::string(bot->GetName());
 }
 
@@ -1556,7 +1573,6 @@ std::string PlayerbotHolder::HandleBotRead(Player* bot, Player* master, const st
         return "Bot has no AI";
 
     std::vector<std::string> output = ai->GetRecordedMessages();
-    ai->RecordMessages(false);
 
     if (output.empty())
         return "(no messages)";
@@ -1743,13 +1759,15 @@ std::list<std::string> PlayerbotHolder::HandleRaid(Player* master, const std::st
 
 std::list<std::string> PlayerbotHolder::HandleRaidLeader(Player* master, const std::string param, AccountTypes security)
 {
-    std::string message = "give leader";
+    std::string message = param;
 
     if (!master)
     {
         std::string botName = param.substr(0, param.find(" "));
 
         master = sObjectAccessor.FindPlayerByName(botName.c_str());
+        if (message.size() > param.find(" ") + 1)
+            message = param.substr(param.find(" ") + 1);
     }
 
     if (!master)
@@ -1826,10 +1844,12 @@ std::list<std::string> PlayerbotHolder::HandleCreate(Player* master, const std::
     // Player* master can be null when called via .rndbot commands
 
     std::string name;
+    std::string testName;
     uint8 race = 0;
     uint8 cls = 0;
     uint32 level = 0;
     bool autoAdd = master;
+    bool temporary = false;
     uint8 gender = GENDER_NONE;
     Team team = Team::TEAM_BOTH_ALLOWED;
     BotRoles role = BotRoles::BOT_ROLE_NONE;
@@ -1863,6 +1883,13 @@ std::list<std::string> PlayerbotHolder::HandleCreate(Player* master, const std::
             autoAdd = (value == "1" || value == "true" || value == "yes");
         else if (key == "group")
             groupWith = value;
+        else if (key == "test")
+        {
+            testName = value;
+            autoAdd = true;
+        }
+        else if (key == "temporary")
+            temporary = (value == "1" || value == "true" || value == "yes");
     }
 
     std::string error;
@@ -1968,6 +1995,15 @@ std::list<std::string> PlayerbotHolder::HandleCreate(Player* master, const std::
     }
     else
         newBot->SetLevel(1);
+
+    if (!testName.empty())
+    {
+        sRandomPlayerbotMgr.SetValue(botGuid, "test", 1, testName);
+    }
+    if (temporary)
+    {
+        sRandomPlayerbotMgr.SetValue(botGuid, "temporary", 1, name);
+    }
 
     if (master)
     {
@@ -2103,6 +2139,133 @@ std::list<std::string> PlayerbotHolder::HandleGroup(Player* master, const std::s
     return messages;
 }
 
+#ifdef GenerateBotTests
+std::list<std::string> PlayerbotHolder::HandleRunTest(Player* master, const std::string param, AccountTypes security)
+{    
+    std::list<std::string> messages;
+
+    if (param.empty())
+    {
+        messages.push_back("Usage: .rndbot runtest <testnamepart>");
+        messages.push_back("Available tests:");
+        std::vector<std::string> availableTests = TestRegistry::GetAvailableTests();
+        for (const auto& test : availableTests)
+            messages.push_back("  " + test);
+        return messages;
+    }
+
+    std::string testNamePart = param;
+    std::transform(testNamePart.begin(), testNamePart.end(), testNamePart.begin(), ::tolower);
+
+    std::vector<std::string> matchingTests;
+    std::vector<std::string> allTests = TestRegistry::GetAvailableTests();
+    for (const auto& test : allTests)
+    {
+        std::string lowerTest = test;
+        std::transform(lowerTest.begin(), lowerTest.end(), lowerTest.begin(), ::tolower);
+        if (lowerTest.find(testNamePart) != std::string::npos || testNamePart == "*")
+            matchingTests.push_back(test);
+    }
+
+    if (matchingTests.empty())
+    {
+        messages.push_back("No tests matching '" + param + "' found");
+        return messages;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(testResultsMutex);
+        for (const auto& test : matchingTests)
+        {
+            PendingTest pt;
+            pt.testName = test;
+            pt.result = "";
+            pt.pending = false;
+            pt.completed = false;
+            pt.retry = 0;
+            pendingTests.push_back(pt);
+        }
+    }
+
+    std::ostringstream out;
+    out << "Queued " << matchingTests.size() << " test(s): ";
+    for (size_t i = 0; i < matchingTests.size() && i < 3; i++)
+        out << matchingTests[i] << (i < matchingTests.size() - 1 && i < 2 ? ", " : "");
+    if (matchingTests.size() > 3)
+        out << "...";
+    messages.push_back(out.str());
+
+    return messages;
+}
+
+void PlayerbotHolder::UpdatePendingTests(uint32 elapsed)
+{
+    std::lock_guard<std::mutex> lock(testResultsMutex);
+
+    for (auto& pt : pendingTests)
+    {
+        if (pt.pending)
+            continue;
+
+        if (pt.completed)
+            continue;
+
+        if (!TestRegistry::HasTest(pt.testName))
+        {
+            pt.result = "Test not found";
+            pt.completed = true;
+            continue;
+        }
+
+        if (dynamic_cast<PlayerbotMgr*>(this))
+        {
+            uint32 maxCharsPerAccount = 9;
+#ifdef MANGOSBOT_TWO
+            maxCharsPerAccount = 10;
+#endif
+            uint32 accountId = sObjectMgr.GetPlayerAccountIdByGUID((dynamic_cast<PlayerbotMgr*>(this))->GetMaster()->GetObjectGuid());
+                if (accountId == 0) continue;
+
+            uint32 currentChars = sAccountMgr.GetCharactersCount(accountId);
+            if (currentChars >= maxCharsPerAccount)
+                continue;
+        }
+
+        std::ostringstream createParams;
+        createParams << "level=1 login=0 temporary=1 test=" + pt.testName;
+        std::list<std::string> createMsgs = HandleCreate(nullptr, createParams.str(), SEC_PLAYER);
+
+        pt.pending = true;
+    }
+}
+
+void PlayerbotHolder::DepositTestResult(const std::string& testName, const std::string& result)
+{
+    std::lock_guard<std::mutex> lock(testResultsMutex);
+
+    for (auto& pt : pendingTests)
+    {
+        if (!pt.pending)
+            continue;
+
+        if (pt.testName == testName && !pt.completed)
+        {
+            if (result == "ABORT") //Failed this time but might work next time.
+            {
+                pt.result = result;
+                pt.retry++;
+                break;
+            }
+
+            pt.result = result;
+            pt.completed = true;
+            testResults.push_back(pt);
+            break;
+        }
+    }
+}
+#endif
+
 uint32 PlayerbotHolder::GetOrCreateAccount(Player* master, std::string& error)
 {
     if (!master)
@@ -2120,12 +2283,34 @@ void PlayerbotHolder::OnBotDeleted(uint32 botGuid, uint32 accountId)
 {
 }
 
+bool PlayerbotHolder::DeleteBot(ObjectGuid guid, bool allowInstant)
+{
+    uint32 botAccount = sObjectMgr.GetPlayerAccountIdByGUID(guid);
+
+    if (sObjectMgr.GetPlayer(guid, true))
+        LogoutPlayerBot(guid, allowInstant, true);
+
+    Player::DeleteFromDB(guid, botAccount, true, true);
+
+    OnBotDeleted(guid, botAccount);
+
+    return true;
+}
+
 std::string PlayerbotHolder::HandleBotDelete(Player* bot, Player* master, const std::string param)
 {
-    if (!Qualified::isValidNumberString(param))
-        return "Add: Error parsing " + param;
+    ObjectGuid guid;
+    if (!bot)
+    {
+        if (!Qualified::isValidNumberString(param))
+            return "Add: Error parsing " + param;
 
-    ObjectGuid guid = ObjectGuid(uint64(std::stoull(param)));
+        guid = ObjectGuid(uint64(std::stoull(param)));
+    }
+    else
+    {
+        guid = bot->GetObjectGuid();
+    }
 
     uint32 masterAccountId = master ? master->GetSession()->GetAccountId() : 0;
     PlayerbotMgr* mgr = master ? master->GetPlayerbotMgr() : nullptr;
@@ -2139,12 +2324,7 @@ std::string PlayerbotHolder::HandleBotDelete(Player* bot, Player* master, const 
     if (isRandomAccount && mgr == this)
         return "Not your bot";
 
-    if (bot)
-        LogoutPlayerBot(guid);
-
-    Player::DeleteFromDB(guid, botAccount, true, true);
-
-    OnBotDeleted(guid, botAccount);
+    DeleteBot(guid);
 
     return "ok";
 }
@@ -2358,6 +2538,7 @@ std::unordered_map<std::string, std::string> PlayerbotHolder::GetCommandTexts()
         {"group", "Create 4 bots with complementary classes at master's level.\nUsage: .(rnd)bot group"},
         {"create", "Create a new bot character.\nUsage: .(rnd)bot create level=<n> class=<class> race=<race>"},
         {"spoof", "Spoof as another bot for command routing.\nUsage: .(rnd)bot spoof <botname>"},
+        {"runtest", "Run bot tests.\nUsage: .rndbot runtest <testnamepart>"},
         
         // Bot commands (used with .(rnd)bot <bot> ...)
         {"add", "Add a bot to the player's group.\nUsage: .(rnd)bot add <playername>"},
