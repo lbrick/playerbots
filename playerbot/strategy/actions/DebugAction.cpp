@@ -2737,8 +2737,7 @@ bool DebugAction::HandlePosition(Event& event, Player* requester, const std::str
             LastMovement& moveData = *ai->GetAiObjectContext()->GetValue<LastMovement&>("last movement");
             std::ostringstream out;
             out << "Last movement: ";
-            out << moveData.lastMoveShort.getX() << ", " << moveData.lastMoveShort.getY() << ", " << moveData.lastMoveShort.getZ();
-            out << " (map: " << moveData.lastMoveShort.getMapId() << ")";
+            WorldPosition().printWKT(moveData.lastPath.getPointPath(), out, 1);
             ai->TellPlayer(requester, out.str());
             return true;
         }
@@ -3129,6 +3128,35 @@ bool DebugAction::HandlePosition(Event& event, Player* requester, const std::str
             ai->TellPlayer(requester, "Underground: No");
         }
 
+        return true;
+    }
+
+    // Check if position is above ground or underground
+    if (param.substr(0, 6) == "ground")
+    {
+        std::string groundParam = param.size() > 5 ? param.substr(5) : "";
+        while (groundParam.size() > 0 && groundParam[0] == ' ')
+            groundParam = groundParam.substr(1);
+
+        WorldPosition pos(bot);
+        if (!groundParam.empty())
+        {
+            PositionTarget target = ParseLocation(groundParam, bot);
+            if (target.valid)
+            {
+                pos = WorldPosition(target.mapId, target.x, target.y, target.z);
+            }
+            else
+            {
+                ai->TellPlayer(requester, "Usage: position ground [x y | map x y | map x y z | location]");
+                return true;
+            }
+        }
+
+        std::ostringstream out;
+        out << pos.getX() << ", " << pos.getY() << ", " << pos.getZ() << " m" << pos.getMapId() << ": ";
+        out << (pos.isUnderground() ? "Underground" : "Above ground");
+        ai->TellPlayer(requester, out.str());
         return true;
     }
 
@@ -5120,7 +5148,6 @@ bool DebugAction::HandleCombat(Event& event, Player* requester, const std::strin
 
     return true;
 }
-
 
 bool DebugAction::HandleNodes(Event& event, Player* requester, const std::string& text)
 {
