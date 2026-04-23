@@ -18,6 +18,7 @@
 #include "playerbot/strategy/dungeons/RagefireChasm/Trigger/RfcTriggers.h"
 #include "playerbot/strategy/dungeons/WailingCaverns/Trigger/WcTriggers.h"
 #include "playerbot/strategy/dungeons/Deadmines/Trigger/DmTriggers.h"
+#include "playerbot/strategy/dungeons/ShadowfangKeep/Trigger/SfkTriggers.h"
 #include "playerbot/strategy/raid/MoltenCore/Trigger/RaidMcTriggers.h"
 #include "playerbot/strategy/raid/BlackwingLair/Trigger/RaidBwlTriggers.h"
 #include "playerbot/strategy/raid/Karazhan/Trigger/RaidKaraTriggers.h"
@@ -344,6 +345,25 @@ namespace ai
             creators["end cookie fight"]                 = [](PlayerbotAI* ai) { return new CookieEndFightTrigger(ai); };
             creators["start vancleef fight"]             = [](PlayerbotAI* ai) { return new VanCleefStartFightTrigger(ai); };
             creators["end vancleef fight"]               = [](PlayerbotAI* ai) { return new VanCleefEndFightTrigger(ai); };
+            creators["enter shadowfang keep"]            = [](PlayerbotAI* ai) { return new ShadowfangKeepEnterDungeonTrigger(ai); };
+            creators["leave shadowfang keep"]            = [](PlayerbotAI* ai) { return new ShadowfangKeepLeaveDungeonTrigger(ai); };
+            creators["target casting springvale heal"]   = [](PlayerbotAI* ai) { return new SpringvaleHealCastingTrigger(ai); };
+            creators["start rethilgore fight"]           = [](PlayerbotAI* ai) { return new RethilgoreStartFightTrigger(ai); };
+            creators["end rethilgore fight"]             = [](PlayerbotAI* ai) { return new RethilgoreEndFightTrigger(ai); };
+            creators["start razorclaw fight"]            = [](PlayerbotAI* ai) { return new RazorclawStartFightTrigger(ai); };
+            creators["end razorclaw fight"]              = [](PlayerbotAI* ai) { return new RazorclawEndFightTrigger(ai); };
+            creators["start silverlaine fight"]          = [](PlayerbotAI* ai) { return new SilverlaineStartFightTrigger(ai); };
+            creators["end silverlaine fight"]            = [](PlayerbotAI* ai) { return new SilverlaineEndFightTrigger(ai); };
+            creators["start springvale fight"]           = [](PlayerbotAI* ai) { return new SpringvaleStartFightTrigger(ai); };
+            creators["end springvale fight"]             = [](PlayerbotAI* ai) { return new SpringvaleEndFightTrigger(ai); };
+            creators["start odo fight"]                  = [](PlayerbotAI* ai) { return new OdoStartFightTrigger(ai); };
+            creators["end odo fight"]                    = [](PlayerbotAI* ai) { return new OdoEndFightTrigger(ai); };
+            creators["start fenrus fight"]               = [](PlayerbotAI* ai) { return new FenrusStartFightTrigger(ai); };
+            creators["end fenrus fight"]                 = [](PlayerbotAI* ai) { return new FenrusEndFightTrigger(ai); };
+            creators["start nandos fight"]               = [](PlayerbotAI* ai) { return new NandosStartFightTrigger(ai); };
+            creators["end nandos fight"]                 = [](PlayerbotAI* ai) { return new NandosEndFightTrigger(ai); };
+            creators["start arugal fight"]               = [](PlayerbotAI* ai) { return new ArugalStartFightTrigger(ai); };
+            creators["end arugal fight"]                 = [](PlayerbotAI* ai) { return new ArugalEndFightTrigger(ai); };
             creators["start oggleflint fight"]  = [](PlayerbotAI* ai) { return new OggleflintStartFightTrigger(ai); };
             creators["end oggleflint fight"]    = [](PlayerbotAI* ai) { return new OggleflintEndFightTrigger(ai); };
             creators["start taragaman fight"]   = [](PlayerbotAI* ai) { return new TaragamanStartFightTrigger(ai); };

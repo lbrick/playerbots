@@ -53,6 +53,7 @@
 #include "playerbot/strategy/dungeons/RagefireChasm/Strategy/RfcStrategy.h"
 #include "playerbot/strategy/dungeons/WailingCaverns/Strategy/WcStrategy.h"
 #include "playerbot/strategy/dungeons/Deadmines/Strategy/DmStrategy.h"
+#include "playerbot/strategy/dungeons/ShadowfangKeep/Strategy/SfkStrategy.h"
 #include "playerbot/strategy/raid/MoltenCore/Strategy/RaidMcStrategy.h"
 #include "playerbot/strategy/raid/BlackwingLair/Strategy/RaidBwlStrategy.h"
 #include "playerbot/strategy/raid/Karazhan/Strategy/RaidKaraStrategy.h"
@@ -168,6 +169,7 @@ namespace ai
             creators["wailing caverns"] = [](PlayerbotAI* ai) { return new WailingCavernsDungeonStrategy(ai); };
             creators["ragefire chasm"] = [](PlayerbotAI* ai) { return new RagefireChasmDungeonStrategy(ai); };
             creators["deadmines"] = [](PlayerbotAI* ai) { return new DeadminesDungeonStrategy(ai); };
+            creators["shadowfang keep"] = [](PlayerbotAI* ai) { return new ShadowfangKeepDungeonStrategy(ai); };
             creators["onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairDungeonStrategy(ai); };
             creators["molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreDungeonStrategy(ai); };
             creators["blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairDungeonStrategy(ai); };
@@ -190,6 +192,14 @@ namespace ai
             creators["smite"]          = [](PlayerbotAI* ai) { return new SmiteFightStrategy(ai); };
             creators["cookie"]         = [](PlayerbotAI* ai) { return new CookieFightStrategy(ai); };
             creators["vancleef"]       = [](PlayerbotAI* ai) { return new VanCleefFightStrategy(ai); };
+            creators["rethilgore"]     = [](PlayerbotAI* ai) { return new RethilgoreFightStrategy(ai); };
+            creators["razorclaw"]      = [](PlayerbotAI* ai) { return new RazorclawFightStrategy(ai); };
+            creators["silverlaine"]    = [](PlayerbotAI* ai) { return new SilverlaineFightStrategy(ai); };
+            creators["springvale"]     = [](PlayerbotAI* ai) { return new SpringvaleFightStrategy(ai); };
+            creators["odo"]            = [](PlayerbotAI* ai) { return new OdoFightStrategy(ai); };
+            creators["fenrus"]         = [](PlayerbotAI* ai) { return new FenrusFightStrategy(ai); };
+            creators["nandos"]         = [](PlayerbotAI* ai) { return new NandosFightStrategy(ai); };
+            creators["arugal"]         = [](PlayerbotAI* ai) { return new ArugalFightStrategy(ai); };
             creators["oggleflint"] = [](PlayerbotAI* ai) { return new OggleflintFightStrategy(ai); };
             creators["taragaman"] = [](PlayerbotAI* ai) { return new TaragamanFightStrategy(ai); };
             creators["jergosh"] = [](PlayerbotAI* ai) { return new JergoshFightStrategy(ai); };

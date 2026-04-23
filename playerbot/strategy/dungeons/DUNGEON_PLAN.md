@@ -23,10 +23,10 @@ Map IDs from `worlddb > instance_template > map` or https://wow.tools/dbc/?dbc=m
 
 | # | Dungeon | Short | Map ID | Levels | Status |
 |---|---------|-------|--------|--------|--------|
-| 1 | Ragefire Chasm | RFC | 389 | 13–18 | 🔵 CODE COMPLETE — awaiting in-game verify |
+| 1 | Ragefire Chasm | RFC | 389 | 13–18 | 🟢 ENTER/LEAVE VERIFIED — boss mechanics pending |
 | 2 | Wailing Caverns | WC | 43 | 15–25 | 🟡 IN PROGRESS |
 | 3 | The Deadmines | DM | 36 | 17–26 | 🟡 IN PROGRESS |
-| 4 | Shadowfang Keep | SFK | 33 | 22–30 | ⬜ TODO |
+| 4 | Shadowfang Keep | SFK | 33 | 22–30 | 🟢 ENTER VERIFIED — leave/boss mechanics pending |
 | 5 | Blackfathom Deeps | BFD | 48 | 20–30 | ⬜ TODO |
 | 6 | The Stockade | Stocks | 34 | 24–32 | ⬜ TODO |
 | 7 | Gnomeregan | Gnomer | 90 | 29–38 | ⬜ TODO |

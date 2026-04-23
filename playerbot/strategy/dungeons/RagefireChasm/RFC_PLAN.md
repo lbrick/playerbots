@@ -2,7 +2,7 @@
 
 **Map ID:** 389  
 **Levels:** 13–18  
-**Status:** 🟡 IN PROGRESS  
+**Status:** 🟢 ENTER/LEAVE VERIFIED; boss verification pending  
 
 ---
 
@@ -50,13 +50,13 @@ src/Ai/Dungeon/RagefireChasm/
 ## Definition of Done
 
 - [x] Build clean
-- [ ] Bot enters RFC → instance strategy loads (verify via strategy debug log)
+- [x] Bot enters RFC → instance strategy loads (verified 2026-04-23 with Trollman + Tultso)
 - [ ] Oggleflint engaged → oggleflint fight strategy enables
 - [ ] Taragaman engaged → taragaman fight strategy enables; bots move >12yd during Firenova
 - [ ] Jergosh engaged → jergosh fight strategy enables
 - [ ] Bazzalan engaged → bazzalan fight strategy enables
 - [ ] Each boss dies → fight strategy disables
-- [ ] Bot leaves RFC → instance strategy unloads
+- [x] Bot leaves RFC → instance strategy unloads (verified 2026-04-23 with Trollman + Tultso)
 
 ---
 
@@ -72,6 +72,13 @@ disable taragaman fight strategy
 
 ---
 
+## Verified Runtime Notes
+
+- `2026-04-23 04:09:39` Trollman entered RFC instance 3.
+- `2026-04-23 04:09:42` Tultso entered RFC instance 3.
+- `2026-04-23 04:09:47` `Bot Tultso: dungeon strategy action [enable ragefire chasm strategy]`
+- `2026-04-23 04:11:00` `Bot Tultso: dungeon strategy action [disable ragefire chasm strategy]`
+
 ## Next Step
 
-In-game verification run. Enter RFC with a bot group, observe log lines above. Then move to WC (Wailing Caverns, Map 43).
+In-game combat verification run. Confirm boss-specific strategy enable/disable lines and Taragaman Firenova avoidance inside RFC.

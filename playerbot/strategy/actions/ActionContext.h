@@ -77,6 +77,7 @@
 #include "playerbot/strategy/dungeons/RagefireChasm/Action/RfcActions.h"
 #include "playerbot/strategy/dungeons/WailingCaverns/Action/WcActions.h"
 #include "playerbot/strategy/dungeons/Deadmines/Action/DmActions.h"
+#include "playerbot/strategy/dungeons/ShadowfangKeep/Action/SfkActions.h"
 #include "playerbot/strategy/raid/MoltenCore/Action/RaidMcActions.h"
 #include "playerbot/strategy/raid/BlackwingLair/Action/RaidBwlActions.h"
 #include "playerbot/strategy/raid/Karazhan/Action/RaidKaraActions.h"
@@ -404,6 +405,24 @@ namespace ai
             creators["disable jergosh fight strategy"]    = [](PlayerbotAI* ai) { return new JergoshDisableFightStrategyAction(ai); };
             creators["enable bazzalan fight strategy"]    = [](PlayerbotAI* ai) { return new BazzalanEnableFightStrategyAction(ai); };
             creators["disable bazzalan fight strategy"]   = [](PlayerbotAI* ai) { return new BazzalanDisableFightStrategyAction(ai); };
+            creators["enable shadowfang keep strategy"]   = [](PlayerbotAI* ai) { return new ShadowfangKeepEnableStrategyAction(ai); };
+            creators["disable shadowfang keep strategy"]  = [](PlayerbotAI* ai) { return new ShadowfangKeepDisableStrategyAction(ai); };
+            creators["enable rethilgore fight strategy"]  = [](PlayerbotAI* ai) { return new RethilgoreEnableFightStrategyAction(ai); };
+            creators["disable rethilgore fight strategy"] = [](PlayerbotAI* ai) { return new RethilgoreDisableFightStrategyAction(ai); };
+            creators["enable razorclaw fight strategy"]   = [](PlayerbotAI* ai) { return new RazorclawEnableFightStrategyAction(ai); };
+            creators["disable razorclaw fight strategy"]  = [](PlayerbotAI* ai) { return new RazorclawDisableFightStrategyAction(ai); };
+            creators["enable silverlaine fight strategy"] = [](PlayerbotAI* ai) { return new SilverlaineEnableFightStrategyAction(ai); };
+            creators["disable silverlaine fight strategy"] = [](PlayerbotAI* ai) { return new SilverlaineDisableFightStrategyAction(ai); };
+            creators["enable springvale fight strategy"]  = [](PlayerbotAI* ai) { return new SpringvaleEnableFightStrategyAction(ai); };
+            creators["disable springvale fight strategy"] = [](PlayerbotAI* ai) { return new SpringvaleDisableFightStrategyAction(ai); };
+            creators["enable odo fight strategy"]         = [](PlayerbotAI* ai) { return new OdoEnableFightStrategyAction(ai); };
+            creators["disable odo fight strategy"]        = [](PlayerbotAI* ai) { return new OdoDisableFightStrategyAction(ai); };
+            creators["enable fenrus fight strategy"]      = [](PlayerbotAI* ai) { return new FenrusEnableFightStrategyAction(ai); };
+            creators["disable fenrus fight strategy"]     = [](PlayerbotAI* ai) { return new FenrusDisableFightStrategyAction(ai); };
+            creators["enable nandos fight strategy"]      = [](PlayerbotAI* ai) { return new NandosEnableFightStrategyAction(ai); };
+            creators["disable nandos fight strategy"]     = [](PlayerbotAI* ai) { return new NandosDisableFightStrategyAction(ai); };
+            creators["enable arugal fight strategy"]      = [](PlayerbotAI* ai) { return new ArugalEnableFightStrategyAction(ai); };
+            creators["disable arugal fight strategy"]     = [](PlayerbotAI* ai) { return new ArugalDisableFightStrategyAction(ai); };
             creators["enable onyxia's lair strategy"] = [](PlayerbotAI* ai) { return new OnyxiasLairEnableDungeonStrategyAction(ai); };
             creators["disable onyxia's lair strategy"] = [](PlayerbotAI* ai) { return new OnyxiasLairDisableDungeonStrategyAction(ai); };
             creators["enable molten core strategy"] = [](PlayerbotAI* ai) { return new MoltenCoreEnableDungeonStrategyAction(ai); };
