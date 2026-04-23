@@ -65,9 +65,20 @@ TestAction::TestAction(PlayerbotAI* ai, std::string name)
     monitors.push_back(std::make_unique<MonitorStateGroupSize>());
     monitors.push_back(std::make_unique<MonitorStateLootGuid>());
 
-    commands.push_back(std::make_unique<RequireEquip>());
-
-    commands.push_back(std::make_unique<CleanupParty>());
+    commands.push_back(std::make_unique<HandleTeleport>());
+    commands.push_back(std::make_unique<HandleSetGM>());
+    commands.push_back(std::make_unique<HandleSetDestination>());
+    commands.push_back(std::make_unique<HandleGiveItem>());
+    commands.push_back(std::make_unique<HandleEquipItem>());
+    commands.push_back(std::make_unique<HandleClearMobs>());
+    commands.push_back(std::make_unique<HandleSpawnBot>());
+    commands.push_back(std::make_unique<HandleDespawnBot>());
+    commands.push_back(std::make_unique<HandleFormParty>());
+    commands.push_back(std::make_unique<HandleSpawnGroup>());
+    commands.push_back(std::make_unique<HandleObserve>());
+    commands.push_back(std::make_unique<HandleCleanup>());
+    commands.push_back(std::make_unique<HandleAssert>());
+    commands.push_back(std::make_unique<HandleMonitor>());
 
     TestRegistry::GetAvailableTests();
 }
