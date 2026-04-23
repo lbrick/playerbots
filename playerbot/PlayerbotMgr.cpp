@@ -2000,7 +2000,7 @@ void PlayerbotHolder::CreateBot(Player* master, const std::string param, std::li
 
             sRandomPlayerbotMgr.SetValue(botGuid, "create levelup", 1);
             sRandomPlayerbotMgr.SetValue(botGuid, "create group", 1, groupWith);
-            sRandomPlayerbotMgr.SetValue(botGuid, "create gear", 1, gear);
+
         }
         else
             newBot->SetLevel(1);
