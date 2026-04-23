@@ -815,14 +815,9 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool idle, 
             if (sPlayerbotAIConfig.hasLog("bot_movement.csv"))
             {
                 WorldPosition telePos;
-                if (entry)
-                {
-                    AreaTrigger const* at = sObjectMgr.GetAreaTrigger(entry);
-                    if (at)
-                        telePos = WorldPosition(at->target_mapId, at->target_X, at->target_Y, at->target_Z, at->target_Orientation);
-                }
-                else
-                    telePos = movePosition;
+                AreaTrigger const* at = sObjectMgr.GetAreaTrigger(entry);
+                if (at)
+                    telePos = WorldPosition(at->target_mapId, at->target_X, at->target_Y, at->target_Z, at->target_Orientation);
 
                 std::ostringstream out;
                 out << sPlayerbotAIConfig.GetTimestampStr() << "+00,";

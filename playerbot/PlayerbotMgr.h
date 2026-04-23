@@ -49,6 +49,14 @@ public:
 
     static std::string GetCommandTexts(const std::string& command);
     static std::unordered_map<std::string, std::string> GetCommandTexts();
+
+    void CreateBot(Player* master, const std::string param, std::list<std::string>& messages, ObjectGuid& guid);
+    bool DeleteBot(ObjectGuid guid, bool allowInstant = true);
+#ifdef GenerateBotTests
+    void DepositTestResult(const std::string& testName, const std::string& result);
+#endif
+
+    std::list<std::string> HandleGroup(Player* master, const std::string param, AccountTypes security);
 protected:
     virtual void OnBotLoginInternal(Player * const bot) = 0;
     void Cleanup();   
