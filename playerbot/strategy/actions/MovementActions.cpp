@@ -2296,8 +2296,8 @@ void MovementAction::UpdateMovementState()
 
 bool MovementAction::Follow(Unit* target, float distance, float angle)
 {
-	if (!ai->IsSafe(target))
-    return false;
+    if (!ai->IsSafe(target))
+        return MoveTo2(target);
 
     MotionMaster &mm = *bot->GetMotionMaster();
 
