@@ -68,7 +68,7 @@ At session start: scan for first `[ ]` — that is the resume point. Mark `[x]` 
 ## Files to Create
 
 ```
-src/Ai/Dungeon/Deadmines/
+playerbot/strategy/dungeons/Deadmines/
   Action/
     DmActions.h
   Trigger/
@@ -100,10 +100,10 @@ SELECT map FROM instance_template WHERE map = 36;
 
 ## Registration Checklist
 
-- [ ] `src/Ai/Base/generic/DungeonStrategy.cpp` — enter/leave deadmines (combat + noncombat)
-- [ ] `src/Ai/Base/triggers/TriggerContext.h` — include `DmTriggers.h` + register all triggers
-- [ ] `src/Ai/Base/actions/ActionContext.h` — include `DmActions.h` + register all actions
-- [ ] `src/Ai/Base/StrategyContext.h` — include `DmStrategy.h` + register all strategies
+- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave deadmines (combat + noncombat)
+- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include `DmTriggers.h` + register all triggers
+- [ ] `playerbot/strategy/actions/ActionContext.h` — include `DmActions.h` + register all actions
+- [ ] `playerbot/strategy/StrategyContext.h` — include `DmStrategy.h` + register all strategies
 - [ ] `CMakeLists.txt` — add `Ai_Dungeon_DM` GLOB_RECURSE + LIBRARY_SRCS entry
 
 ---

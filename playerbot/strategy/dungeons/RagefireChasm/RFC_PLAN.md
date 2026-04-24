@@ -20,7 +20,7 @@
 ## Files Created
 
 ```
-src/Ai/Dungeon/RagefireChasm/
+playerbot/strategy/dungeons/RagefireChasm/
   Action/
     RfcActions.h       — instance + all 4 boss enable/disable + Taragaman MoveAway
   Trigger/
@@ -33,10 +33,10 @@ src/Ai/Dungeon/RagefireChasm/
 
 ## Registration (all complete)
 
-- [x] `src/Ai/Base/generic/DungeonStrategy.cpp` — enter/leave RFC in combat + noncombat
-- [x] `src/Ai/Base/triggers/TriggerContext.h` — include + all 9 RFC trigger creators
-- [x] `src/Ai/Base/actions/ActionContext.h` — include + all 11 RFC action creators
-- [x] `src/Ai/Base/StrategyContext.h` — include + 5 RFC strategy creators
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave RFC in combat + noncombat
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include + all 9 RFC trigger creators
+- [x] `playerbot/strategy/actions/ActionContext.h` — include + all 11 RFC action creators
+- [x] `playerbot/strategy/StrategyContext.h` — include + 5 RFC strategy creators
 - [x] `CMakeLists.txt` — `Ai_Dungeon_RFC` GLOB_RECURSE added + included in LIBRARY_SRCS
 
 ---

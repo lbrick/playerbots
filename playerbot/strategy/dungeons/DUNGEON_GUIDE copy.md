@@ -25,7 +25,7 @@ Dungeon strategies only layer boss-specific behaviour on top.
 Each dungeon lives in its own subdirectory:
 
 ```
-src/Ai/Dungeon/
+playerbot/strategy/dungeons/
   <DungeonName>/
     Action/
       <Dungeon>Actions.h      — enable/disable strategy actions + boss-specific movement actions
@@ -71,17 +71,17 @@ Write a boss table like this before touching any code:
 
 ## Step 2 — Create the Trigger File
 
-**Path:** `src/Ai/Dungeon/<DungeonName>/Trigger/<Dungeon>Triggers.h`
+**Path:** `playerbot/strategy/dungeons/<DungeonName>/Trigger/<Dungeon>Triggers.h`
 
 Every dungeon needs at minimum:
 - One `EnterDungeonTrigger` and one `LeaveDungeonTrigger` (use the instance map ID)
 - One `StartBossFightTrigger` and one `EndBossFightTrigger` per boss (use boss NPC ID)
 
-All four base classes live in `src/Ai/Base/triggers/DungeonTriggers.h`.
+All four base classes live in `playerbot/strategy/triggers/DungeonTriggers.h`.
 
 ```cpp
 #pragma once
-#include "src/Ai/Base/triggers/DungeonTriggers.h"
+#include "playerbot/strategy/triggers/DungeonTriggers.h"
 
 namespace ai
 {
@@ -138,7 +138,7 @@ Use `CloseToGameObjectHazardTrigger` instead if the hazard is a spawned game obj
 
 ## Step 3 — Create the Action File
 
-**Path:** `src/Ai/Dungeon/<DungeonName>/Action/<Dungeon>Actions.h`
+**Path:** `playerbot/strategy/dungeons/<DungeonName>/Action/<Dungeon>Actions.h`
 
 Actions only need a `.h` file if all logic is inherited from a base class.  
 Only create a `.cpp` if you need custom `Execute()` logic.
@@ -147,8 +147,8 @@ Only create a `.cpp` if you need custom `Execute()` logic.
 
 ```cpp
 #pragma once
-#include "src/Ai/Base/actions/DungeonActions.h"
-#include "src/Ai/Base/actions/ChangeStrategyAction.h"
+#include "playerbot/strategy/actions/DungeonActions.h"
+#include "playerbot/strategy/actions/ChangeStrategyAction.h"
 
 namespace ai
 {
@@ -201,13 +201,13 @@ namespace ai
 
 ## Step 4 — Create the Strategy Files
 
-**Path:** `src/Ai/Dungeon/<DungeonName>/Strategy/<Dungeon>Strategy.h` and `.cpp`
+**Path:** `playerbot/strategy/dungeons/<DungeonName>/Strategy/<Dungeon>Strategy.h` and `.cpp`
 
 ### Header
 
 ```cpp
 #pragma once
-#include "src/Ai/Base/Strategy.h"
+#include "playerbot/strategy/Strategy.h"
 
 namespace ai
 {
@@ -243,7 +243,7 @@ both register start-fight triggers so the boss strategy loads whether the bot wa
 in combat when it zoned in or not.
 
 ```cpp
-#include "src/Bot/Engine/playerbot.h"
+#include "playerbot/playerbot.h"
 #include "<Dungeon>Strategy.h"
 
 using namespace ai;
@@ -324,7 +324,7 @@ Add the `#include` near the other dungeon trigger includes (top of file), then r
 each trigger in the constructor body:
 
 ```cpp
-#include "src/Ai/Dungeon/<DungeonName>/Trigger/<Dungeon>Triggers.h"
+#include "playerbot/strategy/dungeons/<DungeonName>/Trigger/<Dungeon>Triggers.h"
 
 // In constructor:
 creators["enter <dungeon name>"] = [](PlayerbotAI* ai) { return new <Dungeon>EnterDungeonTrigger(ai); };
@@ -340,7 +340,7 @@ creators["<boss> <mechanic>"]    = [](PlayerbotAI* ai) { return new <Boss><Mecha
 Add the `#include` near the other dungeon action includes, then register:
 
 ```cpp
-#include "src/Ai/Dungeon/<DungeonName>/Action/<Dungeon>Actions.h"
+#include "playerbot/strategy/dungeons/<DungeonName>/Action/<Dungeon>Actions.h"
 
 // In constructor:
 creators["enable <dungeon name> strategy"]  = [](PlayerbotAI* ai) { return new <Dungeon>EnableStrategyAction(ai); };
@@ -356,7 +356,7 @@ creators["<boss> move away from <mechanic>"] = [](PlayerbotAI* ai) { return new 
 Add the `#include` near the other dungeon strategy includes, then register:
 
 ```cpp
-#include "src/Ai/Dungeon/<DungeonName>/Strategy/<Dungeon>Strategy.h"
+#include "playerbot/strategy/dungeons/<DungeonName>/Strategy/<Dungeon>Strategy.h"
 
 // In constructor (under "// Dungeon Strategies"):
 creators["<dungeon name>"] = [](PlayerbotAI* ai) { return new <Dungeon>DungeonStrategy(ai); };
@@ -413,5 +413,5 @@ Then in-game verification (with `LogFileLevel = 3`):
 - **Bosses with no dangerous mechanics** still need start/end fight triggers for consistency, but `InitCombatTriggers` can be omitted from their fight strategy.
 - **Multiple wings sharing a map ID** (SM, LBRS/UBRS): use one instance strategy with all wing bosses registered. The bot strategy enable/disable for each boss is independent.
 - When in doubt about how something should look, check the Onyxia implementation as the canonical cmangos pattern:
-  - `src/Ai/Raid/OnyxiasLair/` — trigger, action, strategy files
-  - `src/Ai/Base/generic/DungeonStrategy.cpp` — how enter/leave is wired
+  - `playerbot/strategy/raid/OnyxiasLair/` — trigger, action, strategy files
+  - `playerbot/strategy/generic/DungeonStrategy.cpp` — how enter/leave is wired

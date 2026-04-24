@@ -47,7 +47,7 @@
 ## Files to Create
 
 ```
-src/Ai/Dungeon/WailingCaverns/
+playerbot/strategy/dungeons/WailingCaverns/
   Action/
     WcActions.h
   Trigger/
@@ -62,10 +62,10 @@ src/Ai/Dungeon/WailingCaverns/
 
 ## Registration Checklist
 
-- [x] `src/Ai/Base/generic/DungeonStrategy.cpp` — enter/leave wailing caverns (combat + noncombat)
-- [x] `src/Ai/Base/triggers/TriggerContext.h` — include + register all triggers
-- [x] `src/Ai/Base/actions/ActionContext.h` — include + register all actions
-- [x] `src/Ai/Base/StrategyContext.h` — include + register all strategies
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave wailing caverns (combat + noncombat)
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include + register all triggers
+- [x] `playerbot/strategy/actions/ActionContext.h` — include + register all actions
+- [x] `playerbot/strategy/StrategyContext.h` — include + register all strategies
 - [x] `CMakeLists.txt` — add `Ai_Dungeon_WC` GLOB_RECURSE + LIBRARY_SRCS entry
 
 ---

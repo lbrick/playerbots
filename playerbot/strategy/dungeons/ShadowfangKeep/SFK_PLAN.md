@@ -66,7 +66,7 @@ Recommended delivery split:
 ## Files to Create
 
 ```
-src/Ai/Dungeon/ShadowfangKeep/
+playerbot/strategy/dungeons/ShadowfangKeep/
   Action/
     SfkActions.h
   Trigger/
@@ -175,10 +175,10 @@ SELECT map FROM instance_template WHERE map = 33;
 
 ## Registration Checklist
 
-- [x] `src/Ai/Base/generic/DungeonStrategy.cpp` — enter/leave shadowfang keep (combat + noncombat)
-- [x] `src/Ai/Base/triggers/TriggerContext.h` — include `SfkTriggers.h` + register all triggers
-- [x] `src/Ai/Base/actions/ActionContext.h` — include `SfkActions.h` + register all actions
-- [x] `src/Ai/Base/StrategyContext.h` — include `SfkStrategy.h` + register all strategies
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave shadowfang keep (combat + noncombat)
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include `SfkTriggers.h` + register all triggers
+- [x] `playerbot/strategy/actions/ActionContext.h` — include `SfkActions.h` + register all actions
+- [x] `playerbot/strategy/StrategyContext.h` — include `SfkStrategy.h` + register all strategies
 - [x] `CMakeLists.txt` — add `Ai_Dungeon_SFK` GLOB_RECURSE + LIBRARY_SRCS entry
 
 ---

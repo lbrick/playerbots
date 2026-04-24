@@ -106,7 +106,7 @@ Recommended delivery split:
 ## Files to Create
 
 ```
-src/Ai/Dungeon/BlackfathomDeeps/
+playerbot/strategy/dungeons/BlackfathomDeeps/
   Action/
     BfdActions.h
   Trigger/
@@ -167,10 +167,10 @@ Verified output:
 
 ## Registration Checklist
 
-- [ ] `src/Ai/Base/generic/DungeonStrategy.cpp` — enter/leave blackfathom deeps (combat + noncombat)
-- [ ] `src/Ai/Base/triggers/TriggerContext.h` — include `BfdTriggers.h` + register all triggers
-- [ ] `src/Ai/Base/actions/ActionContext.h` — include `BfdActions.h` + register all actions
-- [ ] `src/Ai/Base/StrategyContext.h` — include `BfdStrategy.h` + register all strategies
+- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave blackfathom deeps (combat + noncombat)
+- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include `BfdTriggers.h` + register all triggers
+- [ ] `playerbot/strategy/actions/ActionContext.h` — include `BfdActions.h` + register all actions
+- [ ] `playerbot/strategy/StrategyContext.h` — include `BfdStrategy.h` + register all strategies
 - [ ] `CMakeLists.txt` — add `Ai_Dungeon_BFD` GLOB_RECURSE + LIBRARY_SRCS entry
 
 ---

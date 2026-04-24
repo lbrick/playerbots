@@ -1,6 +1,6 @@
 # Classic Dungeon Implementation Plan
 
-**Target:** cmangos-playerbots `src/Ai/Dungeon/`  
+**Target:** cmangos-playerbots `playerbot/strategy/dungeons/`  
 **Reference implementation:** AC playerbots WotLK dungeons (`azerothcore-playerbots/src/Ai/Dungeon/`)  
 **Boss research:** https://www.wowhead.com/classic/guide/ragefire-chasm-dungeon-strategy-wow-classic  
   (Replace `ragefire-chasm` with the dungeon slug for any other dungeon)
@@ -30,7 +30,7 @@ Map IDs from `worlddb > instance_template > map` or https://wow.tools/dbc/?dbc=m
 | 5 | Blackfathom Deeps | BFD | 48 | 20–30 | 🟡 IN PROGRESS |
 | 6 | The Stockade | Stocks | 34 | 24–32 | ⬜ TODO |
 | 7 | Gnomeregan | Gnomer | 90 | 29–38 | ⬜ TODO |
-| 8 | Razorfen Kraul | RFK | 47 | 25–38 | ⬜ TODO |
+| 8 | Razorfen Kraul | RFK | 47 | 25–38 | 🟡 PLANNED — see RazorfenKraul/RFK_PLAN.md |
 | 9 | Scarlet Monastery | SM | 189 | 28–45 | ⬜ TODO |
 | 10 | Razorfen Downs | RFD | 129 | 35–50 | ⬜ TODO |
 | 11 | Uldaman | Ulda | 70 | 35–45 | ⬜ TODO |
@@ -68,11 +68,11 @@ Map IDs from `worlddb > instance_template > map` or https://wow.tools/dbc/?dbc=m
 
 Every dungeon requires changes to 5 files outside its own folder:
 
-- [ ] `src/Ai/Base/generic/DungeonStrategy.cpp` — add enter/leave triggers (both combat + noncombat)
-- [ ] `src/Ai/Base/triggers/TriggerContext.h` — include header + register all triggers
-- [ ] `src/Ai/Base/actions/ActionContext.h` — include header + register all enable/disable actions
-- [ ] `src/Ai/Base/StrategyContext.h` — include header + register instance + boss fight strategies
-- [ ] `CMakeLists.txt` — verify `GLOB_RECURSE` covers `src/Ai/Dungeon/` (already covers `src/Ai/` recursively — no change needed if already set)
+- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — add enter/leave triggers (both combat + noncombat)
+- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include header + register all triggers
+- [ ] `playerbot/strategy/actions/ActionContext.h` — include header + register all enable/disable actions
+- [ ] `playerbot/strategy/StrategyContext.h` — include header + register instance + boss fight strategies
+- [ ] `CMakeLists.txt` — add explicit `GLOB_RECURSE Ai_Dungeon_XXX` entry for the new dungeon (each dungeon has its own entry; check existing entries around line 79 as the pattern)
 
 ---
 
