@@ -869,22 +869,24 @@ void RandomPlayerbotMgr::LoginFreeBots()
         for (auto [accountId, botGuid] : sPlayerbotAIConfig.freeAltBots)
         {
             ObjectGuid guid(ObjectGuid(HIGHGUID_PLAYER, botGuid));
-            Player* player = sObjectMgr.GetPlayer(guid, false);
+            Player* bot = sObjectMgr.GetPlayer(guid, false);
 
-            if (!player)
+            if (!bot)
             {
                 sLog.outDetail("Add player %d", botGuid);
                 AddPlayerBot(botGuid, accountId);
             }
-            else if (!player->IsBeingTeleported())
+            else if (!bot->IsBeingTeleported())
             {
                 if (sRandomPlayerbotMgr.GetValue(botGuid, "create levelup"))
                 {
-                    PlayerbotFactory factory(player, player->GetLevel());
-                    factory.Randomize(false, false);
+                    PlayerbotFactory factory(bot, bot->GetLevel());
+                    factory.Randomize(true, false);
 
                     sRandomPlayerbotMgr.SetValue(botGuid, "create levelup", 0);
                 }
+
+                Player* master = nullptr;
 
                 if (sRandomPlayerbotMgr.GetValue(botGuid, "create group"))
                 {
@@ -892,16 +894,40 @@ void RandomPlayerbotMgr::LoginFreeBots()
 
                     if (!groupWith.empty())
                     {
-                        Player* master = sObjectAccessor.FindPlayerByName(groupWith.c_str());
+                        master = sObjectAccessor.FindPlayerByName(groupWith.c_str());
 
                         if (master)
-                            player->GetPlayerbotAI()->DoSpecificAction("join", Event("create group", "", master));
+                        {
+                            bot->GetPlayerbotAI()->DoSpecificAction("join", Event("create group", "", master));
+                        }
                     }
 
                     sRandomPlayerbotMgr.SetValue(botGuid, "create group", 0);
                 }
 
-                if (!IsRandomBot(player) && GetPlayerBot(guid)) //Place bot in player manager.
+                if (sRandomPlayerbotMgr.GetValue(botGuid, "create gear"))
+                {
+                    std::string gear = sRandomPlayerbotMgr.GetData(botGuid, "create gear");
+                    if (gear == "empty")
+                    {
+                        for (uint8 slot = 0; slot < EQUIPMENT_SLOT_END; ++slot)
+                        {
+                            bot->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+                        }
+                    }
+
+                if (GetEventValue(botGuid, "test"))
+                {
+                    PlayerbotAI* ai = bot->GetPlayerbotAI();
+                    AiObjectContext* context = ai->GetAiObjectContext();
+                    std::string strategyName = "test::" + GetEventData(botGuid, "test");
+                    ai->ChangeStrategy("+" + strategyName, BotState::BOT_STATE_NON_COMBAT);
+                    SET_AI_VALUE2(bool, "manual bool", "is running test", true);
+
+                    sRandomPlayerbotMgr.SetValue(botGuid, "test", 0);
+                }
+
+                if (!IsRandomBot(bot) && GetPlayerBot(guid)) //Place bot in player manager.
                 {
                     for (auto& [mGuid, master] : players)
                     {
@@ -916,6 +942,9 @@ void RandomPlayerbotMgr::LoginFreeBots()
                         }
                     }
                 }
+
+                if (master)
+                    bot->TeleportTo(WorldPosition(master));
 
                 BotAlwaysOnline always = BotAlwaysOnline(sRandomPlayerbotMgr.GetValue(botGuid, "always"));
                 if (always != BotAlwaysOnline::ACTIVE)
