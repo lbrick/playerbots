@@ -31,7 +31,7 @@ Map IDs from `worlddb > instance_template > map` or https://wow.tools/dbc/?dbc=m
 | 6 | The Stockade | Stocks | 34 | 24–32 | ⬜ TODO |
 | 7 | Gnomeregan | Gnomer | 90 | 29–38 | ⬜ TODO |
 | 8 | Razorfen Kraul | RFK | 47 | 25–38 | 🟡 PLANNED — see RazorfenKraul/RFK_PLAN.md |
-| 9 | Scarlet Monastery | SM | 189 | 28–45 | ⬜ TODO |
+| 9 | Scarlet Monastery | SM | 189 | 28–45 | 🟡 PLANNED — see ScarletMonastery/SM_PLAN.md |
 | 10 | Razorfen Downs | RFD | 129 | 35–50 | ⬜ TODO |
 | 11 | Uldaman | Ulda | 70 | 35–45 | ⬜ TODO |
 | 12 | Zul'Farrak | ZF | 209 | 44–54 | ⬜ TODO |
