@@ -289,7 +289,10 @@ bool ChangeTalentsAction::AutoSelectTalents(std::ostringstream* out)
     {
         TalentSpec oldSpec(bot);
         int currentTree = oldSpec.highestTree();
-        std::vector<TalentPath*> paths = getPremadePaths(&oldSpec);
+        std::vector<TalentPath*> paths;
+
+        if (oldSpec.points)
+            paths = getPremadePaths(&oldSpec);
 
         if (paths.size() == 0) //No spec like the old one found. Pick any.
         {
