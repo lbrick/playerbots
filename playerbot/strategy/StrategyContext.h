@@ -54,6 +54,7 @@
 #include "playerbot/strategy/dungeons/WailingCaverns/Strategy/WcStrategy.h"
 #include "playerbot/strategy/dungeons/Deadmines/Strategy/DmStrategy.h"
 #include "playerbot/strategy/dungeons/ShadowfangKeep/Strategy/SfkStrategy.h"
+#include "playerbot/strategy/dungeons/BlackfathomDeeps/Strategy/BfdStrategy.h"
 #include "playerbot/strategy/raid/MoltenCore/Strategy/RaidMcStrategy.h"
 #include "playerbot/strategy/raid/BlackwingLair/Strategy/RaidBwlStrategy.h"
 #include "playerbot/strategy/raid/Karazhan/Strategy/RaidKaraStrategy.h"
@@ -170,6 +171,7 @@ namespace ai
             creators["ragefire chasm"] = [](PlayerbotAI* ai) { return new RagefireChasmDungeonStrategy(ai); };
             creators["deadmines"] = [](PlayerbotAI* ai) { return new DeadminesDungeonStrategy(ai); };
             creators["shadowfang keep"] = [](PlayerbotAI* ai) { return new ShadowfangKeepDungeonStrategy(ai); };
+            creators["blackfathom deeps"] = [](PlayerbotAI* ai) { return new BlackfathomDeepsDungeonStrategy(ai); };
             creators["onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairDungeonStrategy(ai); };
             creators["molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreDungeonStrategy(ai); };
             creators["blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairDungeonStrategy(ai); };
@@ -200,6 +202,13 @@ namespace ai
             creators["fenrus"]         = [](PlayerbotAI* ai) { return new FenrusFightStrategy(ai); };
             creators["nandos"]         = [](PlayerbotAI* ai) { return new NandosFightStrategy(ai); };
             creators["arugal"]         = [](PlayerbotAI* ai) { return new ArugalFightStrategy(ai); };
+            creators["ghamoo-ra"]      = [](PlayerbotAI* ai) { return new GhamooRaFightStrategy(ai); };
+            creators["lady sarevess"]  = [](PlayerbotAI* ai) { return new LadySarevessFightStrategy(ai); };
+            creators["gelihast"]       = [](PlayerbotAI* ai) { return new GelihastFightStrategy(ai); };
+            creators["lorgus jett"]    = [](PlayerbotAI* ai) { return new LorgusJettFightStrategy(ai); };
+            creators["baron aquanis"]  = [](PlayerbotAI* ai) { return new BaronAquanisFightStrategy(ai); };
+            creators["kelris"]         = [](PlayerbotAI* ai) { return new KelrisFightStrategy(ai); };
+            creators["aku'mai"]        = [](PlayerbotAI* ai) { return new AkuMaiFightStrategy(ai); };
             creators["oggleflint"] = [](PlayerbotAI* ai) { return new OggleflintFightStrategy(ai); };
             creators["taragaman"] = [](PlayerbotAI* ai) { return new TaragamanFightStrategy(ai); };
             creators["jergosh"] = [](PlayerbotAI* ai) { return new JergoshFightStrategy(ai); };

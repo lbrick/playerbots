@@ -36,3 +36,4 @@
 | 19:30 | party join: teleport+follow+restore impl | AcceptInvitationAction.h, LeaveGroupAction.cpp, PlayerbotAI.h/.cpp, AiFactory.cpp | working — 40 events confirmed in log | ~800 |
 | 22:07 | created Deadmines dungeon folder + DM_PLAN.md | src/Ai/Dungeon/Deadmines/ | plan ready, awaiting user confirmation | ~200 |
 | 22:20 | DM dungeon impl complete: 4 files created, 5 files registered, build clean | Deadmines/* + DungeonStrategy.cpp + TriggerContext.h + ActionContext.h + StrategyContext.h + CMakeLists.txt | success | ~800 |
+| 01:28 | Created BFD dungeon strategy (Steps 2-13) | BlackfathomDeeps/Trigger/BfdTriggers.h, Action/BfdActions.h, Strategy/BfdStrategy.h/.cpp + 5 registration edits | clean build | ~4000 |

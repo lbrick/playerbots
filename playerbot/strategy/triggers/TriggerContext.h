@@ -19,6 +19,7 @@
 #include "playerbot/strategy/dungeons/WailingCaverns/Trigger/WcTriggers.h"
 #include "playerbot/strategy/dungeons/Deadmines/Trigger/DmTriggers.h"
 #include "playerbot/strategy/dungeons/ShadowfangKeep/Trigger/SfkTriggers.h"
+#include "playerbot/strategy/dungeons/BlackfathomDeeps/Trigger/BfdTriggers.h"
 #include "playerbot/strategy/raid/MoltenCore/Trigger/RaidMcTriggers.h"
 #include "playerbot/strategy/raid/BlackwingLair/Trigger/RaidBwlTriggers.h"
 #include "playerbot/strategy/raid/Karazhan/Trigger/RaidKaraTriggers.h"
@@ -296,6 +297,14 @@ namespace ai
             creators["leave ragefire chasm"] = [](PlayerbotAI* ai) { return new RagefireChasmLeaveDungeonTrigger(ai); };
             creators["enter wailing caverns"] = [](PlayerbotAI* ai) { return new WailingCavernsEnterDungeonTrigger(ai); };
             creators["leave wailing caverns"] = [](PlayerbotAI* ai) { return new WailingCavernsLeaveDungeonTrigger(ai); };
+            creators["enter deadmines"] = [](PlayerbotAI* ai) { return new DeadminesEnterDungeonTrigger(ai); };
+            creators["leave deadmines"] = [](PlayerbotAI* ai) { return new DeadminesLeaveDungeonTrigger(ai); };
+            creators["enter shadowfang keep"] = [](PlayerbotAI* ai) { return new ShadowfangKeepEnterDungeonTrigger(ai); };
+            creators["leave shadowfang keep"] = [](PlayerbotAI* ai) { return new ShadowfangKeepLeaveDungeonTrigger(ai); };
+            creators["enter blackfathom deeps"] = [](PlayerbotAI* ai) { return new BlackfathomDeepsEnterDungeonTrigger(ai); };
+            creators["leave blackfathom deeps"] = [](PlayerbotAI* ai) { return new BlackfathomDeepsLeaveDungeonTrigger(ai); };
+
+            // Raid Triggers
             creators["enter onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairEnterDungeonTrigger(ai); };
             creators["leave onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairLeaveDungeonTrigger(ai); };
             creators["enter molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreEnterDungeonTrigger(ai); };
@@ -308,6 +317,7 @@ namespace ai
             creators["leave blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairLeaveDungeonTrigger(ai); };
 
             // Dungeon Boss Triggers
+            // WC
             creators["target casting druid slumber"] = [](PlayerbotAI* ai) { return new DruidSlumberCastingTrigger(ai); };
             creators["start kresh fight"]       = [](PlayerbotAI* ai) { return new KreshStartFightTrigger(ai); };
             creators["end kresh fight"]         = [](PlayerbotAI* ai) { return new KreshEndFightTrigger(ai); };
@@ -325,8 +335,8 @@ namespace ai
             creators["start mutanus fight"]     = [](PlayerbotAI* ai) { return new MutanusStartFightTrigger(ai); };
             creators["end mutanus fight"]       = [](PlayerbotAI* ai) { return new MutanusEndFightTrigger(ai); };
             creators["mutanus aoe"]             = [](PlayerbotAI* ai) { return new MutanusAoeTrigger(ai); };
-            creators["enter deadmines"]                  = [](PlayerbotAI* ai) { return new DeadminesEnterDungeonTrigger(ai); };
-            creators["leave deadmines"]                  = [](PlayerbotAI* ai) { return new DeadminesLeaveDungeonTrigger(ai); };
+
+            // DM
             creators["start rhahkzor fight"]             = [](PlayerbotAI* ai) { return new RhahkzorStartFightTrigger(ai); };
             creators["end rhahkzor fight"]               = [](PlayerbotAI* ai) { return new RhahkzorEndFightTrigger(ai); };
             creators["rhahkzor slam"]                    = [](PlayerbotAI* ai) { return new RhahkzorSlamTrigger(ai); };
@@ -345,8 +355,8 @@ namespace ai
             creators["end cookie fight"]                 = [](PlayerbotAI* ai) { return new CookieEndFightTrigger(ai); };
             creators["start vancleef fight"]             = [](PlayerbotAI* ai) { return new VanCleefStartFightTrigger(ai); };
             creators["end vancleef fight"]               = [](PlayerbotAI* ai) { return new VanCleefEndFightTrigger(ai); };
-            creators["enter shadowfang keep"]            = [](PlayerbotAI* ai) { return new ShadowfangKeepEnterDungeonTrigger(ai); };
-            creators["leave shadowfang keep"]            = [](PlayerbotAI* ai) { return new ShadowfangKeepLeaveDungeonTrigger(ai); };
+            
+            // SFK
             creators["target casting springvale heal"]   = [](PlayerbotAI* ai) { return new SpringvaleHealCastingTrigger(ai); };
             creators["start rethilgore fight"]           = [](PlayerbotAI* ai) { return new RethilgoreStartFightTrigger(ai); };
             creators["end rethilgore fight"]             = [](PlayerbotAI* ai) { return new RethilgoreEndFightTrigger(ai); };
@@ -364,6 +374,8 @@ namespace ai
             creators["end nandos fight"]                 = [](PlayerbotAI* ai) { return new NandosEndFightTrigger(ai); };
             creators["start arugal fight"]               = [](PlayerbotAI* ai) { return new ArugalStartFightTrigger(ai); };
             creators["end arugal fight"]                 = [](PlayerbotAI* ai) { return new ArugalEndFightTrigger(ai); };
+
+            // RFC
             creators["start oggleflint fight"]  = [](PlayerbotAI* ai) { return new OggleflintStartFightTrigger(ai); };
             creators["end oggleflint fight"]    = [](PlayerbotAI* ai) { return new OggleflintEndFightTrigger(ai); };
             creators["start taragaman fight"]   = [](PlayerbotAI* ai) { return new TaragamanStartFightTrigger(ai); };
@@ -373,9 +385,31 @@ namespace ai
             creators["end jergosh fight"]       = [](PlayerbotAI* ai) { return new JergoshEndFightTrigger(ai); };
             creators["start bazzalan fight"]    = [](PlayerbotAI* ai) { return new BazzalanStartFightTrigger(ai); };
             creators["end bazzalan fight"]      = [](PlayerbotAI* ai) { return new BazzalanEndFightTrigger(ai); };
+
+            // BFD
+            creators["start ghamoo-ra fight"]        = [](PlayerbotAI* ai) { return new GhamooRaStartFightTrigger(ai); };
+            creators["end ghamoo-ra fight"]          = [](PlayerbotAI* ai) { return new GhamooRaEndFightTrigger(ai); };
+            creators["ghamoo-ra trample"]            = [](PlayerbotAI* ai) { return new GhamooRaTrampleTrigger(ai); };
+            creators["start lady sarevess fight"]    = [](PlayerbotAI* ai) { return new LadySarevessStartFightTrigger(ai); };
+            creators["end lady sarevess fight"]      = [](PlayerbotAI* ai) { return new LadySarevessEndFightTrigger(ai); };
+            creators["start gelihast fight"]         = [](PlayerbotAI* ai) { return new GelihastStartFightTrigger(ai); };
+            creators["end gelihast fight"]           = [](PlayerbotAI* ai) { return new GelihastEndFightTrigger(ai); };
+            creators["start lorgus jett fight"]      = [](PlayerbotAI* ai) { return new LorgusJettStartFightTrigger(ai); };
+            creators["end lorgus jett fight"]        = [](PlayerbotAI* ai) { return new LorgusJettEndFightTrigger(ai); };
+            creators["start baron aquanis fight"]    = [](PlayerbotAI* ai) { return new BaronAquanisStartFightTrigger(ai); };
+            creators["end baron aquanis fight"]      = [](PlayerbotAI* ai) { return new BaronAquanisEndFightTrigger(ai); };
+            creators["start kelris fight"]           = [](PlayerbotAI* ai) { return new KelrisStartFightTrigger(ai); };
+            creators["end kelris fight"]             = [](PlayerbotAI* ai) { return new KelrisEndFightTrigger(ai); };
+            creators["start aku'mai fight"]          = [](PlayerbotAI* ai) { return new AkuMaiStartFightTrigger(ai); };
+            creators["end aku'mai fight"]            = [](PlayerbotAI* ai) { return new AkuMaiEndFightTrigger(ai); };
+            creators["aku'mai poison cloud"]         = [](PlayerbotAI* ai) { return new AkuMaiPoisonCloudTrigger(ai); };
+
+            // Raid Boss Triggers
+            // Onyxia
             creators["start onyxia fight"] = [](PlayerbotAI* ai) { return new OnyxiaStartFightTrigger(ai); };
             creators["end onyxia fight"] = [](PlayerbotAI* ai) { return new OnyxiaEndFightTrigger(ai); };
 
+            // MC
             creators["start magmadar fight"] = [](PlayerbotAI* ai) { return new MagmadarStartFightTrigger(ai); };
             creators["end magmadar fight"] = [](PlayerbotAI* ai) { return new MagmadarEndFightTrigger(ai); };
             creators["magmadar lava bomb"] = [](PlayerbotAI* ai) { return new MagmadarLavaBombTrigger(ai); };

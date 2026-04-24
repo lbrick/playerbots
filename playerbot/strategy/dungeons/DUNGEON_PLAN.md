@@ -27,7 +27,7 @@ Map IDs from `worlddb > instance_template > map` or https://wow.tools/dbc/?dbc=m
 | 2 | Wailing Caverns | WC | 43 | 15–25 | 🟡 IN PROGRESS |
 | 3 | The Deadmines | DM | 36 | 17–26 | 🟡 IN PROGRESS |
 | 4 | Shadowfang Keep | SFK | 33 | 22–30 | 🟢 ENTER VERIFIED — leave/boss mechanics pending |
-| 5 | Blackfathom Deeps | BFD | 48 | 20–30 | ⬜ TODO |
+| 5 | Blackfathom Deeps | BFD | 48 | 20–30 | 🟡 IN PROGRESS |
 | 6 | The Stockade | Stocks | 34 | 24–32 | ⬜ TODO |
 | 7 | Gnomeregan | Gnomer | 90 | 29–38 | ⬜ TODO |
 | 8 | Razorfen Kraul | RFK | 47 | 25–38 | ⬜ TODO |

@@ -24,6 +24,10 @@ void DungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
         NextAction::array(0, new NextAction("enable shadowfang keep strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
+        "enter blackfathom deeps",
+        NextAction::array(0, new NextAction("enable blackfathom deeps strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
         "enter onyxia's lair",
         NextAction::array(0, new NextAction("enable onyxia's lair strategy", 100.0f), NULL)));
 
@@ -73,6 +77,14 @@ void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode(
         "leave shadowfang keep",
         NextAction::array(0, new NextAction("disable shadowfang keep strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter blackfathom deeps",
+        NextAction::array(0, new NextAction("enable blackfathom deeps strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave blackfathom deeps",
+        NextAction::array(0, new NextAction("disable blackfathom deeps strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
         "enter onyxia's lair",

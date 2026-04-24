@@ -78,6 +78,7 @@
 #include "playerbot/strategy/dungeons/WailingCaverns/Action/WcActions.h"
 #include "playerbot/strategy/dungeons/Deadmines/Action/DmActions.h"
 #include "playerbot/strategy/dungeons/ShadowfangKeep/Action/SfkActions.h"
+#include "playerbot/strategy/dungeons/BlackfathomDeeps/Action/BfdActions.h"
 #include "playerbot/strategy/raid/MoltenCore/Action/RaidMcActions.h"
 #include "playerbot/strategy/raid/BlackwingLair/Action/RaidBwlActions.h"
 #include "playerbot/strategy/raid/Karazhan/Action/RaidKaraActions.h"
@@ -423,6 +424,24 @@ namespace ai
             creators["disable nandos fight strategy"]     = [](PlayerbotAI* ai) { return new NandosDisableFightStrategyAction(ai); };
             creators["enable arugal fight strategy"]      = [](PlayerbotAI* ai) { return new ArugalEnableFightStrategyAction(ai); };
             creators["disable arugal fight strategy"]     = [](PlayerbotAI* ai) { return new ArugalDisableFightStrategyAction(ai); };
+            creators["enable blackfathom deeps strategy"]             = [](PlayerbotAI* ai) { return new BlackfathomDeepsEnableStrategyAction(ai); };
+            creators["disable blackfathom deeps strategy"]            = [](PlayerbotAI* ai) { return new BlackfathomDeepsDisableStrategyAction(ai); };
+            creators["enable ghamoo-ra fight strategy"]               = [](PlayerbotAI* ai) { return new GhamooRaEnableFightStrategyAction(ai); };
+            creators["disable ghamoo-ra fight strategy"]              = [](PlayerbotAI* ai) { return new GhamooRaDisableFightStrategyAction(ai); };
+            creators["ghamoo-ra move away from trample"]              = [](PlayerbotAI* ai) { return new GhamooRaMoveAwayFromTrampleAction(ai); };
+            creators["enable lady sarevess fight strategy"]           = [](PlayerbotAI* ai) { return new LadySarevessEnableFightStrategyAction(ai); };
+            creators["disable lady sarevess fight strategy"]          = [](PlayerbotAI* ai) { return new LadySarevessDisableFightStrategyAction(ai); };
+            creators["enable gelihast fight strategy"]                = [](PlayerbotAI* ai) { return new GelihastEnableFightStrategyAction(ai); };
+            creators["disable gelihast fight strategy"]               = [](PlayerbotAI* ai) { return new GelihastDisableFightStrategyAction(ai); };
+            creators["enable lorgus jett fight strategy"]             = [](PlayerbotAI* ai) { return new LorgusJettEnableFightStrategyAction(ai); };
+            creators["disable lorgus jett fight strategy"]            = [](PlayerbotAI* ai) { return new LorgusJettDisableFightStrategyAction(ai); };
+            creators["enable baron aquanis fight strategy"]           = [](PlayerbotAI* ai) { return new BaronAquanisEnableFightStrategyAction(ai); };
+            creators["disable baron aquanis fight strategy"]          = [](PlayerbotAI* ai) { return new BaronAquanisDisableFightStrategyAction(ai); };
+            creators["enable kelris fight strategy"]                  = [](PlayerbotAI* ai) { return new KelrisEnableFightStrategyAction(ai); };
+            creators["disable kelris fight strategy"]                 = [](PlayerbotAI* ai) { return new KelrisDisableFightStrategyAction(ai); };
+            creators["enable aku'mai fight strategy"]                 = [](PlayerbotAI* ai) { return new AkuMaiEnableFightStrategyAction(ai); };
+            creators["disable aku'mai fight strategy"]                = [](PlayerbotAI* ai) { return new AkuMaiDisableFightStrategyAction(ai); };
+            creators["aku'mai move away from poison cloud"]           = [](PlayerbotAI* ai) { return new AkuMaiMoveAwayFromPoisonCloudAction(ai); };
             creators["enable onyxia's lair strategy"] = [](PlayerbotAI* ai) { return new OnyxiasLairEnableDungeonStrategyAction(ai); };
             creators["disable onyxia's lair strategy"] = [](PlayerbotAI* ai) { return new OnyxiasLairDisableDungeonStrategyAction(ai); };
             creators["enable molten core strategy"] = [](PlayerbotAI* ai) { return new MoltenCoreEnableDungeonStrategyAction(ai); };

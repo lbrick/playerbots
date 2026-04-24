@@ -80,11 +80,13 @@ file(GLOB_RECURSE Ai_Dungeon_DM  ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/
 file(GLOB_RECURSE Ai_Dungeon_RFC ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/RagefireChasm/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/RagefireChasm/*.h)
 file(GLOB_RECURSE Ai_Dungeon_SFK ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/ShadowfangKeep/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/ShadowfangKeep/*.h)
 file(GLOB_RECURSE Ai_Dungeon_WC  ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/WailingCaverns/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/WailingCaverns/*.h)
+file(GLOB_RECURSE Ai_Dungeon_BFD ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/BlackfathomDeeps/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/BlackfathomDeeps/*.h)
 
-source_group("Strategy\\Dungeons\\Deadmines"      FILES ${Ai_Dungeon_DM})
-source_group("Strategy\\Dungeons\\RagefireChasm"  FILES ${Ai_Dungeon_RFC})
-source_group("Strategy\\Dungeons\\ShadowfangKeep" FILES ${Ai_Dungeon_SFK})
-source_group("Strategy\\Dungeons\\WailingCaverns" FILES ${Ai_Dungeon_WC})
+source_group("Strategy\\Dungeons\\Deadmines"        FILES ${Ai_Dungeon_DM})
+source_group("Strategy\\Dungeons\\RagefireChasm"    FILES ${Ai_Dungeon_RFC})
+source_group("Strategy\\Dungeons\\ShadowfangKeep"   FILES ${Ai_Dungeon_SFK})
+source_group("Strategy\\Dungeons\\WailingCaverns"   FILES ${Ai_Dungeon_WC})
+source_group("Strategy\\Dungeons\\BlackfathomDeeps" FILES ${Ai_Dungeon_BFD})
 
 # ── Strategy Raid ─────────────────────────────────────────────────────────────
 
@@ -131,6 +133,7 @@ set(LIBRARY_SRCS
     ${Ai_Dungeon_RFC}
     ${Ai_Dungeon_SFK}
     ${Ai_Dungeon_WC}
+    ${Ai_Dungeon_BFD}
     # Strategy Raid
     ${Ai_BlackwingLair}
     ${Ai_Karazhan}
