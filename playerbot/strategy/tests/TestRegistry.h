@@ -14,6 +14,9 @@ namespace ai
         static std::vector<std::string> GetTestScript(const std::string& name);
         static std::vector<std::string> GetAvailableTests();
         static void GenerateMovementTests(int maxTests, float minDist, float maxDist);
+        static void GenerateBossWalkTest();
+        static std::string GetBotCreationRequirement(const std::string& testName);
+        static uint32 ExpectedBotSpawnCount(const std::string& testName);
 
         static bool ParseLocation(const std::string& str, GuidPosition& out);
         static bool LookupNamedLocation(const std::string& name, GuidPosition& out);
