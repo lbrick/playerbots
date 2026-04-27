@@ -182,4 +182,19 @@ namespace ai
     private:
         uint32 buffID;
     };
+
+    // Fires when bot is within spreadRadius yards of any living group member.
+    // Used for chain-bounce mechanics (Chain Bolt, Chain Lightning, etc.).
+    class TooCloseToAllyTrigger : public Trigger
+    {
+    public:
+        TooCloseToAllyTrigger(PlayerbotAI* ai, std::string name, float spreadRadius)
+            : Trigger(ai, name, 1)
+            , spreadRadius(spreadRadius) {}
+
+        bool IsActive() override;
+
+    protected:
+        float spreadRadius;
+    };
 }

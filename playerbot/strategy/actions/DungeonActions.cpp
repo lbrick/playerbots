@@ -296,3 +296,86 @@ bool InterruptEnemyCastAction::Execute(Event& event)
     }
     return false;
 }
+
+bool SpreadFromAlliesAction::Execute(Event& event)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    Player* closest = nullptr;
+    float closestDist = targetSpread + 1.0f;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->getSource();
+        if (!member || member == bot || !member->IsAlive())
+            continue;
+        if (member->GetMapId() != bot->GetMapId())
+            continue;
+        const float dist = bot->GetDistance(member);
+        if (dist < closestDist)
+        {
+            closestDist = dist;
+            closest = member;
+        }
+    }
+
+    if (!closest)
+        return false;
+
+    const std::list<HazardPosition>& hazards = AI_VALUE(std::list<HazardPosition>, "hazards");
+
+    const WorldPosition botPosition(bot);
+    const WorldPosition allyPosition(closest);
+    float angleLeft = allyPosition.getAngleTo(botPosition);
+    float angleRight = angleLeft;
+
+    const uint8 attempts = 20;
+    const uint8 halfAttempts = (uint8)(attempts * 0.5f);
+    const float angleIncrement = (float)(M_PI / halfAttempts);
+
+    for (uint8 i = 0; i < halfAttempts; i++)
+    {
+        WorldPosition pointLeft = allyPosition + WorldPosition(0, targetSpread * cos(angleLeft), targetSpread * sin(angleLeft), 1.0f);
+        pointLeft.setZ(pointLeft.getHeight());
+        WorldPosition pointRight = allyPosition + WorldPosition(0, targetSpread * cos(angleRight), targetSpread * sin(angleRight), 1.0f);
+        pointRight.setZ(pointRight.getHeight());
+
+        WorldPosition* validPoint = nullptr;
+
+        auto isValid = [&](const WorldPosition& point) -> bool {
+            for (const HazardPosition& hazard : hazards)
+                if (point.distance(hazard.first) < hazard.second)
+                    return false;
+            if (!bot->IsWithinLOS(point.getX(), point.getY(), point.getZ() + bot->GetCollisionHeight()))
+                return false;
+            return botPosition.canPathTo(point, bot);
+        };
+
+        if (isValid(pointLeft))
+            validPoint = &pointLeft;
+        else if (isValid(pointRight))
+            validPoint = &pointRight;
+
+        if (validPoint)
+        {
+            if (MoveTo(bot->GetMapId(), validPoint->getX(), validPoint->getY(), validPoint->getZ(), false, IsReaction(), false, true))
+            {
+                if (IsReaction())
+                    WaitForReach(validPoint->distance(botPosition));
+                return true;
+            }
+        }
+
+        angleLeft += angleIncrement;
+        angleRight -= angleIncrement;
+    }
+
+    return false;
+}
+
+bool SpreadFromAlliesAction::isPossible()
+{
+    return MovementAction::isPossible() && ai->CanMove();
+}

@@ -307,3 +307,26 @@ bool TargetCastingSpellTrigger::IsActive()
 
     return spell && spell->m_spellInfo && spell->m_spellInfo->Id == spellId;
 }
+
+bool TooCloseToAllyTrigger::IsActive()
+{
+    if (!bot->IsInWorld() || bot->IsBeingTeleported())
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->getSource();
+        if (!member || member == bot || !member->IsAlive())
+            continue;
+        if (member->GetMapId() != bot->GetMapId())
+            continue;
+        if (bot->GetDistance(member) <= spreadRadius)
+            return true;
+    }
+
+    return false;
+}

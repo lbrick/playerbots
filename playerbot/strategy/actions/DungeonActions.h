@@ -69,6 +69,22 @@ namespace ai
         }
     };
 
+    // Moves bot to be at least targetSpread yards from the nearest group member.
+    // Used in response to TooCloseToAllyTrigger for chain-bounce avoidance.
+    class SpreadFromAlliesAction : public MovementAction
+    {
+    public:
+        SpreadFromAlliesAction(PlayerbotAI* ai, std::string name, float targetSpread)
+            : MovementAction(ai, name)
+            , targetSpread(targetSpread) {}
+
+        bool Execute(Event& event) override;
+        bool isPossible() override;
+
+    private:
+        float targetSpread;
+    };
+
     // Class-agnostic interrupt action for dungeon strategies.
     // Tries each known interrupt ability in priority order; casts first available.
     class InterruptEnemyCastAction : public Action

@@ -55,6 +55,10 @@
 #include "playerbot/strategy/dungeons/Deadmines/Strategy/DmStrategy.h"
 #include "playerbot/strategy/dungeons/ShadowfangKeep/Strategy/SfkStrategy.h"
 #include "playerbot/strategy/dungeons/BlackfathomDeeps/Strategy/BfdStrategy.h"
+#include "playerbot/strategy/dungeons/Stockade/Strategy/StocksStrategy.h"
+#include "playerbot/strategy/dungeons/Gnomeregan/Strategy/GnomerStrategy.h"
+#include "playerbot/strategy/dungeons/RazorfenKraul/Strategy/RfkStrategy.h"
+#include "playerbot/strategy/dungeons/ScarletMonastery/Strategy/SmStrategy.h"
 #include "playerbot/strategy/raid/MoltenCore/Strategy/RaidMcStrategy.h"
 #include "playerbot/strategy/raid/BlackwingLair/Strategy/RaidBwlStrategy.h"
 #include "playerbot/strategy/raid/Karazhan/Strategy/RaidKaraStrategy.h"
@@ -172,6 +176,10 @@ namespace ai
             creators["deadmines"] = [](PlayerbotAI* ai) { return new DeadminesDungeonStrategy(ai); };
             creators["shadowfang keep"] = [](PlayerbotAI* ai) { return new ShadowfangKeepDungeonStrategy(ai); };
             creators["blackfathom deeps"] = [](PlayerbotAI* ai) { return new BlackfathomDeepsDungeonStrategy(ai); };
+            creators["stockade"] = [](PlayerbotAI* ai) { return new StocksDungeonStrategy(ai); };
+            creators["gnomeregan"] = [](PlayerbotAI* ai) { return new GnomereganDungeonStrategy(ai); };
+            creators["razorfen kraul"] = [](PlayerbotAI* ai) { return new RazorfenKraulDungeonStrategy(ai); };
+            creators["scarlet monastery"] = [](PlayerbotAI* ai) { return new ScarletMonasteryDungeonStrategy(ai); };
             creators["onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairDungeonStrategy(ai); };
             creators["molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreDungeonStrategy(ai); };
             creators["blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairDungeonStrategy(ai); };
@@ -209,6 +217,36 @@ namespace ai
             creators["baron aquanis"]  = [](PlayerbotAI* ai) { return new BaronAquanisFightStrategy(ai); };
             creators["kelris"]         = [](PlayerbotAI* ai) { return new KelrisFightStrategy(ai); };
             creators["aku'mai"]        = [](PlayerbotAI* ai) { return new AkuMaiFightStrategy(ai); };
+            // Stockade bosses
+            creators["targorr"]        = [](PlayerbotAI* ai) { return new TargorrFightStrategy(ai); };
+            creators["kam deepfury"]   = [](PlayerbotAI* ai) { return new KamDeepfuryFightStrategy(ai); };
+            creators["hamhock"]        = [](PlayerbotAI* ai) { return new HamhockFightStrategy(ai); };
+            creators["bazil thredd"]   = [](PlayerbotAI* ai) { return new BazilThreddFightStrategy(ai); };
+            creators["dextren ward"]   = [](PlayerbotAI* ai) { return new DextrenWardFightStrategy(ai); };
+            // Gnomeregan bosses
+            creators["grubbis"]        = [](PlayerbotAI* ai) { return new GrubbisFightStrategy(ai); };
+            creators["viscous fallout"] = [](PlayerbotAI* ai) { return new ViscousFalloutFightStrategy(ai); };
+            creators["electrocutioner"] = [](PlayerbotAI* ai) { return new ElectrocutionerFightStrategy(ai); };
+            creators["crowd pummeler"] = [](PlayerbotAI* ai) { return new CrowdPummelerFightStrategy(ai); };
+            creators["thermaplugg"]    = [](PlayerbotAI* ai) { return new ThermapluggFightStrategy(ai); };
+            // Razorfen Kraul bosses
+            creators["roogug"]                 = [](PlayerbotAI* ai) { return new RoogugFightStrategy(ai); };
+            creators["aggem thorncurse"]       = [](PlayerbotAI* ai) { return new AggEmThorncurseFightStrategy(ai); };
+            creators["death speaker jargba"]   = [](PlayerbotAI* ai) { return new DeathSpeakerJargbaFightStrategy(ai); };
+            creators["overlord ramtusk"]       = [](PlayerbotAI* ai) { return new OverlordRamtuskFightStrategy(ai); };
+            creators["agathelos"]              = [](PlayerbotAI* ai) { return new AgathelosFightStrategy(ai); };
+            creators["charlga razorflank"]     = [](PlayerbotAI* ai) { return new CharlgaRazorflankFightStrategy(ai); };
+            // Scarlet Monastery bosses
+            creators["vishas"]           = [](PlayerbotAI* ai) { return new VishasFightStrategy(ai); };
+            creators["fallen champion"]  = [](PlayerbotAI* ai) { return new FallenChampionFightStrategy(ai); };
+            creators["ironspine"]        = [](PlayerbotAI* ai) { return new IronspineFightStrategy(ai); };
+            creators["thalnos"]          = [](PlayerbotAI* ai) { return new ThalnsosFightStrategy(ai); };
+            creators["loksey"]           = [](PlayerbotAI* ai) { return new LokseyFightStrategy(ai); };
+            creators["doan"]             = [](PlayerbotAI* ai) { return new DoanFightStrategy(ai); };
+            creators["herod"]            = [](PlayerbotAI* ai) { return new HerodFightStrategy(ai); };
+            creators["mograine"]         = [](PlayerbotAI* ai) { return new MograineFightStrategy(ai); };
+            creators["whitemane"]        = [](PlayerbotAI* ai) { return new WhitemaneFightStrategy(ai); };
+            creators["fairbanks"]        = [](PlayerbotAI* ai) { return new FairbanksFightStrategy(ai); };
             creators["oggleflint"] = [](PlayerbotAI* ai) { return new OggleflintFightStrategy(ai); };
             creators["taragaman"] = [](PlayerbotAI* ai) { return new TaragamanFightStrategy(ai); };
             creators["jergosh"] = [](PlayerbotAI* ai) { return new JergoshFightStrategy(ai); };
