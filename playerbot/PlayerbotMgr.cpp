@@ -195,7 +195,7 @@ void PlayerbotMgr::CancelLogout()
     });
 }
 
-void PlayerbotHolder::LogoutPlayerBot(uint32 guid)
+void PlayerbotHolder::LogoutPlayerBot(uint32 guid, bool allowInstant, bool forDelete)
 {
     Player* bot = GetPlayerBot(guid);
     if (bot)
@@ -213,7 +213,8 @@ void PlayerbotHolder::LogoutPlayerBot(uint32 guid)
            }
         }
         sLog.outDebug("Bot %s logging out", bot->GetName());
-        bot->SaveToDB();
+        if (!forDelete)
+            bot->SaveToDB();
 
         WorldSession* botWorldSessionPtr = bot->GetSession();
         WorldSession* masterWorldSessionPtr = nullptr;

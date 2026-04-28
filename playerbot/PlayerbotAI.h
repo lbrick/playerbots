@@ -396,6 +396,7 @@ public:
     static bool IsTank(Player* player, bool inGroup = true);
     static bool IsHeal(Player* player, bool inGroup = true);
     bool IsRanged(Player* player, bool inGroup = true);
+    bool IsMelee(Player* player, bool inGroup = true);
     Creature* GetCreature(ObjectGuid guid) const;
     Creature* GetAnyTypeCreature(ObjectGuid guid) const;
     Unit* GetUnit(ObjectGuid guid);
