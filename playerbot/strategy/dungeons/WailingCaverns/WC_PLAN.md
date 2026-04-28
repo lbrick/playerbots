@@ -2,7 +2,7 @@
 
 **Map ID:** 43  
 **Levels:** 15–25  
-**Status:** 🟡 IN PROGRESS  
+**Status:** 🟡 MOSTLY VERIFIED — Cobrahn (no mechanics, basic test pending) + Mutanus (AoE mechanic, needs verify)  
 **NPC IDs:** from Classic 1.12 data — verify with `SELECT entry, name FROM creature_template WHERE name LIKE '%<boss>%'` before coding
 
 ---
@@ -138,12 +138,34 @@ playerbot/strategy/dungeons/WailingCaverns/
 ## Definition of Done
 
 - [x] `./build.sh` clean ✅ (2026-04-20)
-- [ ] Bot enters WC → `enable wailing caverns strategy` in log
-- [ ] Each boss engaged → fight strategy enables
-- [ ] Verdan → bots stay >10yd (check `verdan move away from grasping vines` in log)
-- [ ] Mutanus → bots stay >12yd (check `mutanus move away from aoe` in log)
-- [ ] Each boss dies/resets → fight strategy disables
-- [ ] Bot leaves WC → `disable wailing caverns strategy` in log
+- [x] Bot enters WC → `enable wailing caverns strategy` in log (verified 2026-04-28 07:34:12)
+- [x] Lady Anacondra → fight strategy enables + disables (verified 2026-04-28; killed 07:36:11)
+- [x] Kresh → fight strategy enables + disables (verified 2026-04-28; killed 07:39:45)
+- [x] Skum → killed without issues (2026-04-28 07:46:08; no mechanics, no fight strategy — sufficient per policy)
+- [ ] Lord Cobrahn → fight strategy enables + disables *(not engaged 2026-04-28; no mechanics — basic test sufficient)*
+- [x] Lord Pythas → fight strategy enables + disables (verified 2026-04-28; killed 07:49:38)
+- [x] Lord Serpentis → fight strategy enables + disables (verified 2026-04-28; killed 07:52:08)
+- [x] Verdan → `verdan move away from grasping vines - OK` confirmed multiple bots (2026-04-28 07:53:02–07:53:15); initial FAILEDs resolved — pathing delay, not a bug; killed 07:53:35
+- [ ] Mutanus → bots stay >12yd (`mutanus move away from aoe`) *(not engaged 2026-04-28 — HAS mechanics, needs verify)*
+- [x] Each verified boss dies → fight strategy disables ✅
+- [x] Bot leaves WC → `disable wailing caverns strategy` in log (verified 2026-04-28 07:54:07)
+
+---
+
+## Verified Runtime Notes
+
+### 2026-04-28 — Partial combat run (instance 5, ~20 min)
+- Party: Trollman (player) + Charalt, Gaakimi, Knudre, Madordet (bots)
+- `07:34:12` WC strategy enabled on entry
+- `07:36:11` Lady Anacondra killed; fight strategy enabled + disabled ✅
+- `07:39:45` Kresh killed; fight strategy enabled + disabled ✅
+- `07:46:08` Skum killed (no fight strategy — no mechanics) ✅
+- `07:49:38` Lord Pythas killed; fight strategy enabled + disabled ✅
+- `07:52:08` Lord Serpentis killed; fight strategy enabled + disabled ✅
+- `07:52:39–07:53:35` Verdan: fight strategy enabled; `verdan move away from grasping vines - OK` on Knudre/Charalt/Gaakimi/Madordet (initial FAILEDs = pathing delay, resolved); killed 07:53:35 ✅
+- `07:54:07` WC strategy disabled on exit; instance unloaded `07:54:31`
+- **Lord Cobrahn not engaged** (queried at 07:35:58 but not killed — skipped or pathed around)
+- **Mutanus not engaged** — run ended before final boss
 
 ---
 

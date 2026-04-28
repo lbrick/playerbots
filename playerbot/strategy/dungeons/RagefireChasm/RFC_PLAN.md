@@ -2,7 +2,7 @@
 
 **Map ID:** 389  
 **Levels:** 13–18  
-**Status:** 🟢 ENTER/LEAVE VERIFIED; boss verification pending  
+**Status:** 🟢 COMPLETE — full combat run verified 2026-04-28 (Oggleflint not engaged this run)  
 
 ---
 
@@ -51,11 +51,11 @@ playerbot/strategy/dungeons/RagefireChasm/
 
 - [x] Build clean
 - [x] Bot enters RFC → instance strategy loads (verified 2026-04-23 with Trollman + Tultso)
-- [ ] Oggleflint engaged → oggleflint fight strategy enables
-- [ ] Taragaman engaged → taragaman fight strategy enables; bots move >12yd during Firenova
-- [ ] Jergosh engaged → jergosh fight strategy enables
-- [ ] Bazzalan engaged → bazzalan fight strategy enables
-- [ ] Each boss dies → fight strategy disables
+- [ ] Oggleflint engaged → oggleflint fight strategy enables *(not engaged in 2026-04-28 run — skipped or not pathed)*
+- [x] Taragaman engaged → taragaman fight strategy enables; bots move >12yd during Firenova (verified 2026-04-28: all 4 bots enabled, 3+ successful move-away actions; Yimech died on final Firenova avoidance attempt)
+- [x] Jergosh engaged → jergosh fight strategy enables (verified 2026-04-28: all 4 bots enabled + disabled post-kill)
+- [x] Bazzalan engaged → bazzalan fight strategy enables (verified 2026-04-28: all 4 bots enabled + disabled post-kill)
+- [x] Each boss dies → fight strategy disables (verified 2026-04-28: Taragaman, Jergosh, Bazzalan all disabled)
 - [x] Bot leaves RFC → instance strategy unloads (verified 2026-04-23 with Trollman + Tultso)
 
 ---
@@ -74,11 +74,24 @@ disable taragaman fight strategy
 
 ## Verified Runtime Notes
 
-- `2026-04-23 04:09:39` Trollman entered RFC instance 3.
-- `2026-04-23 04:09:42` Tultso entered RFC instance 3.
-- `2026-04-23 04:09:47` `Bot Tultso: dungeon strategy action [enable ragefire chasm strategy]`
-- `2026-04-23 04:11:00` `Bot Tultso: dungeon strategy action [disable ragefire chasm strategy]`
+### 2026-04-23 — Enter/Leave only
+- `04:09:39` Trollman entered RFC instance 3.
+- `04:09:42` Tultso entered RFC instance 3.
+- `04:09:47` `Bot Tultso: dungeon strategy action [enable ragefire chasm strategy]`
+- `04:11:00` `Bot Tultso: dungeon strategy action [disable ragefire chasm strategy]`
+
+### 2026-04-28 — Full combat run (instance 4, ~12.5 min)
+- Party: Trollman (player) + Garec, Tisi, Eston, Yimech (bots)
+- `07:09:00` All 4 bots entered, RFC strategy enabled
+- `07:14:08` All 4 bots enabled taragaman fight strategy
+- `07:14:16–07:14:38` Multiple `taragaman move away from firenova - OK` actions
+- `07:14:34` Yimech died (final Firenova avoidance attempt returned IMPOSSIBLE — likely out of pathing options)
+- `07:14:39` Taragaman disabled; `DungeonPersistentState` confirmed kill at `07:14:50`
+- `07:16:02` All 4 bots enabled jergosh fight strategy; disabled post-kill at `07:16:30–07:16:49`; confirmed kill `07:16:30`
+- `07:17:49` All 4 bots enabled bazzalan fight strategy; disabled post-kill at `07:18:25`; confirmed kill `07:18:21`
+- `07:21:23–07:21:27` All bots exited, RFC strategy disabled; instance unloaded `07:21:39`
+- **Oggleflint not engaged** — no fight strategy events, not in DungeonPersistentState
 
 ## Next Step
 
-In-game combat verification run. Confirm boss-specific strategy enable/disable lines and Taragaman Firenova avoidance inside RFC.
+Verify Oggleflint fight strategy triggers by engaging Oggleflint at start of a future run.
