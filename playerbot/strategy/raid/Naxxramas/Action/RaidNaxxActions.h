@@ -1,7 +1,7 @@
 #pragma once
 #include "playerbot/strategy/actions/DungeonActions.h"
 #include "playerbot/strategy/actions/ChangeStrategyAction.h"
-#include "UseItemAction.h"
+#include "playerbot/strategy/actions/UseItemAction.h"
 
 namespace ai
 {
