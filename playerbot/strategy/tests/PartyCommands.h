@@ -7,8 +7,7 @@ namespace ai
     class HandleSpawnBot : public TestCommand
     {
     public:
-        bool Execute(const std::string& params, Player* bot,
-                    PlayerbotAI* ai, TestContext& ctx, std::string& error) override;
+        TestResult Execute(const std::string& params, Player* bot, PlayerbotAI* ai, TestContext& ctx, std::string& message) override;
     protected:
         std::string GetName() const override { return "spawn"; }
     };
@@ -16,8 +15,7 @@ namespace ai
     class HandleDespawnBot : public TestCommand
     {
     public:
-        bool Execute(const std::string& params, Player* bot,
-                    PlayerbotAI* ai, TestContext& ctx, std::string& error) override;
+        TestResult Execute(const std::string& params, Player* bot, PlayerbotAI* ai, TestContext& ctx, std::string& message) override;
     protected:
         std::string GetName() const override { return "despawn"; }
     };
@@ -25,8 +23,7 @@ namespace ai
     class HandleFormParty : public TestCommand
     {
     public:
-        bool Execute(const std::string& params, Player* bot,
-                    PlayerbotAI* ai, TestContext& ctx, std::string& error) override;
+        TestResult Execute(const std::string& params, Player* bot, PlayerbotAI* ai, TestContext& ctx, std::string& message) override;
     protected:
         std::string GetName() const override { return "form"; }
     };
@@ -34,8 +31,7 @@ namespace ai
     class HandleSpawnGroup : public TestCommand
     {
     public:
-        bool Execute(const std::string& params, Player* bot,
-                    PlayerbotAI* ai, TestContext& ctx, std::string& error) override;
+        TestResult Execute(const std::string& params, Player* bot, PlayerbotAI* ai, TestContext& ctx, std::string& message) override;
     protected:
         std::string GetName() const override { return "mgroup"; }
     };

@@ -8,12 +8,12 @@
 
 using namespace ai;
 
-bool HandleSpawnBot::Execute(const std::string& params, Player* bot, PlayerbotAI* ai, TestContext& ctx, std::string& error)
+TestResult HandleSpawnBot::Execute(const std::string& params, Player* bot, PlayerbotAI* ai, TestContext& ctx, std::string& error)
 {
     if (!ai->GetHolder())
     {
         error = "Failed to spawn bot with params: " + params;
-        return false;
+        return TestResult::FAIL;
     }
     std::list<std::string> messages;
     ObjectGuid guid;
@@ -22,21 +22,21 @@ bool HandleSpawnBot::Execute(const std::string& params, Player* bot, PlayerbotAI
     if (!guid)
     {
         error = "Failed to spawn bot with params: " + params;
-        return false;
+        return TestResult::FAIL;
     }
 
     ctx.spawnedBots.push_back(guid);
 
-    return true;
+    return TestResult::PASS;
 }
 
-bool HandleDespawnBot::Execute(const std::string& params, Player* bot,
+TestResult HandleDespawnBot::Execute(const std::string& params, Player* bot,
                     PlayerbotAI* ai, TestContext& ctx, std::string& error)
 {
     if (!ai->GetHolder())
     {
         error = "Failed to delete spawned bots";
-        return false;
+        return TestResult::FAIL;
     }
 
     for (auto& guid : ctx.spawnedBots)
@@ -44,23 +44,23 @@ bool HandleDespawnBot::Execute(const std::string& params, Player* bot,
         ai->GetHolder()->DeleteBot(guid);
     }
     ctx.spawnedBots.clear();
-    return true;
+    return TestResult::PASS;
 }
 
-bool HandleFormParty::Execute(const std::string& params, Player* bot,
+TestResult HandleFormParty::Execute(const std::string& params, Player* bot,
                     PlayerbotAI* ai, TestContext& ctx, std::string& error)
 {
-    return true;
+    return TestResult::PASS;
 }
 
-bool HandleSpawnGroup::Execute(const std::string& params, Player* bot,
+TestResult HandleSpawnGroup::Execute(const std::string& params, Player* bot,
                     PlayerbotAI* ai, TestContext& ctx, std::string& error)
 {
     uint32 groupSize = atoi(params.c_str());
     if (groupSize == 0 || groupSize > 50)
     {
         error = "Invalid group size: " + params + ". Use 1-50.";
-        return false;
+        return TestResult::FAIL;
     }
 
     std::ostringstream paramStr;
@@ -68,5 +68,5 @@ bool HandleSpawnGroup::Execute(const std::string& params, Player* bot,
 
     sRandomPlayerbotMgr.HandleGroup(bot, paramStr.str(), SEC_PLAYER);
 
-    return true;
+    return TestResult::PASS;
 }
