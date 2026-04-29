@@ -2308,7 +2308,6 @@ void TravelMgr::LoadFishLocations()
     {
         sTravelNodeMap.setHasToGen();
         GetFishLocations();
-        sTravelNodeMap.setHasToGen(false);
         SaveFishLocations();
         return;
     }
