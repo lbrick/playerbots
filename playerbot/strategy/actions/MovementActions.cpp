@@ -115,8 +115,8 @@ bool MovementAction::FlyDirect(const WorldPosition &startPosition, const WorldPo
         }
         else
         {
-            std::reverse(path.begin(), path.end());
             path = movePath.getPointPath();
+            std::reverse(path.begin(), path.end());
         }
 
         if (path.empty())
@@ -993,31 +993,46 @@ void MovementAction::DispatchMovement(TravelPath movePath, bool generatePath, bo
     std::vector<G3D::Vector3> pointPath = WorldPosition().toPointsArray(path);
     float size = WorldPosition().getPathLength(path);
 
-    /*
-#ifndef MANGOSBOT_TWO
-    mm.MovePath(pointPath, moveMode, false, false);
-#else
-    mm.MovePath(pointPath, moveMode, false);
-#endif
-    */
+    bool usePath = true;
 
-    WorldPosition movePosition = path.back();
+    if (usePath)
+    {
+        bool normalizeZ = true;
+
+        for (auto& p : pointPath)
+        {
+            if (bot->GetTransport())
+                bot->GetTransport()->CalculatePassengerPosition(p.x, p.y, p.z);
+            bot->UpdateAllowedPositionZ(p.x, p.y, p.z);
+            if (bot->GetTransport())
+                bot->GetTransport()->CalculatePassengerOffset(p.x, p.y, p.z);
+        }
+
+#ifndef MANGOSBOT_TWO
+        mm.MovePath(pointPath, moveMode, false, false);
+#else
+        mm.MovePath(pointPath, moveMode, false);
+#endif
+    }
+    else
+    {
+        WorldPosition movePosition = path.back();
 
 #ifdef MANGOSBOT_ZERO
-    mm.MovePoint(movePosition.getMapId(),
-        movePosition.getX(),
-        movePosition.getY(),
-        movePosition.getZ(),
-        moveMode,
-        generatePath);
+        mm.MovePoint(movePosition.getMapId(),
+            movePosition.getX(),
+            movePosition.getY(),
+            movePosition.getZ(),
+            moveMode,
+            generatePath);
 #else
-    mm.MovePoint(movePosition.getMapId(),
-        Position(movePosition.getX(), movePosition.getY(), movePosition.getZ(), 0.f),
-        moveMode,
-        bot->IsFlying() ? bot->GetSpeed(MOVE_FLIGHT) : 0.f,
-        bot->IsFlying());
+        mm.MovePoint(movePosition.getMapId(),
+            Position(movePosition.getX(), movePosition.getY(), movePosition.getZ(), 0.f),
+            moveMode,
+            bot->IsFlying() ? bot->GetSpeed(MOVE_FLIGHT) : 0.f,
+            bot->IsFlying());
 #endif
-
+    }
     WaitForReach(size);
 }
 
@@ -1543,14 +1558,9 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool idle, 
                 if (sPlayerbotAIConfig.hasLog("bot_movement.csv"))
                 {
                     WorldPosition telePos;
-                    if (entry)
-                    {
-                        AreaTrigger const* at = sObjectMgr.GetAreaTrigger(entry);
-                        if (at)
-                            telePos = WorldPosition(at->target_mapId, at->target_X, at->target_Y, at->target_Z, at->target_Orientation);
-                    }
-                    else
-                        telePos = movePosition;
+                    AreaTrigger const* at = sObjectMgr.GetAreaTrigger(entry);
+                    if (at)
+                        telePos = WorldPosition(at->target_mapId, at->target_X, at->target_Y, at->target_Z, at->target_Orientation);
 
                     std::ostringstream out;
                     out << sPlayerbotAIConfig.GetTimestampStr() << "+00,";
@@ -4123,9 +4133,6 @@ bool JumpAction::CanJumpTo(const WorldPosition& src, const WorldPosition& dest, 
 bool JumpAction::JumpTowards(const ai::WorldPosition &src, const ai::WorldPosition &dest, Unit* jumper, float jumpSpeed, bool preSetLanding)
 {
     if (src.getMapId() != dest.getMapId())
-        return false;
-
-    if (src.fDist(dest) > sPlayerbotAIConfig.sightDistance)
         return false;
 
     if (src.fDist(dest) > sPlayerbotAIConfig.sightDistance)

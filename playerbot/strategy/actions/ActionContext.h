@@ -83,6 +83,10 @@
 #include "../tests/TestAction.h"
 #endif
 
+#ifdef GenerateBotTests
+#include "../tests/TestAction.h"
+#endif
+
 namespace ai
 {
     class ActionContext : public NamedObjectContext<Action>

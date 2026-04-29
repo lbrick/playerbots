@@ -868,24 +868,44 @@ void RandomPlayerbotMgr::LoginFreeBots()
     {
         std::vector<std::pair<uint32, uint32>> botsToRemove;
 
+
         for (auto [accountId, botGuid] : sPlayerbotAIConfig.freeAltBots)
         {
             ObjectGuid guid(ObjectGuid(HIGHGUID_PLAYER, botGuid));
-            Player* player = sObjectMgr.GetPlayer(guid, false);
+            Player* bot = sObjectMgr.GetPlayer(guid, false);
 
-            if (!player)
+            if (!bot)
             {
                 sLog.outDetail("Add player %d", botGuid);
                 AddPlayerBot(botGuid, accountId);
             }
-            else if (!player->IsBeingTeleported())
+            else if (!bot->IsBeingTeleported())
             {
-                PlayerbotFactory factory(player, player->GetLevel());
                 if (sRandomPlayerbotMgr.GetValue(botGuid, "create levelup"))
                 {
-                    factory.Randomize(false, false);                    
+                    PlayerbotFactory factory(bot, bot->GetLevel());
+                    factory.Randomize(true, false);
 
                     sRandomPlayerbotMgr.SetValue(botGuid, "create levelup", 0);
+                }
+
+                Player* master = nullptr;
+
+                if (sRandomPlayerbotMgr.GetValue(botGuid, "create group"))
+                {
+                    std::string groupWith = sRandomPlayerbotMgr.GetData(botGuid, "create group");
+
+                    if (!groupWith.empty())
+                    {
+                        master = sObjectAccessor.FindPlayerByName(groupWith.c_str());
+
+                        if (master)
+                        {
+                            bot->GetPlayerbotAI()->DoSpecificAction("join", Event("create group", "", master));
+                        }
+                    }
+
+                    sRandomPlayerbotMgr.SetValue(botGuid, "create group", 0);
                 }
 
                 if (sRandomPlayerbotMgr.GetValue(botGuid, "create gear"))
@@ -895,33 +915,57 @@ void RandomPlayerbotMgr::LoginFreeBots()
                     {
                         for (uint8 slot = 0; slot < EQUIPMENT_SLOT_END; ++slot)
                         {
-                            player->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+                            bot->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
                         }
                     }
-
-                }
-
-                if (sRandomPlayerbotMgr.GetValue(botGuid, "create group"))
-                {
-                    std::string groupWith = sRandomPlayerbotMgr.GetData(botGuid, "create group");
-
-                    if (!groupWith.empty())
+                    else if (gear == "green" || gear == "uncommon")
                     {
-                        Player* master = sObjectAccessor.FindPlayerByName(groupWith.c_str());
-
-                        if (master)
-                            player->GetPlayerbotAI()->DoSpecificAction("join", Event("create group", "", master));
+                        PlayerbotFactory factory(bot, bot->GetLevel(), ITEM_QUALITY_UNCOMMON);
+                        factory.EquipGear();
                     }
-
-                    sRandomPlayerbotMgr.SetValue(botGuid, "create group", 0);
+                    else if (gear == "blue" || gear == "rare")
+                    {
+                        PlayerbotFactory factory(bot, bot->GetLevel(), ITEM_QUALITY_RARE);
+                        factory.EquipGear();
+                    }
+                    else if (gear == "purple" || gear == "epic")
+                    {
+                        PlayerbotFactory factory(bot, bot->GetLevel(), ITEM_QUALITY_EPIC);
+                        factory.EquipGear();
+                    }
+                    else if (gear == "upgrade")
+                    {
+                        PlayerbotFactory factory(bot, master ? master->GetLevel() : bot->GetLevel(), ITEM_QUALITY_NORMAL);
+                        factory.UpgradeGear(false);
+                    }
+                    else if (gear == "sync")
+                    {
+                        PlayerbotFactory factory(bot, master ? master->GetLevel() : bot->GetLevel(), ITEM_QUALITY_NORMAL);
+                        factory.UpgradeGear(true);
+                    }
+                    else if (gear == "best")
+                    {
+                        PlayerbotFactory factory(bot, bot->GetLevel());
+                        factory.EquipGearBest();
+                    }
+                    else if (gear == "partial")
+                    {
+                        PlayerbotFactory factory(bot, bot->GetLevel());
+                        factory.EquipGearPartialUpgrade();
+                    }
+                    else
+                    {
+                        PlayerbotFactory factory(bot, bot->GetLevel());
+                        factory.EquipGear();
+                    }
                 }
 
                 if (GetEventValue(botGuid, "test"))
                 {
-                    PlayerbotAI* ai = player->GetPlayerbotAI();
+                    PlayerbotAI* ai = bot->GetPlayerbotAI();
                     AiObjectContext* context = ai->GetAiObjectContext();
                     std::string testName = GetEventData(botGuid, "test");
-                    testName = std::regex_replace(testName, std::regex("\\'"), "'");
+                    testName = std::regex_replace(testName, std::regex("\'"), "'");
                     std::string strategyName = "test::" + testName;
                     ai->ChangeStrategy("+" + strategyName, BotState::BOT_STATE_NON_COMBAT);
                     SET_AI_VALUE2(bool, "manual bool", "is running test", true);
@@ -929,14 +973,14 @@ void RandomPlayerbotMgr::LoginFreeBots()
                     sRandomPlayerbotMgr.SetValue(botGuid, "test", 0);
                 }
 
-                if (!IsRandomBot(player) && GetPlayerBot(guid)) //Place bot in player manager.
+                if (!IsRandomBot(bot) && GetPlayerBot(guid)) //Place bot in player manager.
                 {
-                    for (auto& [mGuid, master] : players)
+                    for (auto& [mGuid, mgr_master] : players)
                     {
                         ObjectGuid masterGuid(ObjectGuid(HIGHGUID_PLAYER, mGuid));
                         if (accountId == sObjectMgr.GetPlayerAccountIdByGUID(masterGuid))
                         {
-                            PlayerbotMgr* mgr = master->GetPlayerbotMgr();
+                            PlayerbotMgr* mgr = mgr_master->GetPlayerbotMgr();
                             if (mgr)
                             {
                                 MovePlayerBot(guid, mgr);
@@ -945,7 +989,10 @@ void RandomPlayerbotMgr::LoginFreeBots()
                     }
                 }
 
-                BotAlwaysOnline always = BotAlwaysOnline(sRandomPlayerbotMgr.GetValue(botGuid, "always"));
+                if (master)
+                    bot->TeleportTo(WorldPosition(master));
+
+                                BotAlwaysOnline always = BotAlwaysOnline(sRandomPlayerbotMgr.GetValue(botGuid, "always"));
                 if (always != BotAlwaysOnline::ACTIVE)
                 {
                     botsToRemove.push_back({accountId, botGuid});
