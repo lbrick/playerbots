@@ -1,4 +1,4 @@
-#include "TestMonitor.h"
+#include "TestComponent.h"
 #include "playerbot/WorldPosition.h"
 #include "playerbot/PlayerbotTextMgr.h"
 

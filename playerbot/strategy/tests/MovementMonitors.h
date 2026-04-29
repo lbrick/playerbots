@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TestMonitor.h"
+#include "TestComponent.h"
 
 namespace ai
 {
