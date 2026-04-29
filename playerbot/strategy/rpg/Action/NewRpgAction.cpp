@@ -480,8 +480,8 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     if (!dataPtr->waypointsBuilt && dist > 150.0f)
     {
         dataPtr->waypointsBuilt = true;
-        std::vector<WorldPosition> startPath;
-        TravelNodeRoute route = sTravelNodeMap.getRoute(WorldPosition(bot), dest, startPath, bot);
+        std::vector<WorldPosition> startPath, endPath;
+        TravelNodeRoute route = sTravelNodeMap.getRoute(WorldPosition(bot), dest, startPath, endPath, bot);
         std::vector<TravelNode*>& nodes = route.getNodes();
         if (!nodes.empty())
         {
