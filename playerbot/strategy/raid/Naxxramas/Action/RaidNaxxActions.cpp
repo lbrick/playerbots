@@ -1,5 +1,5 @@
 
 #include "playerbot/playerbot.h"
-#include "MoltenCoreDungeonTriggers.h"
+#include "RaidNaxxActions.h"
 
 using namespace ai;

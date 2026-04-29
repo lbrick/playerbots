@@ -1,8 +1,8 @@
 #pragma once
 #include "playerbot/strategy/actions/DungeonActions.h"
-#include "playerbot/strategy/actions/ChangeStrategyAction.h"
-#include "playerbot/strategy/actions/MovementActions.h"
-#include "playerbot/strategy/actions/UseItemAction.h"
+#include "ChangeStrategyAction.h"
+#include "MovementActions.h"
+#include "UseItemAction.h"
 #include "playerbot/strategy/values/GuidPositionValues.h"
 
 namespace ai
@@ -29,7 +29,7 @@ namespace ai
         bool Execute(Event& event) override
         {
             std::list<GuidPosition> gos = AI_VALUE(std::list<GuidPosition>, "go usable filter::go trapped filter::entry filter::{gos in sight,suppression devices}");
-
+            
             if (gos.empty())
                 return false;
 
@@ -49,7 +49,7 @@ namespace ai
 
             if (!closest)
                 return false;
-
+            
             if (ai->HasStrategy("debug move", BotState::BOT_STATE_NON_COMBAT))
             {
                 ai->TellPlayerNoFacing(GetMaster(), "Moving to Suppression Device at " + std::to_string((int)closestDist) + " yards");
@@ -117,7 +117,7 @@ namespace ai
         bool Execute(Event& event) override
         {
             std::list<GuidPosition> gos = AI_VALUE(std::list<GuidPosition>, "entry filter::{gos close,suppression devices}");
-
+            
             if (gos.empty())
                 return false;
 
@@ -168,7 +168,7 @@ namespace ai
                 return false;
 
             std::list<GuidPosition> gos = AI_VALUE(std::list<GuidPosition>, "go usable filter::go trapped filter::entry filter::{gos close,suppression devices}");
-
+            
             if (gos.empty())
                 return false;
 
@@ -206,8 +206,8 @@ namespace ai
 
         bool isPossible() override
         {
-            return bot->getClass() == CLASS_ROGUE &&
-                   bot->HasSpell(SPELL_DISARM_TRAP) &&
+            return bot->getClass() == CLASS_ROGUE && 
+                   bot->HasSpell(SPELL_DISARM_TRAP) && 
                    ai->CanMove();
         }
 

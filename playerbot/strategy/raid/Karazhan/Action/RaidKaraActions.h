@@ -1,7 +1,7 @@
 #pragma once
 #include "playerbot/strategy/actions/DungeonActions.h"
-#include "playerbot/strategy/actions/ChangeStrategyAction.h"
-#include "playerbot/strategy/actions/UseItemAction.h"
+#include "ChangeStrategyAction.h"
+#include "UseItemAction.h"
 
 namespace ai
 {
@@ -39,7 +39,7 @@ namespace ai
     {
     public:
         RemoveNetherPortalBuffsFromNetherspiteAction(PlayerbotAI* ai) : Action(ai, "remove nether portal buffs from netherspite") {}
-        bool Execute(Event& event) override;
+        virtual bool Execute(Event& event) override;
     };
 
     class AddNetherPortalPerseverenceForTankAction : public Action

@@ -1,5 +1,5 @@
 
 #include "playerbot/playerbot.h"
-#include "OnyxiasLairDungeonActions.h"
+#include "RaidMcActions.h"
 
 using namespace ai;

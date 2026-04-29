@@ -1,5 +1,5 @@
 
 #include "playerbot/playerbot.h"
-#include "OnyxiasLairDungeonTriggers.h"
+#include "RaidMcTriggers.h"
 
 using namespace ai;

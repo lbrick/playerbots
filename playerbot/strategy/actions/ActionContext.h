@@ -73,11 +73,11 @@
 #include "UseConsumableAction.h"
 #include "WorldBuffTravelActions.h"
 
-#include "OnyxiasLairDungeonActions.h"
-#include "MoltenCoreDungeonActions.h"
-#include "BlackwingLairDungeonActions.h"
-#include "KarazhanDungeonActions.h"
-#include "NaxxramasDungeonActions.h"
+#include "playerbot/strategy/raid/OnyxiasLair/Action/RaidOnyActions.h"
+#include "playerbot/strategy/raid/MoltenCore/Action/RaidMcActions.h"
+#include "playerbot/strategy/raid/BlackwingLair/Action/RaidBwlActions.h"
+#include "playerbot/strategy/raid/Karazhan/Action/RaidKaraActions.h"
+#include "playerbot/strategy/raid/Naxxramas/Action/RaidNaxxActions.h"
 
 #ifdef GenerateBotTests
 #include "../tests/TestAction.h"
