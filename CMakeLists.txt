@@ -118,6 +118,18 @@ file(GLOB Playerbot_Tests ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/tests/*
     source_group("Player Bot\\Strategies\\Tests" FILES ${Playerbot_Tests})
     LIST(APPEND LIBRARY_SRCS ${Playerbot_Tests})
 
+file(GLOB_RECURSE Playerbot_Dungeons ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/dungeons/*.h)
+    source_group("Player Bot\\Strategies\\Dungeons" FILES ${Playerbot_Dungeons})
+    LIST(APPEND LIBRARY_SRCS ${Playerbot_Dungeons})
+
+file(GLOB_RECURSE Playerbot_Raids ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/raid/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/raid/*.h)
+    source_group("Player Bot\\Strategies\\Raids" FILES ${Playerbot_Raids})
+    LIST(APPEND LIBRARY_SRCS ${Playerbot_Raids})
+
+file(GLOB_RECURSE Playerbot_Rpg ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/rpg/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/rpg/*.h)
+    source_group("Player Bot\\Strategies\\Rpg" FILES ${Playerbot_Rpg})
+    LIST(APPEND LIBRARY_SRCS ${Playerbot_Rpg})
+
 # Define ENABLE_PLAYERBOTS if need
 if (BUILD_PLAYERBOTS)
   add_definitions(-DENABLE_PLAYERBOTS)
