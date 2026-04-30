@@ -96,6 +96,18 @@
       "related_bugs": [],
       "occurrences": 2,
       "last_seen": "2026-04-20"
+    },
+    {
+      "id": "bug-009",
+      "timestamp": "2026-04-30",
+      "error_message": "[New RPG] log lines never appear in Server.log despite LogFileLevel=3 and logFilterPlayerBot=0",
+      "file": "playerbot/strategy/actions/ActionContext.h, playerbot/strategy/triggers/TriggerContext.h",
+      "root_cause": "NewRpg actions and triggers were never registered in ActionContext/TriggerContext. Strategy was added to StrategyContext but the engine silently no-ops unresolved action/trigger names. Strategy logs (outDetail) appeared as 'new rpg' entries but NEWRPG_LOG (outDebug) action logs never fired because the actions were never invoked.",
+      "fix": "Added #include for NewRpgAction.h and NewRpgTriggers.h, registered all 8 actions and 7 status triggers in their respective context constructors.",
+      "tags": ["new-rpg", "context-registration", "action-context", "trigger-context", "silent-noop"],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-30"
     }
   ]
 }

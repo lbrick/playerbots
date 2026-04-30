@@ -19,6 +19,7 @@
 #include "playerbot/strategy/raid/BlackwingLair/Trigger/RaidBwlTriggers.h"
 #include "playerbot/strategy/raid/Karazhan/Trigger/RaidKaraTriggers.h"
 #include "playerbot/strategy/raid/Naxxramas/Trigger/RaidNaxxTriggers.h"
+#include "playerbot/strategy/rpg/Trigger/NewRpgTriggers.h"
 #include "GlyphTriggers.h"
 #include "WorldBuffTravelTriggers.h"
 
@@ -244,6 +245,13 @@ namespace ai
 
             creators["val"] = [](PlayerbotAI* ai) { return new ValueTrigger(ai); };
 
+            creators["go grind status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GO_GRIND); };
+            creators["go camp status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GO_CAMP); };
+            creators["wander random status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_WANDER_RANDOM); };
+            creators["wander npc status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_WANDER_NPC); };
+            creators["do quest status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_DO_QUEST); };
+            creators["travel flight status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_TRAVEL_FLIGHT); };
+            creators["change zone status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_CHANGE_ZONE); };
             creators["rpg"] = [](PlayerbotAI* ai) { return new RpgTrigger(ai); };
             creators["rpg wander"] = [](PlayerbotAI* ai) { return new RpgWanderTrigger(ai); };
             creators["rpg taxi"] = [](PlayerbotAI* ai) { return new RpgTaxiTrigger(ai); };

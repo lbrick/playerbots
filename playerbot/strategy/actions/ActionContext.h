@@ -78,6 +78,7 @@
 #include "playerbot/strategy/raid/BlackwingLair/Action/RaidBwlActions.h"
 #include "playerbot/strategy/raid/Karazhan/Action/RaidKaraActions.h"
 #include "playerbot/strategy/raid/Naxxramas/Action/RaidNaxxActions.h"
+#include "playerbot/strategy/rpg/Action/NewRpgAction.h"
 
 #ifdef GenerateBotTests
 #include "../tests/TestAction.h"
@@ -100,6 +101,14 @@ namespace ai
             creators["crpg"] = [](PlayerbotAI* ai) { return new CRpgAction(ai); };
             creators["choose rpg target"] = [](PlayerbotAI* ai) { return new ChooseRpgTargetAction(ai); };
             creators["move to rpg target"] = [](PlayerbotAI* ai) { return new MoveToRpgTargetAction(ai); };
+            creators["new rpg status update"] = [](PlayerbotAI* ai) { return new NewRpgStatusUpdateAction(ai); };
+            creators["new rpg go grind"] = [](PlayerbotAI* ai) { return new NewRpgGoGrindAction(ai); };
+            creators["new rpg go camp"] = [](PlayerbotAI* ai) { return new NewRpgGoCampAction(ai); };
+            creators["new rpg wander random"] = [](PlayerbotAI* ai) { return new NewRpgWanderRandomAction(ai); };
+            creators["new rpg wander npc"] = [](PlayerbotAI* ai) { return new NewRpgWanderNpcAction(ai); };
+            creators["new rpg do quest"] = [](PlayerbotAI* ai) { return new NewRpgDoQuestAction(ai); };
+            creators["new rpg travel flight"] = [](PlayerbotAI* ai) { return new NewRpgTravelFlightAction(ai); };
+            creators["new rpg go change zone"] = [](PlayerbotAI* ai) { return new NewRpgGoChangeZoneAction(ai); };
 			creators["travel"] = [](PlayerbotAI* ai) { return new TravelAction(ai); };
 			creators["choose travel target"] = [](PlayerbotAI* ai) { return new ChooseTravelTargetAction(ai); };
             creators["choose group travel target"] = [](PlayerbotAI* ai) { return new ChooseGroupTravelTargetAction(ai); };
