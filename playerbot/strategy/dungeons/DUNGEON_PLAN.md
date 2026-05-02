@@ -32,12 +32,12 @@ Map IDs from `worlddb > instance_template > map` or https://wow.tools/dbc/?dbc=m
 | 7 | Gnomeregan | Gnomer | 90 | 29–38 | 🟢 ENTER/LEAVE + BOSS MECHANICS IMPLEMENTED — in-game verify pending |
 | 8 | Razorfen Kraul | RFK | 47 | 25–38 | 🟢 ENTER/LEAVE + BOSS MECHANICS IMPLEMENTED — in-game verify pending |
 | 9 | Scarlet Monastery | SM | 189 | 28–45 | 🟢 ENTER/LEAVE + BOSS MECHANICS IMPLEMENTED — in-game verify pending |
-| 10 | Razorfen Downs | RFD | 129 | 35–50 | 📋 PLANNED — see `RazorfenDowns/RFD_PLAN.md` |
-| 11 | Uldaman | Ulda | 70 | 35–45 | 📋 PLANNED — see `Uldaman/ULDA_PLAN.md` |
-| 12 | Zul'Farrak | ZF | 209 | 44–54 | 📋 PLANNED — see `ZulFarrak/ZF_PLAN.md` |
-| 13 | Maraudon | Mara | 349 | 46–55 | 📋 PLANNED — see `Maraudon/MARA_PLAN.md` |
-| 14 | Temple of Atal'Hakkar | ST | 109 | 50–56 | 📋 PLANNED — see `TempleOfAtalHakkar/ST_PLAN.md` |
-| 15 | Blackrock Depths | BRD | 230 | 52–60 | 📋 PLANNED — see `BlackrockDepths/BRD_PLAN.md` |
+| 10 | Razorfen Downs | RFD | 129 | 35–50 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
+| 11 | Uldaman | Ulda | 70 | 35–45 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
+| 12 | Zul'Farrak | ZF | 209 | 44–54 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
+| 13 | Maraudon | Mara | 349 | 46–55 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
+| 14 | Temple of Atal'Hakkar | ST | 109 | 50–56 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
+| 15 | Blackrock Depths | BRD | 230 | 52–60 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
 | 16 | Lower Blackrock Spire | LBRS | 229 | 55–60 | 📋 PLANNED — see `BlackrockSpire/BRS_PLAN.md` (combined) |
 | 17 | Upper Blackrock Spire | UBRS | 229 | 55–60 | 📋 PLANNED — see `BlackrockSpire/BRS_PLAN.md` (combined) |
 | 18 | Dire Maul | DM | 429 | 55–60 | 📋 PLANNED — see `DireMaul/DM_PLAN.md` |
@@ -127,7 +127,7 @@ Every dungeon requires changes to 5 files outside its own folder:
 - [ ] `playerbot/strategy/triggers/TriggerContext.h` — include header + register all triggers
 - [ ] `playerbot/strategy/actions/ActionContext.h` — include header + register all enable/disable actions
 - [ ] `playerbot/strategy/StrategyContext.h` — include header + register instance + boss fight strategies
-- [ ] `CMakeLists.txt` — add explicit `GLOB_RECURSE Ai_Dungeon_XXX` entry for the new dungeon (each dungeon has its own entry; check existing entries around line 79 as the pattern)
+- [ ] `CMakeLists.txt` — **no per-dungeon entry needed**; single `GLOB_RECURSE Playerbot_Dungeons` at line 121 covers all `.cpp/.h` under `dungeons/`. Touch the file after adding new `.cpp` files to force cmake to rescan the glob.
 
 ---
 

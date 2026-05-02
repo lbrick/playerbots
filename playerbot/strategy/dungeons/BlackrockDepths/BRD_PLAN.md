@@ -2,7 +2,7 @@
 
 **Map ID:** 230  
 **Levels:** 52–60  
-**Status:** ⬜ TODO  
+**Status:** 🟢 IMPLEMENTED — build verified 2026-05-02  
 
 > **NPC IDs:** Cross-check every entry with `SELECT entry, name FROM creature_template WHERE name LIKE '%...%'` against classicmangos DB before wiring triggers.
 >
@@ -17,11 +17,11 @@
 | Boss | NPC ID | Mechanic | Trigger Type | Action |
 |------|--------|----------|--------------|--------|
 | Gorosh the Dervish | 9027 | Blood Craze (self-heal on hit), Sweeping Strikes. No radial AoE. | None — start/end only | — |
-| Grizzle | 9023 | **Ground Tremor** (~10yd AoE physical stun around boss) | `CloseToHostileCreatureHazardTrigger(9023, 10, 3)` | `MoveAwayFromCreature(9023, 12)` |
-| Eviscerator | 9024 | Whirlwind (~8yd AoE physical), Cleave. | `CloseToHostileCreatureHazardTrigger(9024, 8, 3)` | `MoveAwayFromCreature(9024, 10)` |
-| Ok'thor the Breaker | 9026 | **War Stomp** (~8yd AoE physical), Knockdown | `CloseToHostileCreatureHazardTrigger(9026, 8, 3)` | `MoveAwayFromCreature(9026, 10)` |
-| Anub'shiah | 9028 | Curse of Blood (debuff), melee. No positional AoE. | None — start/end only | — |
-| Hedrum the Creeper | 9029 | Poison Bolt Volley (AoE ranged), Corrosive Poison. Ranged AoE handled by healer strategy. | None — start/end only | — |
+| Grizzle | 9028 | **Ground Tremor** (~10yd AoE physical stun around boss) | `CloseToHostileCreatureHazardTrigger(9028, 10, 3)` | `MoveAwayFromCreature(9028, 12)` |
+| Eviscerator | 9029 | Whirlwind (~8yd AoE physical), Cleave. | `CloseToHostileCreatureHazardTrigger(9029, 8, 3)` | `MoveAwayFromCreature(9029, 10)` |
+| Ok'thor the Breaker | 9030 | **War Stomp** (~8yd AoE physical), Knockdown | `CloseToHostileCreatureHazardTrigger(9030, 8, 3)` | `MoveAwayFromCreature(9030, 10)` |
+| Anub'shiah | 9031 | Curse of Blood (debuff), melee. No positional AoE. | None — start/end only | — |
+| Hedrum the Creeper | 9032 | Poison Bolt Volley (AoE ranged), Corrosive Poison. Ranged AoE handled by healer strategy. | None — start/end only | — |
 
 ### Main Dungeon
 
@@ -31,19 +31,19 @@
 | Lord Roccor | 9025 | **Earthquake** (~10yd AoE physical), Earth Shock | `CloseToHostileCreatureHazardTrigger(9025, 10, 3)` | `MoveAwayFromCreature(9025, 12)` |
 | Houndmaster Grebmar | 9319 | Releases hound packs. No positional AoE. | None — start/end only | — |
 | Pyromancer Loregrain | 9024 | **Fire Nova** (~10yd AoE fire), Fireball | `CloseToHostileCreatureHazardTrigger(9024, 10, 3)` | `MoveAwayFromCreature(9024, 12)` |
-| Warder Stilgiss | 9017 | Frost Nova (~8yd), Blizzard. Frost Nova = move away. | `CloseToHostileCreatureHazardTrigger(9017, 8, 3)` | `MoveAwayFromCreature(9017, 10)` |
-| Verek | 9216 | Veil of Shadow, melee dog. No positional AoE. | None — start/end only | — |
+| Warder Stilgiss | 9041 | Frost Nova (~8yd), Blizzard. Frost Nova = move away. | `CloseToHostileCreatureHazardTrigger(9041, 8, 3)` | `MoveAwayFromCreature(9041, 10)` |
+| Verek | 9042 | Veil of Shadow, melee dog. No positional AoE. | None — start/end only | — |
 | Plugger Spazzring | 9499 | Gouge, Blind. No positional AoE. | None — start/end only | — |
 | Phalanx | 9502 | Mortal Strike, Shield Bash. No positional AoE. | None — start/end only | — |
 | Ambassador Flamelash | 9156 | Summons fire elemental waves. No positional AoE (elementals handled by kill logic). | None — start/end only | — |
-| The Seven (Dwarven spirits) | 8903 | Multi-mob fight. Various debuffs. No positional AoE. | None — start/end only | — |
+| The Seven (Dwarven spirits) | 8888 | Multi-mob fight. Various debuffs. No positional AoE. Using Franclorn Forgewright (8888) as canonical NPC — verify in DB. | None — start/end only | — |
 | Golem Lord Argelmach | 8983 | **Static Field** (~8yd AoE nature around boss), Shock, summons golems | `CloseToHostileCreatureHazardTrigger(8983, 8, 3)` | `MoveAwayFromCreature(8983, 10)` |
 | Bael'Gar | 9016 | **Fire Nova** (~10yd AoE fire), Lava Burst | `CloseToHostileCreatureHazardTrigger(9016, 10, 3)` | `MoveAwayFromCreature(9016, 12)` |
 | General Angerforge | 9033 | Mortal Strike, multi-mob adds. No radial AoE. | None — start/end only | — |
 | Magmus | 9938 | **War Stomp** (~8yd AoE), Fire Bolt. Blocks emperor's door until dead. | `CloseToHostileCreatureHazardTrigger(9938, 8, 3)` | `MoveAwayFromCreature(9938, 10)` |
 | Emperor Dagran Thaurissan | 9019 | Sunder Armor (stacking debuff), Fireball, Hand of Thaurissan (periodic AoE debuff aura). Aura handled by healer; no movement mechanic. | None — start/end only | — |
 
-> **Eviscerator + Pyromancer Loregrain NPC ID 9024:** These may share an ID — verify in DB. One of these is likely wrong.
+> **DB verification complete (2026-05-02):** Ring of Law IDs corrected: Grizzle=9028, Eviscerator=9029, Ok'thor=9030, Anub'shiah=9031, Hedrum=9032. Warder Stilgiss=9041, Verek=9042. Pyromancer=9024 (no conflict with Eviscerator). The Seven uses Franclorn Forgewright (8888) — canonical NPC unresolved, flag for future DB check.
 >
 > **Ring of Law:** Only one champion spawns per run (random). Register all six; only the active one will ever trigger.
 >
@@ -84,17 +84,17 @@ playerbot/strategy/dungeons/BlackrockDepths/
 
 ## Registration Checklist
 
-- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave blackrock depths (combat + noncombat)
-- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include BrdTriggers.h + all BRD creators
-- [ ] `playerbot/strategy/actions/ActionContext.h` — include BrdActions.h + all BRD creators
-- [ ] `playerbot/strategy/StrategyContext.h` — include BrdStrategy.h + all strategy creators
-- [ ] `CMakeLists.txt` — `Ai_Dungeon_BRD` GLOB_RECURSE added + included in LIBRARY_SRCS
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave blackrock depths (combat + noncombat)
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include BrdTriggers.h + all BRD creators
+- [x] `playerbot/strategy/actions/ActionContext.h` — include BrdActions.h + all BRD creators
+- [x] `playerbot/strategy/StrategyContext.h` — include BrdStrategy.h + all strategy creators
+- [x] `CMakeLists.txt` — covered by existing GLOB_RECURSE (no per-dungeon entry needed)
 
 ---
 
 ## Build Status
 
-- [ ] `./build.sh` — clean, no new errors
+- [x] `./build.sh` — clean, no new errors (2026-05-02)
 
 ---
 

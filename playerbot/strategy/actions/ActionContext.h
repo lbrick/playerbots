@@ -79,6 +79,12 @@
 #include "playerbot/strategy/raid/Karazhan/Action/RaidKaraActions.h"
 #include "playerbot/strategy/raid/Naxxramas/Action/RaidNaxxActions.h"
 #include "playerbot/strategy/rpg/Action/NewRpgAction.h"
+#include "playerbot/strategy/dungeons/RazorfenDowns/Action/RfdActions.h"
+#include "playerbot/strategy/dungeons/Uldaman/Action/UldaActions.h"
+#include "playerbot/strategy/dungeons/ZulFarrak/Action/ZfActions.h"
+#include "playerbot/strategy/dungeons/Maraudon/Action/MaraActions.h"
+#include "playerbot/strategy/dungeons/TempleOfAtalHakkar/Action/StActions.h"
+#include "playerbot/strategy/dungeons/BlackrockDepths/Action/BrdActions.h"
 
 #ifdef GenerateBotTests
 #include "../tests/TestAction.h"
@@ -367,6 +373,165 @@ namespace ai
             creators["move to"] = [](PlayerbotAI* ai) { return new MoveToAction(ai); };
 
             // Dungeon Actions
+            creators["enable razorfen downs strategy"] = [](PlayerbotAI* ai) { return new RazorfenDownsEnableStrategyAction(ai); };
+            creators["disable razorfen downs strategy"] = [](PlayerbotAI* ai) { return new RazorfenDownsDisableStrategyAction(ai); };
+            creators["enable tuten'kash fight strategy"] = [](PlayerbotAI* ai) { return new TutenkashEnableFightStrategyAction(ai); };
+            creators["disable tuten'kash fight strategy"] = [](PlayerbotAI* ai) { return new TutenkashDisableFightStrategyAction(ai); };
+            creators["enable mordresh fire eye fight strategy"] = [](PlayerbotAI* ai) { return new MordreshEnableFightStrategyAction(ai); };
+            creators["disable mordresh fire eye fight strategy"] = [](PlayerbotAI* ai) { return new MordreshDisableFightStrategyAction(ai); };
+            creators["mordresh move away from fire nova"] = [](PlayerbotAI* ai) { return new MordreshMoveAwayFromFireNovaAction(ai); };
+            creators["enable glutton fight strategy"] = [](PlayerbotAI* ai) { return new GluttonEnableFightStrategyAction(ai); };
+            creators["disable glutton fight strategy"] = [](PlayerbotAI* ai) { return new GluttonDisableFightStrategyAction(ai); };
+            creators["enable amnennar the coldbringer fight strategy"] = [](PlayerbotAI* ai) { return new AmnennarEnableFightStrategyAction(ai); };
+            creators["disable amnennar the coldbringer fight strategy"] = [](PlayerbotAI* ai) { return new AmnennarDisableFightStrategyAction(ai); };
+            creators["amnennar move away from frost nova"] = [](PlayerbotAI* ai) { return new AmnennarMoveAwayFromFrostNovaAction(ai); };
+
+            creators["enable uldaman strategy"] = [](PlayerbotAI* ai) { return new UldamanEnableStrategyAction(ai); };
+            creators["disable uldaman strategy"] = [](PlayerbotAI* ai) { return new UldamanDisableStrategyAction(ai); };
+            creators["enable revelosh fight strategy"] = [](PlayerbotAI* ai) { return new ReveloshEnableFightStrategyAction(ai); };
+            creators["disable revelosh fight strategy"] = [](PlayerbotAI* ai) { return new ReveloshDisableFightStrategyAction(ai); };
+            creators["enable baelog fight strategy"] = [](PlayerbotAI* ai) { return new BaelogEnableFightStrategyAction(ai); };
+            creators["disable baelog fight strategy"] = [](PlayerbotAI* ai) { return new BaelogDisableFightStrategyAction(ai); };
+            creators["enable ironaya fight strategy"] = [](PlayerbotAI* ai) { return new IronayaEnableFightStrategyAction(ai); };
+            creators["disable ironaya fight strategy"] = [](PlayerbotAI* ai) { return new IronayaDisableFightStrategyAction(ai); };
+            creators["ironaya move away from war stomp"] = [](PlayerbotAI* ai) { return new IronayaMoveAwayFromWarStompAction(ai); };
+            creators["enable obsidian sentinel fight strategy"] = [](PlayerbotAI* ai) { return new ObsidianSentinelEnableFightStrategyAction(ai); };
+            creators["disable obsidian sentinel fight strategy"] = [](PlayerbotAI* ai) { return new ObsidianSentinelDisableFightStrategyAction(ai); };
+            creators["enable ancient stone keeper fight strategy"] = [](PlayerbotAI* ai) { return new AncientStoneKeeperEnableFightStrategyAction(ai); };
+            creators["disable ancient stone keeper fight strategy"] = [](PlayerbotAI* ai) { return new AncientStoneKeeperDisableFightStrategyAction(ai); };
+            creators["ancient stone keeper move away from war stomp"] = [](PlayerbotAI* ai) { return new AncientStoneKeeperMoveAwayFromWarStompAction(ai); };
+            creators["enable galgann firehammer fight strategy"] = [](PlayerbotAI* ai) { return new GalgannFirehammerEnableFightStrategyAction(ai); };
+            creators["disable galgann firehammer fight strategy"] = [](PlayerbotAI* ai) { return new GalgannFirehammerDisableFightStrategyAction(ai); };
+            creators["galgann move away from fire nova"] = [](PlayerbotAI* ai) { return new GalgannMoveAwayFromFireNovaAction(ai); };
+            creators["enable grimlok fight strategy"] = [](PlayerbotAI* ai) { return new GrimlokEnableFightStrategyAction(ai); };
+            creators["disable grimlok fight strategy"] = [](PlayerbotAI* ai) { return new GrimlokDisableFightStrategyAction(ai); };
+            creators["grimlok move away from war stomp"] = [](PlayerbotAI* ai) { return new GrimlokMoveAwayFromWarStompAction(ai); };
+            creators["enable archaedas fight strategy"] = [](PlayerbotAI* ai) { return new ArchaedasEnableFightStrategyAction(ai); };
+            creators["disable archaedas fight strategy"] = [](PlayerbotAI* ai) { return new ArchaedasDisableFightStrategyAction(ai); };
+            creators["archaedas move away from earth tremor"] = [](PlayerbotAI* ai) { return new ArchaedasMoveAwayFromEarthTremorAction(ai); };
+
+            creators["enable zul'farrak strategy"] = [](PlayerbotAI* ai) { return new ZulFarrakEnableStrategyAction(ai); };
+            creators["disable zul'farrak strategy"] = [](PlayerbotAI* ai) { return new ZulFarrakDisableStrategyAction(ai); };
+            creators["enable theka the martyr fight strategy"] = [](PlayerbotAI* ai) { return new ThekaEnableFightStrategyAction(ai); };
+            creators["disable theka the martyr fight strategy"] = [](PlayerbotAI* ai) { return new ThekaDisableFightStrategyAction(ai); };
+            creators["enable witch doctor zum'rah fight strategy"] = [](PlayerbotAI* ai) { return new ZumrahEnableFightStrategyAction(ai); };
+            creators["disable witch doctor zum'rah fight strategy"] = [](PlayerbotAI* ai) { return new ZumrahDisableFightStrategyAction(ai); };
+            creators["enable antu'sul fight strategy"] = [](PlayerbotAI* ai) { return new AntusulEnableFightStrategyAction(ai); };
+            creators["disable antu'sul fight strategy"] = [](PlayerbotAI* ai) { return new AntusulDisableFightStrategyAction(ai); };
+            creators["enable shadowpriest sezz'ziz fight strategy"] = [](PlayerbotAI* ai) { return new SezzizEnableFightStrategyAction(ai); };
+            creators["disable shadowpriest sezz'ziz fight strategy"] = [](PlayerbotAI* ai) { return new SezzizDisableFightStrategyAction(ai); };
+            creators["enable sergeant bly fight strategy"] = [](PlayerbotAI* ai) { return new SergeantBlyEnableFightStrategyAction(ai); };
+            creators["disable sergeant bly fight strategy"] = [](PlayerbotAI* ai) { return new SergeantBlyDisableFightStrategyAction(ai); };
+            creators["enable gahz'rilla fight strategy"] = [](PlayerbotAI* ai) { return new GahzrillaEnableFightStrategyAction(ai); };
+            creators["disable gahz'rilla fight strategy"] = [](PlayerbotAI* ai) { return new GahzrillaDisableFightStrategyAction(ai); };
+            creators["gahz'rilla move away from freeze"] = [](PlayerbotAI* ai) { return new GahzrillaMoveAwayFromFreezeAction(ai); };
+            creators["enable chief ukorz sandscalp fight strategy"] = [](PlayerbotAI* ai) { return new ChiefUkorzEnableFightStrategyAction(ai); };
+            creators["disable chief ukorz sandscalp fight strategy"] = [](PlayerbotAI* ai) { return new ChiefUkorzDisableFightStrategyAction(ai); };
+
+            creators["enable maraudon strategy"] = [](PlayerbotAI* ai) { return new MaraudonEnableStrategyAction(ai); };
+            creators["disable maraudon strategy"] = [](PlayerbotAI* ai) { return new MaraudonDisableStrategyAction(ai); };
+            creators["enable noxxion fight strategy"] = [](PlayerbotAI* ai) { return new NoxxionEnableFightStrategyAction(ai); };
+            creators["disable noxxion fight strategy"] = [](PlayerbotAI* ai) { return new NoxxionDisableFightStrategyAction(ai); };
+            creators["noxxion move away from noxious fumes"] = [](PlayerbotAI* ai) { return new NoxxionMoveAwayFromNoxiousFumesAction(ai); };
+            creators["enable razorlash fight strategy"] = [](PlayerbotAI* ai) { return new RazorlashEnableFightStrategyAction(ai); };
+            creators["disable razorlash fight strategy"] = [](PlayerbotAI* ai) { return new RazorlashDisableFightStrategyAction(ai); };
+            creators["enable lord vyletongue fight strategy"] = [](PlayerbotAI* ai) { return new LordVyletongueEnableFightStrategyAction(ai); };
+            creators["disable lord vyletongue fight strategy"] = [](PlayerbotAI* ai) { return new LordVyletongueDisableFightStrategyAction(ai); };
+            creators["enable celebras the cursed fight strategy"] = [](PlayerbotAI* ai) { return new CelebrasEnableFightStrategyAction(ai); };
+            creators["disable celebras the cursed fight strategy"] = [](PlayerbotAI* ai) { return new CelebrasDisableFightStrategyAction(ai); };
+            creators["enable landslide fight strategy"] = [](PlayerbotAI* ai) { return new LandslideEnableFightStrategyAction(ai); };
+            creators["disable landslide fight strategy"] = [](PlayerbotAI* ai) { return new LandslideDisableFightStrategyAction(ai); };
+            creators["enable tinkerer gizlock fight strategy"] = [](PlayerbotAI* ai) { return new GizlockEnableFightStrategyAction(ai); };
+            creators["disable tinkerer gizlock fight strategy"] = [](PlayerbotAI* ai) { return new GizlockDisableFightStrategyAction(ai); };
+            creators["gizlock move away from smoke bomb"] = [](PlayerbotAI* ai) { return new GizlockMoveAwayFromSmokeBombAction(ai); };
+            creators["enable rotgrip fight strategy"] = [](PlayerbotAI* ai) { return new RotgripEnableFightStrategyAction(ai); };
+            creators["disable rotgrip fight strategy"] = [](PlayerbotAI* ai) { return new RotgripDisableFightStrategyAction(ai); };
+            creators["enable princess theradras fight strategy"] = [](PlayerbotAI* ai) { return new TheradrasEnableFightStrategyAction(ai); };
+            creators["disable princess theradras fight strategy"] = [](PlayerbotAI* ai) { return new TheradrasDisableFightStrategyAction(ai); };
+            creators["theradras move away from dust field"] = [](PlayerbotAI* ai) { return new TheradrasMoveAwayFromDustFieldAction(ai); };
+
+            creators["enable temple of atal'hakkar strategy"] = [](PlayerbotAI* ai) { return new TempleOfAtalHakkarEnableStrategyAction(ai); };
+            creators["disable temple of atal'hakkar strategy"] = [](PlayerbotAI* ai) { return new TempleOfAtalHakkarDisableStrategyAction(ai); };
+            creators["enable zolo fight strategy"] = [](PlayerbotAI* ai) { return new ZoloEnableFightStrategyAction(ai); };
+            creators["disable zolo fight strategy"] = [](PlayerbotAI* ai) { return new ZoloDisableFightStrategyAction(ai); };
+            creators["enable hukku fight strategy"] = [](PlayerbotAI* ai) { return new HukkuEnableFightStrategyAction(ai); };
+            creators["disable hukku fight strategy"] = [](PlayerbotAI* ai) { return new HukkuDisableFightStrategyAction(ai); };
+            creators["enable gasher fight strategy"] = [](PlayerbotAI* ai) { return new GasherEnableFightStrategyAction(ai); };
+            creators["disable gasher fight strategy"] = [](PlayerbotAI* ai) { return new GasherDisableFightStrategyAction(ai); };
+            creators["enable loro fight strategy"] = [](PlayerbotAI* ai) { return new LoroEnableFightStrategyAction(ai); };
+            creators["disable loro fight strategy"] = [](PlayerbotAI* ai) { return new LoroDisableFightStrategyAction(ai); };
+            creators["enable mijan fight strategy"] = [](PlayerbotAI* ai) { return new MijanEnableFightStrategyAction(ai); };
+            creators["disable mijan fight strategy"] = [](PlayerbotAI* ai) { return new MijanDisableFightStrategyAction(ai); };
+            creators["enable zul'lor fight strategy"] = [](PlayerbotAI* ai) { return new ZulLorEnableFightStrategyAction(ai); };
+            creators["disable zul'lor fight strategy"] = [](PlayerbotAI* ai) { return new ZulLorDisableFightStrategyAction(ai); };
+            creators["enable jammal'an the prophet fight strategy"] = [](PlayerbotAI* ai) { return new JammalanEnableFightStrategyAction(ai); };
+            creators["disable jammal'an the prophet fight strategy"] = [](PlayerbotAI* ai) { return new JammalanDisableFightStrategyAction(ai); };
+            creators["enable ogom the wretched fight strategy"] = [](PlayerbotAI* ai) { return new OgomEnableFightStrategyAction(ai); };
+            creators["disable ogom the wretched fight strategy"] = [](PlayerbotAI* ai) { return new OgomDisableFightStrategyAction(ai); };
+            creators["enable morphaz fight strategy"] = [](PlayerbotAI* ai) { return new MorphazEnableFightStrategyAction(ai); };
+            creators["disable morphaz fight strategy"] = [](PlayerbotAI* ai) { return new MorphazDisableFightStrategyAction(ai); };
+            creators["enable hazzas fight strategy"] = [](PlayerbotAI* ai) { return new HazzasEnableFightStrategyAction(ai); };
+            creators["disable hazzas fight strategy"] = [](PlayerbotAI* ai) { return new HazzasDisableFightStrategyAction(ai); };
+            creators["enable shade of eranikus fight strategy"] = [](PlayerbotAI* ai) { return new ShadeOfEranikusEnableFightStrategyAction(ai); };
+            creators["disable shade of eranikus fight strategy"] = [](PlayerbotAI* ai) { return new ShadeOfEranikusDisableFightStrategyAction(ai); };
+            creators["eranikus move away from war stomp"] = [](PlayerbotAI* ai) { return new EranikusMoveAwayFromWarStompAction(ai); };
+            creators["enable avatar of hakkar fight strategy"] = [](PlayerbotAI* ai) { return new AvatarOfHakkarEnableFightStrategyAction(ai); };
+            creators["disable avatar of hakkar fight strategy"] = [](PlayerbotAI* ai) { return new AvatarOfHakkarDisableFightStrategyAction(ai); };
+
+            creators["enable blackrock depths strategy"] = [](PlayerbotAI* ai) { return new BlackrockDepthsEnableStrategyAction(ai); };
+            creators["disable blackrock depths strategy"] = [](PlayerbotAI* ai) { return new BlackrockDepthsDisableStrategyAction(ai); };
+            creators["enable gorosh fight strategy"] = [](PlayerbotAI* ai) { return new GoroshEnableFightStrategyAction(ai); };
+            creators["disable gorosh fight strategy"] = [](PlayerbotAI* ai) { return new GoroshDisableFightStrategyAction(ai); };
+            creators["enable grizzle fight strategy"] = [](PlayerbotAI* ai) { return new GrizzleEnableFightStrategyAction(ai); };
+            creators["disable grizzle fight strategy"] = [](PlayerbotAI* ai) { return new GrizzleDisableFightStrategyAction(ai); };
+            creators["grizzle move away from ground tremor"] = [](PlayerbotAI* ai) { return new GrizzleMoveAwayFromGroundTremorAction(ai); };
+            creators["enable eviscerator fight strategy"] = [](PlayerbotAI* ai) { return new EviscerratorEnableFightStrategyAction(ai); };
+            creators["disable eviscerator fight strategy"] = [](PlayerbotAI* ai) { return new EviscerratorDisableFightStrategyAction(ai); };
+            creators["eviscerator move away from whirlwind"] = [](PlayerbotAI* ai) { return new EviscerratorMoveAwayFromWhirlwindAction(ai); };
+            creators["enable ok'thor the breaker fight strategy"] = [](PlayerbotAI* ai) { return new OkthorEnableFightStrategyAction(ai); };
+            creators["disable ok'thor the breaker fight strategy"] = [](PlayerbotAI* ai) { return new OkthorDisableFightStrategyAction(ai); };
+            creators["ok'thor move away from war stomp"] = [](PlayerbotAI* ai) { return new OkthorMoveAwayFromWarStompAction(ai); };
+            creators["enable anub'shiah fight strategy"] = [](PlayerbotAI* ai) { return new AnubshiahEnableFightStrategyAction(ai); };
+            creators["disable anub'shiah fight strategy"] = [](PlayerbotAI* ai) { return new AnubshiahDisableFightStrategyAction(ai); };
+            creators["enable hedrum the creeper fight strategy"] = [](PlayerbotAI* ai) { return new HedrumEnableFightStrategyAction(ai); };
+            creators["disable hedrum the creeper fight strategy"] = [](PlayerbotAI* ai) { return new HedrumDisableFightStrategyAction(ai); };
+            creators["enable high interrogator gerstahn fight strategy"] = [](PlayerbotAI* ai) { return new GerstanEnableFightStrategyAction(ai); };
+            creators["disable high interrogator gerstahn fight strategy"] = [](PlayerbotAI* ai) { return new GerstanDisableFightStrategyAction(ai); };
+            creators["enable lord roccor fight strategy"] = [](PlayerbotAI* ai) { return new LordRoccorEnableFightStrategyAction(ai); };
+            creators["disable lord roccor fight strategy"] = [](PlayerbotAI* ai) { return new LordRoccorDisableFightStrategyAction(ai); };
+            creators["lord roccor move away from earthquake"] = [](PlayerbotAI* ai) { return new LordRoccorMoveAwayFromEarthquakeAction(ai); };
+            creators["enable houndmaster grebmar fight strategy"] = [](PlayerbotAI* ai) { return new GrebmarEnableFightStrategyAction(ai); };
+            creators["disable houndmaster grebmar fight strategy"] = [](PlayerbotAI* ai) { return new GrebmarDisableFightStrategyAction(ai); };
+            creators["enable pyromancer loregrain fight strategy"] = [](PlayerbotAI* ai) { return new PyromancerLoregrainEnableFightStrategyAction(ai); };
+            creators["disable pyromancer loregrain fight strategy"] = [](PlayerbotAI* ai) { return new PyromancerLoregrainDisableFightStrategyAction(ai); };
+            creators["pyromancer move away from fire nova"] = [](PlayerbotAI* ai) { return new PyromancerMoveAwayFromFireNovaAction(ai); };
+            creators["enable warder stilgiss fight strategy"] = [](PlayerbotAI* ai) { return new WarderStiglissEnableFightStrategyAction(ai); };
+            creators["disable warder stilgiss fight strategy"] = [](PlayerbotAI* ai) { return new WarderStiglissDisableFightStrategyAction(ai); };
+            creators["warder stilgiss move away from frost nova"] = [](PlayerbotAI* ai) { return new WarderStiglissMoveAwayFromFrostNovaAction(ai); };
+            creators["enable verek fight strategy"] = [](PlayerbotAI* ai) { return new VerekEnableFightStrategyAction(ai); };
+            creators["disable verek fight strategy"] = [](PlayerbotAI* ai) { return new VerekDisableFightStrategyAction(ai); };
+            creators["enable plugger spazzring fight strategy"] = [](PlayerbotAI* ai) { return new PluggerSpazzringEnableFightStrategyAction(ai); };
+            creators["disable plugger spazzring fight strategy"] = [](PlayerbotAI* ai) { return new PluggerSpazzringDisableFightStrategyAction(ai); };
+            creators["enable phalanx fight strategy"] = [](PlayerbotAI* ai) { return new PhalanxEnableFightStrategyAction(ai); };
+            creators["disable phalanx fight strategy"] = [](PlayerbotAI* ai) { return new PhalanxDisableFightStrategyAction(ai); };
+            creators["enable ambassador flamelash fight strategy"] = [](PlayerbotAI* ai) { return new FlamelashEnableFightStrategyAction(ai); };
+            creators["disable ambassador flamelash fight strategy"] = [](PlayerbotAI* ai) { return new FlamelashDisableFightStrategyAction(ai); };
+            creators["enable the seven fight strategy"] = [](PlayerbotAI* ai) { return new TheSevenEnableFightStrategyAction(ai); };
+            creators["disable the seven fight strategy"] = [](PlayerbotAI* ai) { return new TheSevenDisableFightStrategyAction(ai); };
+            creators["enable golem lord argelmach fight strategy"] = [](PlayerbotAI* ai) { return new ArgelmachEnableFightStrategyAction(ai); };
+            creators["disable golem lord argelmach fight strategy"] = [](PlayerbotAI* ai) { return new ArgelmachDisableFightStrategyAction(ai); };
+            creators["argelmach move away from static field"] = [](PlayerbotAI* ai) { return new ArgelmachMoveAwayFromStaticFieldAction(ai); };
+            creators["enable bael'gar fight strategy"] = [](PlayerbotAI* ai) { return new BaelGarEnableFightStrategyAction(ai); };
+            creators["disable bael'gar fight strategy"] = [](PlayerbotAI* ai) { return new BaelGarDisableFightStrategyAction(ai); };
+            creators["bael'gar move away from fire nova"] = [](PlayerbotAI* ai) { return new BaelGarMoveAwayFromFireNovaAction(ai); };
+            creators["enable general angerforge fight strategy"] = [](PlayerbotAI* ai) { return new GeneralAngerforgeEnableFightStrategyAction(ai); };
+            creators["disable general angerforge fight strategy"] = [](PlayerbotAI* ai) { return new GeneralAngerforgeDisableFightStrategyAction(ai); };
+            creators["enable magmus fight strategy"] = [](PlayerbotAI* ai) { return new MagmusEnableFightStrategyAction(ai); };
+            creators["disable magmus fight strategy"] = [](PlayerbotAI* ai) { return new MagmusDisableFightStrategyAction(ai); };
+            creators["magmus move away from war stomp"] = [](PlayerbotAI* ai) { return new MagmusMoveAwayFromWarStompAction(ai); };
+            creators["enable emperor dagran thaurissan fight strategy"] = [](PlayerbotAI* ai) { return new EmperorThaurissanEnableFightStrategyAction(ai); };
+            creators["disable emperor dagran thaurissan fight strategy"] = [](PlayerbotAI* ai) { return new EmperorThaurissanDisableFightStrategyAction(ai); };
+
             creators["enable onyxia's lair strategy"] = [](PlayerbotAI* ai) { return new OnyxiasLairEnableDungeonStrategyAction(ai); };
             creators["disable onyxia's lair strategy"] = [](PlayerbotAI* ai) { return new OnyxiasLairDisableDungeonStrategyAction(ai); };
             creators["enable molten core strategy"] = [](PlayerbotAI* ai) { return new MoltenCoreEnableDungeonStrategyAction(ai); };

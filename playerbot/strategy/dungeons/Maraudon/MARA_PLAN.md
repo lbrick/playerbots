@@ -2,7 +2,7 @@
 
 **Map ID:** 349  
 **Levels:** 46–55  
-**Status:** ⬜ TODO  
+**Status:** 🟢 IMPLEMENTED — build verified 2026-05-02  
 
 > **NPC IDs:** Cross-check every entry with `SELECT entry, name FROM creature_template WHERE name LIKE '%...%'` against classicmangos DB before wiring triggers.
 >
@@ -16,9 +16,9 @@
 |------|--------|----------|--------------|--------|
 | Noxxion (Orange) | 13282 | **Noxious Fumes** (AoE poison cloud ~8yd around boss); splits into smaller adds at ~50% HP | `CloseToHostileCreatureHazardTrigger(13282, 8, 4)` | `MoveAwayFromCreature(13282, 10)` |
 | Razorlash (Orange) | 12258 | Puncture (bleed), Cleave (frontal). No radial AoE mechanic. | None — start/end only | — |
-| Lord Vyletongue (Purple) | 13280 | Curse of Blood (debuff), Blink (random teleport). No positional AoE. | None — start/end only | — |
-| Celebras the Cursed (Purple) | 12519 | Wrath (nature bolt), Entangling Roots (immobilize target). No radial AoE mechanic. | None — start/end only | — |
-| Landslide (Purple) | 12565 | Knock Away (knocks tank back), Trample. No radial AoE mechanic — Knock Away is single-target. | None — start/end only | — |
+| Lord Vyletongue (Purple) | 12236 | Curse of Blood (debuff), Blink (random teleport). No positional AoE. | None — start/end only | — |
+| Celebras the Cursed (Purple) | 12225 | Wrath (nature bolt), Entangling Roots (immobilize target). No radial AoE mechanic. | None — start/end only | — |
+| Landslide (Purple) | 12203 | Knock Away (knocks tank back), Trample. No radial AoE mechanic — Knock Away is single-target. | None — start/end only | — |
 | Tinkerer Gizlock (Pristine) | 13601 | **Goblin Dragon Gun** (frontal fire cone ~45° wide), **Smoke Bomb** (AoE blind ~8yd) | `CloseToHostileCreatureHazardTrigger(13601, 8, 3)` for Smoke Bomb; frontal cone future enhancement | `MoveAwayFromCreature(13601, 10)` |
 | Rotgrip (Pristine) | 13596 | Thrash, Cleave, Wrench (single-target bleed). No radial AoE mechanic. | None — start/end only | — |
 | Princess Theradras (Pristine) | 12201 | **Dust Field** (AoE nature damage ~10yd aura around boss, ticks every 2s), **Boulder** (targeted knockback), Repulsive Gaze (AoE fear ~15yd) | `CloseToHostileCreatureHazardTrigger(12201, 10, 3)` for Dust Field | `MoveAwayFromCreature(12201, 12)` |
@@ -27,7 +27,7 @@
 >
 > **Princess Theradras Repulsive Gaze:** Fear AoE at ~15yd range fires periodically. Existing fear-break logic handles the debuff effect. The Dust Field (melee-range damage aura) is the primary movement mechanic since it punishes melee bots staying in.
 >
-> **Celebras the Cursed:** Becomes Celebras the Redeemed after a questline event. In combat the cursed version is the encounter. Register under NPC 12519.
+> **Celebras the Cursed:** Becomes Celebras the Redeemed after a questline event. In combat the cursed version is the encounter. Register under NPC 12225 (DB verified).
 
 ---
 
@@ -73,17 +73,17 @@ playerbot/strategy/dungeons/Maraudon/
 
 ## Registration Checklist
 
-- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave maraudon (combat + noncombat)
-- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include MaraTriggers.h + all Mara creators
-- [ ] `playerbot/strategy/actions/ActionContext.h` — include MaraActions.h + all Mara creators
-- [ ] `playerbot/strategy/StrategyContext.h` — include MaraStrategy.h + 9 strategy creators
-- [ ] `CMakeLists.txt` — `Ai_Dungeon_Mara` GLOB_RECURSE added + included in LIBRARY_SRCS
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave maraudon (combat + noncombat)
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include MaraTriggers.h + all Mara creators
+- [x] `playerbot/strategy/actions/ActionContext.h` — include MaraActions.h + all Mara creators
+- [x] `playerbot/strategy/StrategyContext.h` — include MaraStrategy.h + 9 strategy creators
+- [x] `CMakeLists.txt` — covered by existing GLOB_RECURSE (no per-dungeon entry needed)
 
 ---
 
 ## Build Status
 
-- [ ] `./build.sh` — clean, no new errors
+- [x] `./build.sh` — clean, no new errors (2026-05-02)
 
 ---
 

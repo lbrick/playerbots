@@ -44,6 +44,30 @@ void DungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
         NextAction::array(0, new NextAction("enable scarlet monastery strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
+        "enter razorfen downs",
+        NextAction::array(0, new NextAction("enable razorfen downs strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter uldaman",
+        NextAction::array(0, new NextAction("enable uldaman strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter zul'farrak",
+        NextAction::array(0, new NextAction("enable zul'farrak strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter maraudon",
+        NextAction::array(0, new NextAction("enable maraudon strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter temple of atal'hakkar",
+        NextAction::array(0, new NextAction("enable temple of atal'hakkar strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter blackrock depths",
+        NextAction::array(0, new NextAction("enable blackrock depths strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
         "enter onyxia's lair",
         NextAction::array(0, new NextAction("enable onyxia's lair strategy", 100.0f), NULL)));
 
@@ -133,6 +157,54 @@ void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode(
         "leave scarlet monastery",
         NextAction::array(0, new NextAction("disable scarlet monastery strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter razorfen downs",
+        NextAction::array(0, new NextAction("enable razorfen downs strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave razorfen downs",
+        NextAction::array(0, new NextAction("disable razorfen downs strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter uldaman",
+        NextAction::array(0, new NextAction("enable uldaman strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave uldaman",
+        NextAction::array(0, new NextAction("disable uldaman strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter zul'farrak",
+        NextAction::array(0, new NextAction("enable zul'farrak strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave zul'farrak",
+        NextAction::array(0, new NextAction("disable zul'farrak strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter maraudon",
+        NextAction::array(0, new NextAction("enable maraudon strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave maraudon",
+        NextAction::array(0, new NextAction("disable maraudon strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter temple of atal'hakkar",
+        NextAction::array(0, new NextAction("enable temple of atal'hakkar strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave temple of atal'hakkar",
+        NextAction::array(0, new NextAction("disable temple of atal'hakkar strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter blackrock depths",
+        NextAction::array(0, new NextAction("enable blackrock depths strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave blackrock depths",
+        NextAction::array(0, new NextAction("disable blackrock depths strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
         "enter onyxia's lair",

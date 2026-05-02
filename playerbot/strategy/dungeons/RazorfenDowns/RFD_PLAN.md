@@ -2,7 +2,7 @@
 
 **Map ID:** 129  
 **Levels:** 35–50  
-**Status:** ⬜ TODO  
+**Status:** 🟢 IMPLEMENTED — build verified 2026-05-02  
 
 > **NPC IDs:** Cross-check every entry with `SELECT entry, name FROM creature_template WHERE name LIKE '%...%'` against classicmangos DB before wiring triggers.
 
@@ -59,17 +59,17 @@ playerbot/strategy/dungeons/RazorfenDowns/
 
 ## Registration Checklist
 
-- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave razorfen downs (combat + noncombat)
-- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include RfdTriggers.h + all 10 RFD creators
-- [ ] `playerbot/strategy/actions/ActionContext.h` — include RfdActions.h + all 10 RFD creators
-- [ ] `playerbot/strategy/StrategyContext.h` — include RfdStrategy.h + 5 RFD strategy creators
-- [ ] `CMakeLists.txt` — `Ai_Dungeon_RFD` GLOB_RECURSE added + included in LIBRARY_SRCS
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave razorfen downs (combat + noncombat)
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include RfdTriggers.h + all 10 RFD creators
+- [x] `playerbot/strategy/actions/ActionContext.h` — include RfdActions.h + all 10 RFD creators
+- [x] `playerbot/strategy/StrategyContext.h` — include RfdStrategy.h + 5 RFD strategy creators
+- [x] `CMakeLists.txt` — covered by existing GLOB_RECURSE (no per-dungeon entry needed)
 
 ---
 
 ## Build Status
 
-- [ ] `./build.sh` — clean, no new errors
+- [x] `./build.sh` — clean, no new errors (2026-05-02)
 
 ---
 

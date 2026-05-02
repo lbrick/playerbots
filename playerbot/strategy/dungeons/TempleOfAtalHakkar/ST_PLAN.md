@@ -2,7 +2,7 @@
 
 **Map ID:** 109  
 **Levels:** 50–56  
-**Status:** ⬜ TODO  
+**Status:** 🟢 IMPLEMENTED — build verified 2026-05-02  
 
 > **NPC IDs:** ALL IDs here are approximate — verify every entry with `SELECT entry, name FROM creature_template WHERE name LIKE '%...%'` against classicmangos DB before wiring triggers.
 
@@ -84,17 +84,17 @@ playerbot/strategy/dungeons/TempleOfAtalHakkar/
 
 ## Registration Checklist
 
-- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave temple of atal'hakkar (combat + noncombat)
-- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include StTriggers.h + all ST creators
-- [ ] `playerbot/strategy/actions/ActionContext.h` — include StActions.h + all ST creators
-- [ ] `playerbot/strategy/StrategyContext.h` — include StStrategy.h + 15 strategy creators
-- [ ] `CMakeLists.txt` — `Ai_Dungeon_ST` GLOB_RECURSE added + included in LIBRARY_SRCS
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave temple of atal'hakkar (combat + noncombat)
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include StTriggers.h + all ST creators
+- [x] `playerbot/strategy/actions/ActionContext.h` — include StActions.h + all ST creators
+- [x] `playerbot/strategy/StrategyContext.h` — include StStrategy.h + 13 strategy creators
+- [x] `CMakeLists.txt` — covered by existing GLOB_RECURSE (no per-dungeon entry needed)
 
 ---
 
 ## Build Status
 
-- [ ] `./build.sh` — clean, no new errors
+- [x] `./build.sh` — clean, no new errors (2026-05-02)
 
 ---
 

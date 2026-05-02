@@ -21,6 +21,12 @@
 #include "playerbot/strategy/raid/Naxxramas/Trigger/RaidNaxxTriggers.h"
 #include "playerbot/strategy/rpg/Trigger/NewRpgTriggers.h"
 #include "GlyphTriggers.h"
+#include "playerbot/strategy/dungeons/RazorfenDowns/Trigger/RfdTriggers.h"
+#include "playerbot/strategy/dungeons/Uldaman/Trigger/UldaTriggers.h"
+#include "playerbot/strategy/dungeons/ZulFarrak/Trigger/ZfTriggers.h"
+#include "playerbot/strategy/dungeons/Maraudon/Trigger/MaraTriggers.h"
+#include "playerbot/strategy/dungeons/TempleOfAtalHakkar/Trigger/StTriggers.h"
+#include "playerbot/strategy/dungeons/BlackrockDepths/Trigger/BrdTriggers.h"
 #include "WorldBuffTravelTriggers.h"
 
 #ifdef GenerateBotTests
@@ -300,6 +306,165 @@ namespace ai
             creators["perception"] = [](PlayerbotAI* ai) { return new PerceptionTrigger(ai); };
 
             // Dungeon Triggers
+            creators["enter razorfen downs"] = [](PlayerbotAI* ai) { return new RazorfenDownsEnterDungeonTrigger(ai); };
+            creators["leave razorfen downs"] = [](PlayerbotAI* ai) { return new RazorfenDownsLeaveDungeonTrigger(ai); };
+            creators["start tuten'kash fight"] = [](PlayerbotAI* ai) { return new TutenkashStartFightTrigger(ai); };
+            creators["end tuten'kash fight"] = [](PlayerbotAI* ai) { return new TutenkashEndFightTrigger(ai); };
+            creators["start mordresh fire eye fight"] = [](PlayerbotAI* ai) { return new MordreshStartFightTrigger(ai); };
+            creators["end mordresh fire eye fight"] = [](PlayerbotAI* ai) { return new MordreshEndFightTrigger(ai); };
+            creators["mordresh fire nova"] = [](PlayerbotAI* ai) { return new MordreshFireNovaTrigger(ai); };
+            creators["start glutton fight"] = [](PlayerbotAI* ai) { return new GluttonStartFightTrigger(ai); };
+            creators["end glutton fight"] = [](PlayerbotAI* ai) { return new GluttonEndFightTrigger(ai); };
+            creators["start amnennar the coldbringer fight"] = [](PlayerbotAI* ai) { return new AmnennarStartFightTrigger(ai); };
+            creators["end amnennar the coldbringer fight"] = [](PlayerbotAI* ai) { return new AmnennarEndFightTrigger(ai); };
+            creators["amnennar frost nova"] = [](PlayerbotAI* ai) { return new AmnennarFrostNovaTrigger(ai); };
+
+            creators["enter uldaman"] = [](PlayerbotAI* ai) { return new UldamanEnterDungeonTrigger(ai); };
+            creators["leave uldaman"] = [](PlayerbotAI* ai) { return new UldamanLeaveDungeonTrigger(ai); };
+            creators["start revelosh fight"] = [](PlayerbotAI* ai) { return new ReveloshStartFightTrigger(ai); };
+            creators["end revelosh fight"] = [](PlayerbotAI* ai) { return new ReveloshEndFightTrigger(ai); };
+            creators["start baelog fight"] = [](PlayerbotAI* ai) { return new BaelogStartFightTrigger(ai); };
+            creators["end baelog fight"] = [](PlayerbotAI* ai) { return new BaelogEndFightTrigger(ai); };
+            creators["start ironaya fight"] = [](PlayerbotAI* ai) { return new IronayaStartFightTrigger(ai); };
+            creators["end ironaya fight"] = [](PlayerbotAI* ai) { return new IronayaEndFightTrigger(ai); };
+            creators["ironaya war stomp"] = [](PlayerbotAI* ai) { return new IronayaWarStompTrigger(ai); };
+            creators["start obsidian sentinel fight"] = [](PlayerbotAI* ai) { return new ObsidianSentinelStartFightTrigger(ai); };
+            creators["end obsidian sentinel fight"] = [](PlayerbotAI* ai) { return new ObsidianSentinelEndFightTrigger(ai); };
+            creators["start ancient stone keeper fight"] = [](PlayerbotAI* ai) { return new AncientStoneKeeperStartFightTrigger(ai); };
+            creators["end ancient stone keeper fight"] = [](PlayerbotAI* ai) { return new AncientStoneKeeperEndFightTrigger(ai); };
+            creators["ancient stone keeper war stomp"] = [](PlayerbotAI* ai) { return new AncientStoneKeeperWarStompTrigger(ai); };
+            creators["start galgann firehammer fight"] = [](PlayerbotAI* ai) { return new GalgannFirehammerStartFightTrigger(ai); };
+            creators["end galgann firehammer fight"] = [](PlayerbotAI* ai) { return new GalgannFirehammerEndFightTrigger(ai); };
+            creators["galgann fire nova"] = [](PlayerbotAI* ai) { return new GalgannFireNovaTrigger(ai); };
+            creators["start grimlok fight"] = [](PlayerbotAI* ai) { return new GrimlokStartFightTrigger(ai); };
+            creators["end grimlok fight"] = [](PlayerbotAI* ai) { return new GrimlokEndFightTrigger(ai); };
+            creators["grimlok war stomp"] = [](PlayerbotAI* ai) { return new GrimlokWarStompTrigger(ai); };
+            creators["start archaedas fight"] = [](PlayerbotAI* ai) { return new ArchaedasStartFightTrigger(ai); };
+            creators["end archaedas fight"] = [](PlayerbotAI* ai) { return new ArchaedasEndFightTrigger(ai); };
+            creators["archaedas earth tremor"] = [](PlayerbotAI* ai) { return new ArchaedasEarthTremorTrigger(ai); };
+
+            creators["enter zul'farrak"] = [](PlayerbotAI* ai) { return new ZulFarrakEnterDungeonTrigger(ai); };
+            creators["leave zul'farrak"] = [](PlayerbotAI* ai) { return new ZulFarrakLeaveDungeonTrigger(ai); };
+            creators["start theka the martyr fight"] = [](PlayerbotAI* ai) { return new ThekaStartFightTrigger(ai); };
+            creators["end theka the martyr fight"] = [](PlayerbotAI* ai) { return new ThekaEndFightTrigger(ai); };
+            creators["start witch doctor zum'rah fight"] = [](PlayerbotAI* ai) { return new ZumrahStartFightTrigger(ai); };
+            creators["end witch doctor zum'rah fight"] = [](PlayerbotAI* ai) { return new ZumrahEndFightTrigger(ai); };
+            creators["start antu'sul fight"] = [](PlayerbotAI* ai) { return new AntusulStartFightTrigger(ai); };
+            creators["end antu'sul fight"] = [](PlayerbotAI* ai) { return new AntusulEndFightTrigger(ai); };
+            creators["start shadowpriest sezz'ziz fight"] = [](PlayerbotAI* ai) { return new SezzizStartFightTrigger(ai); };
+            creators["end shadowpriest sezz'ziz fight"] = [](PlayerbotAI* ai) { return new SezzizEndFightTrigger(ai); };
+            creators["start sergeant bly fight"] = [](PlayerbotAI* ai) { return new SergeantBlyStartFightTrigger(ai); };
+            creators["end sergeant bly fight"] = [](PlayerbotAI* ai) { return new SergeantBlyEndFightTrigger(ai); };
+            creators["start gahz'rilla fight"] = [](PlayerbotAI* ai) { return new GahzrillaStartFightTrigger(ai); };
+            creators["end gahz'rilla fight"] = [](PlayerbotAI* ai) { return new GahzrillaEndFightTrigger(ai); };
+            creators["gahz'rilla freeze"] = [](PlayerbotAI* ai) { return new GahzrillaFreezeTrigger(ai); };
+            creators["start chief ukorz sandscalp fight"] = [](PlayerbotAI* ai) { return new ChiefUkorzStartFightTrigger(ai); };
+            creators["end chief ukorz sandscalp fight"] = [](PlayerbotAI* ai) { return new ChiefUkorzEndFightTrigger(ai); };
+
+            creators["enter maraudon"] = [](PlayerbotAI* ai) { return new MaraudonEnterDungeonTrigger(ai); };
+            creators["leave maraudon"] = [](PlayerbotAI* ai) { return new MaraudonLeaveDungeonTrigger(ai); };
+            creators["start noxxion fight"] = [](PlayerbotAI* ai) { return new NoxxionStartFightTrigger(ai); };
+            creators["end noxxion fight"] = [](PlayerbotAI* ai) { return new NoxxionEndFightTrigger(ai); };
+            creators["noxxion noxious fumes"] = [](PlayerbotAI* ai) { return new NoxxionNoxiousFumesTrigger(ai); };
+            creators["start razorlash fight"] = [](PlayerbotAI* ai) { return new RazorlashStartFightTrigger(ai); };
+            creators["end razorlash fight"] = [](PlayerbotAI* ai) { return new RazorlashEndFightTrigger(ai); };
+            creators["start lord vyletongue fight"] = [](PlayerbotAI* ai) { return new LordVyletongueStartFightTrigger(ai); };
+            creators["end lord vyletongue fight"] = [](PlayerbotAI* ai) { return new LordVyletongueEndFightTrigger(ai); };
+            creators["start celebras the cursed fight"] = [](PlayerbotAI* ai) { return new CelebrasStartFightTrigger(ai); };
+            creators["end celebras the cursed fight"] = [](PlayerbotAI* ai) { return new CelebrasEndFightTrigger(ai); };
+            creators["start landslide fight"] = [](PlayerbotAI* ai) { return new LandslideStartFightTrigger(ai); };
+            creators["end landslide fight"] = [](PlayerbotAI* ai) { return new LandslideEndFightTrigger(ai); };
+            creators["start tinkerer gizlock fight"] = [](PlayerbotAI* ai) { return new GizlockStartFightTrigger(ai); };
+            creators["end tinkerer gizlock fight"] = [](PlayerbotAI* ai) { return new GizlockEndFightTrigger(ai); };
+            creators["gizlock smoke bomb"] = [](PlayerbotAI* ai) { return new GizlockSmokeBombTrigger(ai); };
+            creators["start rotgrip fight"] = [](PlayerbotAI* ai) { return new RotgripStartFightTrigger(ai); };
+            creators["end rotgrip fight"] = [](PlayerbotAI* ai) { return new RotgripEndFightTrigger(ai); };
+            creators["start princess theradras fight"] = [](PlayerbotAI* ai) { return new TheradrasStartFightTrigger(ai); };
+            creators["end princess theradras fight"] = [](PlayerbotAI* ai) { return new TheradrasEndFightTrigger(ai); };
+            creators["theradras dust field"] = [](PlayerbotAI* ai) { return new TheradrasDustFieldTrigger(ai); };
+
+            creators["enter temple of atal'hakkar"] = [](PlayerbotAI* ai) { return new TempleOfAtalHakkarEnterDungeonTrigger(ai); };
+            creators["leave temple of atal'hakkar"] = [](PlayerbotAI* ai) { return new TempleOfAtalHakkarLeaveDungeonTrigger(ai); };
+            creators["start zolo fight"] = [](PlayerbotAI* ai) { return new ZoloStartFightTrigger(ai); };
+            creators["end zolo fight"] = [](PlayerbotAI* ai) { return new ZoloEndFightTrigger(ai); };
+            creators["start hukku fight"] = [](PlayerbotAI* ai) { return new HukkuStartFightTrigger(ai); };
+            creators["end hukku fight"] = [](PlayerbotAI* ai) { return new HukkuEndFightTrigger(ai); };
+            creators["start gasher fight"] = [](PlayerbotAI* ai) { return new GasherStartFightTrigger(ai); };
+            creators["end gasher fight"] = [](PlayerbotAI* ai) { return new GasherEndFightTrigger(ai); };
+            creators["start loro fight"] = [](PlayerbotAI* ai) { return new LoroStartFightTrigger(ai); };
+            creators["end loro fight"] = [](PlayerbotAI* ai) { return new LoroEndFightTrigger(ai); };
+            creators["start mijan fight"] = [](PlayerbotAI* ai) { return new MijanStartFightTrigger(ai); };
+            creators["end mijan fight"] = [](PlayerbotAI* ai) { return new MijanEndFightTrigger(ai); };
+            creators["start zul'lor fight"] = [](PlayerbotAI* ai) { return new ZulLorStartFightTrigger(ai); };
+            creators["end zul'lor fight"] = [](PlayerbotAI* ai) { return new ZulLorEndFightTrigger(ai); };
+            creators["start jammal'an the prophet fight"] = [](PlayerbotAI* ai) { return new JammalanStartFightTrigger(ai); };
+            creators["end jammal'an the prophet fight"] = [](PlayerbotAI* ai) { return new JammalanEndFightTrigger(ai); };
+            creators["start ogom the wretched fight"] = [](PlayerbotAI* ai) { return new OgomStartFightTrigger(ai); };
+            creators["end ogom the wretched fight"] = [](PlayerbotAI* ai) { return new OgomEndFightTrigger(ai); };
+            creators["start morphaz fight"] = [](PlayerbotAI* ai) { return new MorphazStartFightTrigger(ai); };
+            creators["end morphaz fight"] = [](PlayerbotAI* ai) { return new MorphazEndFightTrigger(ai); };
+            creators["start hazzas fight"] = [](PlayerbotAI* ai) { return new HazzasStartFightTrigger(ai); };
+            creators["end hazzas fight"] = [](PlayerbotAI* ai) { return new HazzasEndFightTrigger(ai); };
+            creators["start shade of eranikus fight"] = [](PlayerbotAI* ai) { return new ShadeOfEranikusStartFightTrigger(ai); };
+            creators["end shade of eranikus fight"] = [](PlayerbotAI* ai) { return new ShadeOfEranikusEndFightTrigger(ai); };
+            creators["eranikus war stomp"] = [](PlayerbotAI* ai) { return new EranikusWarStompTrigger(ai); };
+            creators["start avatar of hakkar fight"] = [](PlayerbotAI* ai) { return new AvatarOfHakkarStartFightTrigger(ai); };
+            creators["end avatar of hakkar fight"] = [](PlayerbotAI* ai) { return new AvatarOfHakkarEndFightTrigger(ai); };
+
+            creators["enter blackrock depths"] = [](PlayerbotAI* ai) { return new BlackrockDepthsEnterDungeonTrigger(ai); };
+            creators["leave blackrock depths"] = [](PlayerbotAI* ai) { return new BlackrockDepthsLeaveDungeonTrigger(ai); };
+            creators["start gorosh fight"] = [](PlayerbotAI* ai) { return new GoroshStartFightTrigger(ai); };
+            creators["end gorosh fight"] = [](PlayerbotAI* ai) { return new GoroshEndFightTrigger(ai); };
+            creators["start grizzle fight"] = [](PlayerbotAI* ai) { return new GrizzleStartFightTrigger(ai); };
+            creators["end grizzle fight"] = [](PlayerbotAI* ai) { return new GrizzleEndFightTrigger(ai); };
+            creators["grizzle ground tremor"] = [](PlayerbotAI* ai) { return new GrizzleGroundTremorTrigger(ai); };
+            creators["start eviscerator fight"] = [](PlayerbotAI* ai) { return new EviscerratorStartFightTrigger(ai); };
+            creators["end eviscerator fight"] = [](PlayerbotAI* ai) { return new EviscerratorEndFightTrigger(ai); };
+            creators["eviscerator whirlwind"] = [](PlayerbotAI* ai) { return new EviscerratorWhirlwindTrigger(ai); };
+            creators["start ok'thor the breaker fight"] = [](PlayerbotAI* ai) { return new OkthorStartFightTrigger(ai); };
+            creators["end ok'thor the breaker fight"] = [](PlayerbotAI* ai) { return new OkthorEndFightTrigger(ai); };
+            creators["ok'thor war stomp"] = [](PlayerbotAI* ai) { return new OkthorWarStompTrigger(ai); };
+            creators["start anub'shiah fight"] = [](PlayerbotAI* ai) { return new AnubshiahStartFightTrigger(ai); };
+            creators["end anub'shiah fight"] = [](PlayerbotAI* ai) { return new AnubshiahEndFightTrigger(ai); };
+            creators["start hedrum the creeper fight"] = [](PlayerbotAI* ai) { return new HedrumStartFightTrigger(ai); };
+            creators["end hedrum the creeper fight"] = [](PlayerbotAI* ai) { return new HedrumEndFightTrigger(ai); };
+            creators["start high interrogator gerstahn fight"] = [](PlayerbotAI* ai) { return new GerstanStartFightTrigger(ai); };
+            creators["end high interrogator gerstahn fight"] = [](PlayerbotAI* ai) { return new GerstanEndFightTrigger(ai); };
+            creators["start lord roccor fight"] = [](PlayerbotAI* ai) { return new LordRoccorStartFightTrigger(ai); };
+            creators["end lord roccor fight"] = [](PlayerbotAI* ai) { return new LordRoccorEndFightTrigger(ai); };
+            creators["lord roccor earthquake"] = [](PlayerbotAI* ai) { return new LordRoccorEarthquakeTrigger(ai); };
+            creators["start houndmaster grebmar fight"] = [](PlayerbotAI* ai) { return new GrebmarStartFightTrigger(ai); };
+            creators["end houndmaster grebmar fight"] = [](PlayerbotAI* ai) { return new GrebmarEndFightTrigger(ai); };
+            creators["start pyromancer loregrain fight"] = [](PlayerbotAI* ai) { return new PyromancerLoregrainStartFightTrigger(ai); };
+            creators["end pyromancer loregrain fight"] = [](PlayerbotAI* ai) { return new PyromancerLoregrainEndFightTrigger(ai); };
+            creators["pyromancer fire nova"] = [](PlayerbotAI* ai) { return new PyromancerFireNovaTrigger(ai); };
+            creators["start warder stilgiss fight"] = [](PlayerbotAI* ai) { return new WarderStiglissStartFightTrigger(ai); };
+            creators["end warder stilgiss fight"] = [](PlayerbotAI* ai) { return new WarderStiglissEndFightTrigger(ai); };
+            creators["warder stilgiss frost nova"] = [](PlayerbotAI* ai) { return new WarderStiglissFrostNovaTrigger(ai); };
+            creators["start verek fight"] = [](PlayerbotAI* ai) { return new VerekStartFightTrigger(ai); };
+            creators["end verek fight"] = [](PlayerbotAI* ai) { return new VerekEndFightTrigger(ai); };
+            creators["start plugger spazzring fight"] = [](PlayerbotAI* ai) { return new PluggerSpazzringStartFightTrigger(ai); };
+            creators["end plugger spazzring fight"] = [](PlayerbotAI* ai) { return new PluggerSpazzringEndFightTrigger(ai); };
+            creators["start phalanx fight"] = [](PlayerbotAI* ai) { return new PhalanxStartFightTrigger(ai); };
+            creators["end phalanx fight"] = [](PlayerbotAI* ai) { return new PhalanxEndFightTrigger(ai); };
+            creators["start ambassador flamelash fight"] = [](PlayerbotAI* ai) { return new FlamelashStartFightTrigger(ai); };
+            creators["end ambassador flamelash fight"] = [](PlayerbotAI* ai) { return new FlamelashEndFightTrigger(ai); };
+            creators["start the seven fight"] = [](PlayerbotAI* ai) { return new TheSevenStartFightTrigger(ai); };
+            creators["end the seven fight"] = [](PlayerbotAI* ai) { return new TheSevenEndFightTrigger(ai); };
+            creators["start golem lord argelmach fight"] = [](PlayerbotAI* ai) { return new ArgelmachStartFightTrigger(ai); };
+            creators["end golem lord argelmach fight"] = [](PlayerbotAI* ai) { return new ArgelmachEndFightTrigger(ai); };
+            creators["argelmach static field"] = [](PlayerbotAI* ai) { return new ArgelmachStaticFieldTrigger(ai); };
+            creators["start bael'gar fight"] = [](PlayerbotAI* ai) { return new BaelGarStartFightTrigger(ai); };
+            creators["end bael'gar fight"] = [](PlayerbotAI* ai) { return new BaelGarEndFightTrigger(ai); };
+            creators["bael'gar fire nova"] = [](PlayerbotAI* ai) { return new BaelGarFireNovaTrigger(ai); };
+            creators["start general angerforge fight"] = [](PlayerbotAI* ai) { return new GeneralAngerforgeStartFightTrigger(ai); };
+            creators["end general angerforge fight"] = [](PlayerbotAI* ai) { return new GeneralAngerforgeEndFightTrigger(ai); };
+            creators["start magmus fight"] = [](PlayerbotAI* ai) { return new MagmusStartFightTrigger(ai); };
+            creators["end magmus fight"] = [](PlayerbotAI* ai) { return new MagmusEndFightTrigger(ai); };
+            creators["magmus war stomp"] = [](PlayerbotAI* ai) { return new MagmusWarStompTrigger(ai); };
+            creators["start emperor dagran thaurissan fight"] = [](PlayerbotAI* ai) { return new EmperorThaurissanStartFightTrigger(ai); };
+            creators["end emperor dagran thaurissan fight"] = [](PlayerbotAI* ai) { return new EmperorThaurissanEndFightTrigger(ai); };
+
             creators["enter onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairEnterDungeonTrigger(ai); };
             creators["leave onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairLeaveDungeonTrigger(ai); };
             creators["enter molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreEnterDungeonTrigger(ai); };

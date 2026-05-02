@@ -37,3 +37,10 @@
 | 22:07 | created Deadmines dungeon folder + DM_PLAN.md | src/Ai/Dungeon/Deadmines/ | plan ready, awaiting user confirmation | ~200 |
 | 22:20 | DM dungeon impl complete: 4 files created, 5 files registered, build clean | Deadmines/* + DungeonStrategy.cpp + TriggerContext.h + ActionContext.h + StrategyContext.h + CMakeLists.txt | success | ~800 |
 | 01:28 | Created BFD dungeon strategy (Steps 2-13) | BlackfathomDeeps/Trigger/BfdTriggers.h, Action/BfdActions.h, Strategy/BfdStrategy.h/.cpp + 5 registration edits | clean build | ~4000 |
+| 04:41 | Implemented ZulFarrak (map 209, 7 bosses) + Maraudon (map 349, 8 bosses) dungeon strategies | ZulFarrak/Trigger/ZfTriggers.h, ZulFarrak/Action/ZfActions.h, ZulFarrak/Strategy/ZfStrategy.h/.cpp, Maraudon/Trigger/MaraTriggers.h, Maraudon/Action/MaraActions.h, Maraudon/Strategy/MaraStrategy.h/.cpp + 4 registration files | clean build [100%] Built target mangosd | ~2000 |
+| 05:30 | Implemented Temple of Atal'Hakkar (map 109, 12 bosses) + Blackrock Depths (map 230, 21 bosses) dungeon strategies | ST/BRD Triggers.h, Actions.h, Strategy.h/.cpp + 4 registration files | clean build [100%] Built target mangosd | ~3000 |
+| 10:30 | Fixed NPC IDs in MaraTriggers.h (Vyletongue 13280→12236, Celebras 12519→12225, Landslide 12565→12203) | MaraTriggers.h | fixed | ~400 |
+| 10:31 | Rewrote BrdTriggers.h with all corrected Ring of Law IDs (Grizzle 9028, Eviscerator 9029, Ok'thor 9030, Anub'shiah 9031, Hedrum 9032), Warder Stilgiss 9041, Verek 9042, The Seven 8888 | BrdTriggers.h | fixed | ~600 |
+| 10:32 | Fixed MoveAwayFromCreature IDs in BrdActions.h (Grizzle 9028, Eviscerator 9029, Ok'thor 9030, Warder Stilgiss 9041) | BrdActions.h | fixed | ~300 |
+| 10:33 | Build clean after all NPC ID fixes | builddir-classic | success | ~200 |
+| 10:34 | Updated MARA_PLAN.md and BRD_PLAN.md with verified NPC IDs | MARA_PLAN.md, BRD_PLAN.md | updated | ~300 |
