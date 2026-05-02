@@ -68,6 +68,7 @@
 #include "playerbot/strategy/dungeons/Maraudon/Strategy/MaraStrategy.h"
 #include "playerbot/strategy/dungeons/TempleOfAtalHakkar/Strategy/StStrategy.h"
 #include "playerbot/strategy/dungeons/BlackrockDepths/Strategy/BrdStrategy.h"
+#include "playerbot/strategy/dungeons/BlackrockSpire/Strategy/BrsStrategy.h"
 #include "playerbot/strategy/raid/MoltenCore/Strategy/RaidMcStrategy.h"
 #include "playerbot/strategy/raid/BlackwingLair/Strategy/RaidBwlStrategy.h"
 #include "playerbot/strategy/raid/Karazhan/Strategy/RaidKaraStrategy.h"
@@ -195,6 +196,7 @@ namespace ai
             creators["maraudon"] = [](PlayerbotAI* ai) { return new MaraudonDungeonStrategy(ai); };
             creators["temple of atal'hakkar"] = [](PlayerbotAI* ai) { return new TempleOfAtalHakkarDungeonStrategy(ai); };
             creators["blackrock depths"] = [](PlayerbotAI* ai) { return new BlackrockDepthsDungeonStrategy(ai); };
+            creators["blackrock spire"] = [](PlayerbotAI* ai) { return new BlackrockSpireDungeonStrategy(ai); };
             creators["onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairDungeonStrategy(ai); };
             creators["molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreDungeonStrategy(ai); };
             creators["blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairDungeonStrategy(ai); };
@@ -317,6 +319,20 @@ namespace ai
             creators["general angerforge"]          = [](PlayerbotAI* ai) { return new GeneralAngerforgeFightStrategy(ai); };
             creators["magmus"]                      = [](PlayerbotAI* ai) { return new MagmusFightStrategy(ai); };
             creators["emperor dagran thaurissan"]   = [](PlayerbotAI* ai) { return new EmperorDagranThaurissanFightStrategy(ai); };
+            // Blackrock Spire bosses (LBRS + UBRS)
+            creators["highlord omokk"]              = [](PlayerbotAI* ai) { return new HigdlordOmokkFightStrategy(ai); };
+            creators["shadow hunter vosh'gajin"]    = [](PlayerbotAI* ai) { return new ShadowHunterVoshgajinFightStrategy(ai); };
+            creators["war master voone"]            = [](PlayerbotAI* ai) { return new WarMasterVooneFightStrategy(ai); };
+            creators["mother smolderweb"]           = [](PlayerbotAI* ai) { return new MotherSmolderwebFightStrategy(ai); };
+            creators["urok doomhowl"]               = [](PlayerbotAI* ai) { return new UrokDoomhowlFightStrategy(ai); };
+            creators["quartermaster zigris"]        = [](PlayerbotAI* ai) { return new QuartermasterZigisFightStrategy(ai); };
+            creators["halycon"]                     = [](PlayerbotAI* ai) { return new HalyconFightStrategy(ai); };
+            creators["overlord wyrmthalak"]         = [](PlayerbotAI* ai) { return new OverlordWyrmthalakFightStrategy(ai); };
+            creators["pyroguard emberseer"]         = [](PlayerbotAI* ai) { return new PyroguardEmberseerFightStrategy(ai); };
+            creators["solakar flamewreath"]         = [](PlayerbotAI* ai) { return new SolakarFlamewreathFightStrategy(ai); };
+            creators["jed runewatcher"]             = [](PlayerbotAI* ai) { return new JedRunewatcherFightStrategy(ai); };
+            creators["the beast"]                   = [](PlayerbotAI* ai) { return new TheBeastFightStrategy(ai); };
+            creators["general drakkisath"]          = [](PlayerbotAI* ai) { return new GeneralDrakkisathFightStrategy(ai); };
             // Scarlet Monastery bosses
             creators["vishas"]           = [](PlayerbotAI* ai) { return new VishasFightStrategy(ai); };
             creators["fallen champion"]  = [](PlayerbotAI* ai) { return new FallenChampionFightStrategy(ai); };

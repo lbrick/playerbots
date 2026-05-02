@@ -53,6 +53,317 @@
 
 ---
 
+## Boss Details
+
+### Ring of Law
+
+> Only one champion spawns per run (random). All six registered; only active one triggers.
+
+---
+
+#### Gorosh the Dervish
+**NPC:** 9027 | [Wowhead](https://www.wowhead.com/classic/npc=9027/gorosh-the-dervish)
+
+Orc warrior champion. Self-sustaining melee fighter.
+
+| Ability | Description |
+|---------|-------------|
+| Blood Craze | Heals Gorosh for ~300 HP on each hit received. |
+| Sweeping Strikes | Next 5 attacks hit two targets simultaneously. |
+
+**Bot strategy:** No radial AoE — start/end triggers only. Gorosh self-heals through Blood Craze; DPS pressure important. Sweeping Strikes punishes multiple melee, but no positional response needed.
+
+---
+
+#### Grizzle
+**NPC:** 9028 | [Wowhead](https://www.wowhead.com/classic/npc=9028/grizzle)
+
+Ettin champion with a ground slam AoE. Primary hazard in Ring of Law.
+
+| Ability | Description |
+|---------|-------------|
+| Ground Tremor | ~10yd AoE physical stun around boss. Primary hazard. |
+| Hamstring | Slows current melee target. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9028, 10, 3)` → `MoveAwayFromCreature(9028, 12)`. Ground Tremor stuns bots in range — spread >12yd minimizes locked-down healers.
+
+---
+
+#### Eviscerator
+**NPC:** 9029 | [Wowhead](https://www.wowhead.com/classic/npc=9029/eviscerator)
+
+Spider champion. Whirlwind makes this one of the more dangerous Ring champions.
+
+| Ability | Description |
+|---------|-------------|
+| Whirlwind | ~8yd AoE physical spin hitting all nearby players. |
+| Cleave | Frontal melee hit on up to 2 targets. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9029, 8, 3)` → `MoveAwayFromCreature(9029, 10)`. Whirlwind is the primary hazard — non-tank bots must stay >10yd during spin.
+
+---
+
+#### Ok'thor the Breaker
+**NPC:** 9030 | [Wowhead](https://www.wowhead.com/classic/npc=9030/oktor-the-breaker)
+
+Ogre champion. War Stomp knockback can interrupt healers and casters.
+
+| Ability | Description |
+|---------|-------------|
+| War Stomp | ~8yd AoE physical knockback. |
+| Knockdown | Single-target knockdown on current melee target. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9030, 8, 3)` → `MoveAwayFromCreature(9030, 10)`. War Stomp interrupts casts — spread ensures healers stay active.
+
+---
+
+#### Anub'shiah
+**NPC:** 9031 | [Wowhead](https://www.wowhead.com/classic/npc=9031/anubshiah)
+
+Nerubian champion. Debuff-focused fight with no positional hazard.
+
+| Ability | Description |
+|---------|-------------|
+| Curse of Blood | Increases Physical damage taken by target. |
+| Immolate | Fire DoT on random player. |
+
+**Bot strategy:** No radial AoE — start/end triggers only. Curse of Blood makes burst damage dangerous — healers keep priority targets topped.
+
+---
+
+#### Hedrum the Creeper
+**NPC:** 9032 | [Wowhead](https://www.wowhead.com/classic/npc=9032/hedrum-the-creeper)
+
+Spider champion with ranged poison volley. AoE is ranged, not proximity.
+
+| Ability | Description |
+|---------|-------------|
+| Poison Bolt Volley | AoE ranged poison hitting all players in line of sight. |
+| Corrosive Poison | Nature DoT on random player. |
+
+**Bot strategy:** No positional AoE — start/end triggers only. Poison Bolt Volley is ranged — healer strategy handles it. No spreading required.
+
+---
+
+### Main Dungeon
+
+---
+
+#### High Interrogator Gerstahn
+**NPC:** 9018 | [Wowhead](https://www.wowhead.com/classic/npc=9018/high-interrogator-gerstahn)
+
+Shadow priest boss near the prison wing.
+
+| Ability | Description |
+|---------|-------------|
+| Psychic Scream | AoE fear ~10yd affecting all nearby players. |
+| Mind Blast | Heavy single-target shadow damage. |
+| Shadow Word: Pain | Shadow DoT on random player. |
+
+**Bot strategy:** No positional trigger — fear handled by break-fear strategy. Start/end only.
+
+---
+
+#### Lord Roccor
+**NPC:** 9025 | [Wowhead](https://www.wowhead.com/classic/npc=9025/lord-roccor)
+
+Earthen elementalist patrolling the Ring of Law outer corridor.
+
+| Ability | Description |
+|---------|-------------|
+| Earthquake | ~10yd AoE physical knock-down around boss. Primary hazard. |
+| Earth Shock | Single-target nature damage + interrupt. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9025, 10, 3)` → `MoveAwayFromCreature(9025, 12)`. Earthquake stuns nearby players — spread minimizes healer downtime.
+
+---
+
+#### Houndmaster Grebmar
+**NPC:** 9319 | [Wowhead](https://www.wowhead.com/classic/npc=9319/houndmaster-grebmar)
+
+Dwarf boss near the kennel area. Pack-release encounter.
+
+| Ability | Description |
+|---------|-------------|
+| Release Hounds | Releases two Core Hound packs that join the fight. |
+| Shoot | Ranged attack on random player. |
+
+**Bot strategy:** No positional AoE — start/end only. Adds handled by kill-nearest logic. Hounds may stun/immolate — healer priority.
+
+---
+
+#### Pyromancer Loregrain
+**NPC:** 9024 | [Wowhead](https://www.wowhead.com/classic/npc=9024/pyromancer-loregrain)
+
+Dwarf fire mage near the Shrine of Thaurissan.
+
+| Ability | Description |
+|---------|-------------|
+| Fire Nova | ~10yd AoE fire burst around boss. Primary hazard. |
+| Fireball | Heavy single-target fire damage. |
+| Fire Shield | Periodic fire absorb shield on self. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9024, 10, 3)` → `MoveAwayFromCreature(9024, 12)`. Fire Nova fires repeatedly — bots must stay >12yd except tank.
+
+---
+
+#### Warder Stilgiss
+**NPC:** 9041 | [Wowhead](https://www.wowhead.com/classic/npc=9041/warder-stilgiss)
+
+Undead warder guarding cell block areas. Paired with Verek.
+
+| Ability | Description |
+|---------|-------------|
+| Frost Nova | ~8yd AoE freeze rooting all nearby players. |
+| Blizzard | Ground-targeted AoE frost damage zone. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9041, 8, 3)` → `MoveAwayFromCreature(9041, 10)`. Frost Nova roots bots in place — spread prevents chain-frozen healers.
+
+---
+
+#### Verek
+**NPC:** 9042 | [Wowhead](https://www.wowhead.com/classic/npc=9042/verek)
+
+Core Hound pet of Warder Stilgiss. Engaged alongside Stilgiss.
+
+| Ability | Description |
+|---------|-------------|
+| Veil of Shadow | Reduces healing received by target by 75%. |
+| Lava Breath | Frontal cone fire damage. |
+
+**Bot strategy:** No radial AoE — start/end only. Kill Verek before Stilgiss to remove healing debuff pressure.
+
+---
+
+#### Plugger Spazzring
+**NPC:** 9499 | [Wowhead](https://www.wowhead.com/classic/npc=9499/plugger-spazzring)
+
+Goblin bartender in the Grim Guzzler tavern. Optional encounter.
+
+| Ability | Description |
+|---------|-------------|
+| Gouge | Incapacitates current melee target briefly. |
+| Blind | Disorients random player. |
+
+**Bot strategy:** No positional AoE — start/end only. Gouge breaks on damage; blind handled by healer. Fighting Plugger aggroes the tavern.
+
+---
+
+#### Phalanx
+**NPC:** 9502 | [Wowhead](https://www.wowhead.com/classic/npc=9502/phalanx)
+
+Large golem guarding the bar in the Grim Guzzler.
+
+| Ability | Description |
+|---------|-------------|
+| Mortal Strike | Heavy melee hit reducing healing received by 50%. |
+| Shield Bash | Interrupts casting and silences for 2 sec. |
+
+**Bot strategy:** No radial AoE — start/end only. Mortal Strike makes healing discipline critical. Tank should hold aggro firmly to limit Shield Bash on casters.
+
+---
+
+#### Ambassador Flamelash
+**NPC:** 9156 | [Wowhead](https://www.wowhead.com/classic/npc=9156/ambassador-flamelash)
+
+Fire elemental ambassador in the Hall of Crafting.
+
+| Ability | Description |
+|---------|-------------|
+| Summon Fire Elemental | Summons multiple fire elemental waves throughout fight. |
+| Burning Spirit | Empowers summoned elementals, increasing their damage. |
+
+**Bot strategy:** No positional AoE — start/end only. Elemental waves handled by kill-nearest logic. Focus Flamelash while off-bots clear adds.
+
+---
+
+#### The Seven
+**NPC:** 8888 (Franclorn Forgewright, canonical) | [Wowhead](https://www.wowhead.com/classic/npc=8888/franclorn-forgewright)
+
+Seven dwarven spirits of the dark iron ancestors. All engage simultaneously.
+
+| Ability | Description |
+|---------|-------------|
+| Various debuffs | Each spirit has unique curse/debuff abilities. |
+| Overwhelming Numbers | Seven simultaneous targets demand AoE and smart kill-ordering. |
+
+**Bot strategy:** No positional AoE — start/end only. Use Franclorn Forgewright (8888) as canonical trigger — verify each spirit's NPC ID in DB if per-spirit strategies needed later.
+
+---
+
+#### Golem Lord Argelmach
+**NPC:** 8983 | [Wowhead](https://www.wowhead.com/classic/npc=8983/golem-lord-argelmach)
+
+Dwarf engineer boss in the Manufactory. Controls the golem army.
+
+| Ability | Description |
+|---------|-------------|
+| Static Field | ~8yd AoE nature damage pulsing around boss. Primary hazard. |
+| Shock | Single-target nature damage + knockback. |
+| Summon Golems | Summons Iron and Crimson Golems as adds. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(8983, 8, 3)` → `MoveAwayFromCreature(8983, 10)`. Static Field damages all bots in melee range continuously — non-tanks must stay out. Golem adds handled by kill-nearest.
+
+---
+
+#### Bael'Gar
+**NPC:** 9016 | [Wowhead](https://www.wowhead.com/classic/npc=9016/baelgar)
+
+Ancient fire elemental imprisoned deep in BRD. One of the most dangerous AoE bosses.
+
+| Ability | Description |
+|---------|-------------|
+| Fire Nova | ~10yd AoE fire burst around boss. Primary hazard. Fires repeatedly. |
+| Lava Burst | Targeted fire AoE on a random player. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9016, 10, 3)` → `MoveAwayFromCreature(9016, 12)`. Fire Nova is a primary DoD verification point — bots must spread >12yd during fight.
+
+---
+
+#### General Angerforge
+**NPC:** 9033 | [Wowhead](https://www.wowhead.com/classic/npc=9033/general-angerforge)
+
+Dark Iron general in the West Garrison. Summons elite guard adds at low HP.
+
+| Ability | Description |
+|---------|-------------|
+| Mortal Strike | Heavy melee hit reducing healing received by 50%. |
+| Summon Anvilrage Soldiers | Summons Dark Iron soldiers when HP drops low. |
+
+**Bot strategy:** No radial AoE — start/end only. Burn Angerforge before adds overwhelm — Mortal Strike makes extended fights dangerous.
+
+---
+
+#### Magmus
+**NPC:** 9938 | [Wowhead](https://www.wowhead.com/classic/npc=9938/magmus)
+
+Fire elemental guarding the door to the Emperor's throne room. Must die to open the door.
+
+| Ability | Description |
+|---------|-------------|
+| War Stomp | ~8yd AoE physical knockback. Primary hazard. |
+| Fire Bolt | Ranged fire damage on random player. |
+| Lava Spray | Frontal cone fire damage. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9938, 8, 3)` → `MoveAwayFromCreature(9938, 10)`. Gate behind Magmus stays closed until he dies — required kill on every Emperor run.
+
+---
+
+#### Emperor Dagran Thaurissan
+**NPC:** 9019 | [Wowhead](https://www.wowhead.com/classic/npc=9019/emperor-dagran-thaurissan)
+
+Final boss of BRD. Dark Iron emperor and master of fire magic. Moira Bronzebeard is present in the room — do not kill her.
+
+| Ability | Description |
+|---------|-------------|
+| Sunder Armor | Stacking armor reduction debuff on tank. Resets on boss reset. |
+| Fireball | Heavy ranged fire damage on random player. |
+| Hand of Thaurissan | Periodic AoE shadow debuff aura — damages all nearby players. |
+
+**Bot strategy:** No positional movement trigger — Hand of Thaurissan aura handled by healer throughput strategy. Start/end only. Sunder Armor stacks demand threat management to avoid tank switches.
+
+---
+
 ## Files to Create
 
 ```

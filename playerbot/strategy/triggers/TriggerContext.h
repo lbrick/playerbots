@@ -27,6 +27,7 @@
 #include "playerbot/strategy/dungeons/Maraudon/Trigger/MaraTriggers.h"
 #include "playerbot/strategy/dungeons/TempleOfAtalHakkar/Trigger/StTriggers.h"
 #include "playerbot/strategy/dungeons/BlackrockDepths/Trigger/BrdTriggers.h"
+#include "playerbot/strategy/dungeons/BlackrockSpire/Trigger/BrsTriggers.h"
 #include "WorldBuffTravelTriggers.h"
 
 #ifdef GenerateBotTests
@@ -464,6 +465,42 @@ namespace ai
             creators["magmus war stomp"] = [](PlayerbotAI* ai) { return new MagmusWarStompTrigger(ai); };
             creators["start emperor dagran thaurissan fight"] = [](PlayerbotAI* ai) { return new EmperorThaurissanStartFightTrigger(ai); };
             creators["end emperor dagran thaurissan fight"] = [](PlayerbotAI* ai) { return new EmperorThaurissanEndFightTrigger(ai); };
+
+            // Blackrock Spire (LBRS + UBRS, map 229)
+            creators["enter blackrock spire"] = [](PlayerbotAI* ai) { return new BlackrockSpireEnterDungeonTrigger(ai); };
+            creators["leave blackrock spire"] = [](PlayerbotAI* ai) { return new BlackrockSpireLeaveDungeonTrigger(ai); };
+            creators["start highlord omokk fight"] = [](PlayerbotAI* ai) { return new HigdlordOmokkStartFightTrigger(ai); };
+            creators["end highlord omokk fight"] = [](PlayerbotAI* ai) { return new HigdlordOmokkEndFightTrigger(ai); };
+            creators["omokk war stomp"] = [](PlayerbotAI* ai) { return new OmokkWarStompTrigger(ai); };
+            creators["start shadow hunter vosh'gajin fight"] = [](PlayerbotAI* ai) { return new VoshgajinStartFightTrigger(ai); };
+            creators["end shadow hunter vosh'gajin fight"] = [](PlayerbotAI* ai) { return new VoshgajinEndFightTrigger(ai); };
+            creators["start war master voone fight"] = [](PlayerbotAI* ai) { return new WarMasterVooneStartFightTrigger(ai); };
+            creators["end war master voone fight"] = [](PlayerbotAI* ai) { return new WarMasterVooneEndFightTrigger(ai); };
+            creators["start mother smolderweb fight"] = [](PlayerbotAI* ai) { return new MotherSmolderwebStartFightTrigger(ai); };
+            creators["end mother smolderweb fight"] = [](PlayerbotAI* ai) { return new MotherSmolderwebEndFightTrigger(ai); };
+            creators["start urok doomhowl fight"] = [](PlayerbotAI* ai) { return new UrokDoomhowlStartFightTrigger(ai); };
+            creators["end urok doomhowl fight"] = [](PlayerbotAI* ai) { return new UrokDoomhowlEndFightTrigger(ai); };
+            creators["urok war stomp"] = [](PlayerbotAI* ai) { return new UrokWarStompTrigger(ai); };
+            creators["start quartermaster zigris fight"] = [](PlayerbotAI* ai) { return new QuartermasterZigrisStartFightTrigger(ai); };
+            creators["end quartermaster zigris fight"] = [](PlayerbotAI* ai) { return new QuartermasterZigrisEndFightTrigger(ai); };
+            creators["start halycon fight"] = [](PlayerbotAI* ai) { return new HalyconStartFightTrigger(ai); };
+            creators["end halycon fight"] = [](PlayerbotAI* ai) { return new HalyconEndFightTrigger(ai); };
+            creators["start overlord wyrmthalak fight"] = [](PlayerbotAI* ai) { return new OverlordWyrmthalakStartFightTrigger(ai); };
+            creators["end overlord wyrmthalak fight"] = [](PlayerbotAI* ai) { return new OverlordWyrmthalakEndFightTrigger(ai); };
+            creators["wyrmthalak blizzard"] = [](PlayerbotAI* ai) { return new WyrmthalakBlizzardTrigger(ai); };
+            creators["start pyroguard emberseer fight"] = [](PlayerbotAI* ai) { return new PyroguardEmberseerStartFightTrigger(ai); };
+            creators["end pyroguard emberseer fight"] = [](PlayerbotAI* ai) { return new PyroguardEmberseerEndFightTrigger(ai); };
+            creators["emberseer ignite"] = [](PlayerbotAI* ai) { return new EmberseerIgniteTrigger(ai); };
+            creators["start solakar flamewreath fight"] = [](PlayerbotAI* ai) { return new SolakarFlamewreathStartFightTrigger(ai); };
+            creators["end solakar flamewreath fight"] = [](PlayerbotAI* ai) { return new SolakarFlamewreathEndFightTrigger(ai); };
+            creators["start jed runewatcher fight"] = [](PlayerbotAI* ai) { return new JedRunewatcherStartFightTrigger(ai); };
+            creators["end jed runewatcher fight"] = [](PlayerbotAI* ai) { return new JedRunewatcherEndFightTrigger(ai); };
+            creators["start the beast fight"] = [](PlayerbotAI* ai) { return new TheBeastStartFightTrigger(ai); };
+            creators["end the beast fight"] = [](PlayerbotAI* ai) { return new TheBeastEndFightTrigger(ai); };
+            creators["the beast conflagration"] = [](PlayerbotAI* ai) { return new TheBeastConflagrationTrigger(ai); };
+            creators["start general drakkisath fight"] = [](PlayerbotAI* ai) { return new GeneralDrakkisathStartFightTrigger(ai); };
+            creators["end general drakkisath fight"] = [](PlayerbotAI* ai) { return new GeneralDrakkisathEndFightTrigger(ai); };
+            creators["drakkisath conflagration"] = [](PlayerbotAI* ai) { return new DrakkisathConflagrationTrigger(ai); };
 
             creators["enter onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairEnterDungeonTrigger(ai); };
             creators["leave onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairLeaveDungeonTrigger(ai); };

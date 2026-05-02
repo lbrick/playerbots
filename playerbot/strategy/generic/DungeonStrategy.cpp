@@ -68,6 +68,10 @@ void DungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
         NextAction::array(0, new NextAction("enable blackrock depths strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
+        "enter blackrock spire",
+        NextAction::array(0, new NextAction("enable blackrock spire strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
         "enter onyxia's lair",
         NextAction::array(0, new NextAction("enable onyxia's lair strategy", 100.0f), NULL)));
 
@@ -205,6 +209,14 @@ void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode(
         "leave blackrock depths",
         NextAction::array(0, new NextAction("disable blackrock depths strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter blackrock spire",
+        NextAction::array(0, new NextAction("enable blackrock spire strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave blackrock spire",
+        NextAction::array(0, new NextAction("disable blackrock spire strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
         "enter onyxia's lair",

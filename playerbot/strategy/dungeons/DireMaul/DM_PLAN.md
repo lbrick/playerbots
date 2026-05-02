@@ -54,6 +54,239 @@
 
 ---
 
+## Boss Details
+
+### East (Warpwood Quarter)
+
+---
+
+#### Zevrim Thornhoof
+**NPC:** 11490 | [Wowhead](https://www.wowhead.com/classic/npc=11490/zevrim-thornhoof)
+
+Satyr boss at the entrance to DM East. Sacrifice mechanic removes a player from the fight temporarily.
+
+| Ability | Description |
+|---------|-------------|
+| Sacrifice | Lifts a random player, dealing periodic shadow damage while channeled. Target is unreachable. |
+| Corrupt | Shadow DoT on random player. |
+
+**Bot strategy:** No radial AoE — start/end only. Sacrificed bot is handled by waiting out the channel. Healers maintain HoTs on targeted player.
+
+---
+
+#### Hydrospawn
+**NPC:** 13280 | [Wowhead](https://www.wowhead.com/classic/npc=13280/hydrospawn)
+
+Water elemental boss. **Verify NPC ID in DB** — 13280 was used for Lord Vyletongue in MARA_PLAN; one is wrong.
+
+| Ability | Description |
+|---------|-------------|
+| Tidal Wave | Single-target knockback on current melee target. |
+| Enervate | Reduces a target's attack and cast speed. |
+
+**Bot strategy:** No radial AoE — start/end only. Tidal Wave is single-target knockback; no spreading required.
+
+---
+
+#### Lethtendris
+**NPC:** 14327 | [Wowhead](https://www.wowhead.com/classic/npc=14327/lethtendris)
+
+Blood elf sorceress with imp companion (Pimgib). Mana drain caster.
+
+| Ability | Description |
+|---------|-------------|
+| Arcane Missiles | Channeled arcane damage on random player. |
+| Drain Mana | Drains mana from a random player. |
+| Enveloping Web | Immobilizes current target. |
+
+**Bot strategy:** No positional AoE — start/end only. Pimgib (imp companion) handled by kill-nearest. Interrupt Arcane Missiles if interrupt logic available.
+
+---
+
+#### Alzzin the Wildshaper
+**NPC:** 11492 | [Wowhead](https://www.wowhead.com/classic/npc=11492/alzzin-the-wildshaper)
+
+Final East wing boss. Shapeshifter with a radial root AoE and enrage at low HP.
+
+| Ability | Description |
+|---------|-------------|
+| Earthgrip | ~10yd AoE root around boss. Primary hazard. |
+| Enrage | Enrages at low HP, increasing attack speed and damage. |
+| Shapeshift | Alternates between druid caster and melee bear form. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(11492, 10, 3)` → `MoveAwayFromCreature(11492, 12)`. Earthgrip roots bots in place — spread minimizes healer lockdown. Burns boss fast after Enrage.
+
+---
+
+### West (Capital Gardens)
+
+---
+
+#### Tendris Warpwood
+**NPC:** 11489 | [Wowhead](https://www.wowhead.com/classic/npc=11489/tendris-warpwood)
+
+Ancient treant boss. Entangle roots all nearby players — primary group hazard.
+
+| Ability | Description |
+|---------|-------------|
+| Entangle | ~8yd AoE root around boss. Primary hazard. |
+| Thorn Aura | Reflects a portion of melee damage back to attacker. |
+| War Stomp | ~8yd AoE knockback. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(11489, 8, 3)` → `MoveAwayFromCreature(11489, 10)`. Entangle roots bots — spread prevents chain-rooted healers. Thorn Aura punishes rapid melee; tank awareness important.
+
+---
+
+#### Illyanna Ravenoak
+**NPC:** 11488 | [Wowhead](https://www.wowhead.com/classic/npc=11488/illyanna-ravenoak)
+
+Blood elf ranger boss. Frontal AoE sweep attack; bear companion Ferra (11489-family) engages alongside.
+
+| Ability | Description |
+|---------|-------------|
+| Strafe | Frontal AoE arrow sweep hitting all in front of her. |
+| Multi-Shot | AoE ranged hit on multiple players. |
+| Trueshot Aura | Passive aura increasing her ranged attack power. |
+
+**Bot strategy:** No positional trigger — frontal sweep detection deferred. Start/end only. Ferra companion handled by kill-nearest.
+
+---
+
+#### Magister Kalendris
+**NPC:** 11487 | [Wowhead](https://www.wowhead.com/classic/npc=11487/magister-kalendris)
+
+Blood elf shadow mage. Mind control is the primary danger — no positional AoE.
+
+| Ability | Description |
+|---------|-------------|
+| Dominate Mind | Mind controls a random player for ~10 sec. |
+| Shadow Word: Pain | Shadow DoT on random player. |
+| Psychic Scream | AoE fear ~10yd — handled by break-fear strategy. |
+
+**Bot strategy:** No positional AoE — start/end only. Dominated bot handled by nearest-kill or wait logic. Psychic Scream handled by break-fear strategy.
+
+---
+
+#### Immol'thar
+**NPC:** 11496 | [Wowhead](https://www.wowhead.com/classic/npc=11496/immolthar)
+
+Massive eyeball demon imprisoned in the west wing. Disease Cloud is a continuous persistent aura — the primary West wing hazard.
+
+| Ability | Description |
+|---------|-------------|
+| Disease Cloud | Persistent ~10yd disease AoE aura around boss. Ticks continuously on all nearby players. Primary hazard. |
+| Summon Glowing Eyes | Summons floating eye adds during fight. |
+| Tentacle | Spawns tentacle adds. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(11496, 10, 3)` → `MoveAwayFromCreature(11496, 12)`. Disease Cloud is persistent — non-tank bots must stay >12yd at all times. Primary DoD verification point. Eye adds handled by kill-nearest.
+
+---
+
+#### Prince Tortheldrin
+**NPC:** 11486 | [Wowhead](https://www.wowhead.com/classic/npc=11486/prince-tortheldrin)
+
+Final West wing boss. Only activates after Immol'thar is dead. Arcane Blast is a radial burst AoE.
+
+| Ability | Description |
+|---------|-------------|
+| Arcane Blast | ~8yd AoE arcane burst around boss. Primary hazard. |
+| Thrash | Multi-attack swing — extra hits on current target. |
+| Whirlwind | ~8yd AoE physical spin. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(11486, 8, 3)` → `MoveAwayFromCreature(11486, 10)`. Arcane Blast + Whirlwind both ~8yd — single trigger covers both. Kill Immol'thar first to activate him.
+
+---
+
+### North (Gordok Commons)
+
+---
+
+#### Guard Mol'dar
+**NPC:** 14326 | [Wowhead](https://www.wowhead.com/classic/npc=14326/guard-moldar)
+
+Ogre guard. First North wing boss. War Stomp knocks back nearby players.
+
+| Ability | Description |
+|---------|-------------|
+| War Stomp | ~8yd AoE physical knockback. Primary hazard. |
+| Sunder Armor | Stacking armor reduction on tank. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(14326, 8, 3)` → `MoveAwayFromCreature(14326, 10)`. Kill him to prevent Gordok from being reinforced.
+
+---
+
+#### Stomper Kreeg
+**NPC:** 14322 | [Wowhead](https://www.wowhead.com/classic/npc=14322/stomper-kreeg)
+
+Drunken ogre guard. Knock Away scatters nearby players and can interrupt healer positioning.
+
+| Ability | Description |
+|---------|-------------|
+| Knock Away | ~8yd AoE knockback around boss. Primary hazard. |
+| Drunken Stupor | Occasionally stumbles, reducing hit chance. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(14322, 8, 3)` → `MoveAwayFromCreature(14322, 10)`. Knock Away scatters group — spread ensures healers stay in range after knockback.
+
+---
+
+#### Guard Fengus
+**NPC:** 14321 | [Wowhead](https://www.wowhead.com/classic/npc=14321/guard-fengus)
+
+Ogre guard. Melee-focused, no radial AoE.
+
+| Ability | Description |
+|---------|-------------|
+| Cleave | Frontal melee swing hitting up to 2 targets. |
+| Mortal Strike | Heavy melee hit reducing healing received by 50%. |
+
+**Bot strategy:** No radial AoE — start/end only. Mortal Strike makes healer throughput critical on tank. Can be skipped on tribute runs.
+
+---
+
+#### Guard Slip'kik
+**NPC:** 14323 | [Wowhead](https://www.wowhead.com/classic/npc=14323/guard-slipkik)
+
+Ogre guard with frost abilities. Frost Nova is the key hazard.
+
+| Ability | Description |
+|---------|-------------|
+| Frost Nova | ~8yd AoE freeze rooting all nearby players. Primary hazard. |
+| Web | Immobilizes current melee target. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(14323, 8, 3)` → `MoveAwayFromCreature(14323, 10)`. Frost Nova roots bots — spread prevents healer lockdown. Can be frozen before fight on tribute runs (statue mechanic).
+
+---
+
+#### Captain Kromcrush
+**NPC:** 14325 | [Wowhead](https://www.wowhead.com/classic/npc=14325/captain-kromcrush)
+
+Elite ogre captain. War Stomp and Mortal Strike make him dangerous to unprepared groups.
+
+| Ability | Description |
+|---------|-------------|
+| War Stomp | ~8yd AoE physical knockback. Primary hazard. |
+| Mortal Strike | Heavy melee hit reducing healing received by 50%. |
+| Bash | Single-target stun on current target. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(14325, 8, 3)` → `MoveAwayFromCreature(14325, 10)`. War Stomp interrupts casters — spread ensures healers stay active. Can be dismissed by players with Gordok Ogre Suit; bot ignores this.
+
+---
+
+#### King Gordok
+**NPC:** 11501 | [Wowhead](https://www.wowhead.com/classic/npc=11501/king-gordok)
+
+Final North wing boss. Thunderclap is the primary group hazard; Mortal Strike + Knock Away make him the most dangerous North boss.
+
+| Ability | Description |
+|---------|-------------|
+| Thunderclap | ~8yd AoE physical damage and slow around boss. Primary hazard. |
+| Mortal Strike | Heavy melee hit reducing healing received by 50%. |
+| Knock Away | Single-target knockback on current melee target. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(11501, 8, 3)` → `MoveAwayFromCreature(11501, 10)`. Thunderclap drives spread requirement. Primary DoD verification point for North wing. Gordok tribute run (skipping guards) not implemented — bot uses standard kill logic.
+
+---
+
 ## Files to Create
 
 ```

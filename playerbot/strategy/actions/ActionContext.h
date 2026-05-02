@@ -85,6 +85,7 @@
 #include "playerbot/strategy/dungeons/Maraudon/Action/MaraActions.h"
 #include "playerbot/strategy/dungeons/TempleOfAtalHakkar/Action/StActions.h"
 #include "playerbot/strategy/dungeons/BlackrockDepths/Action/BrdActions.h"
+#include "playerbot/strategy/dungeons/BlackrockSpire/Action/BrsActions.h"
 
 #ifdef GenerateBotTests
 #include "../tests/TestAction.h"
@@ -531,6 +532,42 @@ namespace ai
             creators["magmus move away from war stomp"] = [](PlayerbotAI* ai) { return new MagmusMoveAwayFromWarStompAction(ai); };
             creators["enable emperor dagran thaurissan fight strategy"] = [](PlayerbotAI* ai) { return new EmperorThaurissanEnableFightStrategyAction(ai); };
             creators["disable emperor dagran thaurissan fight strategy"] = [](PlayerbotAI* ai) { return new EmperorThaurissanDisableFightStrategyAction(ai); };
+
+            // Blackrock Spire (LBRS + UBRS, map 229)
+            creators["enable blackrock spire strategy"] = [](PlayerbotAI* ai) { return new BlackrockSpireEnableStrategyAction(ai); };
+            creators["disable blackrock spire strategy"] = [](PlayerbotAI* ai) { return new BlackrockSpireDisableStrategyAction(ai); };
+            creators["enable highlord omokk fight strategy"] = [](PlayerbotAI* ai) { return new HigdlordOmokkEnableFightStrategyAction(ai); };
+            creators["disable highlord omokk fight strategy"] = [](PlayerbotAI* ai) { return new HigdlordOmokkDisableFightStrategyAction(ai); };
+            creators["omokk move away from war stomp"] = [](PlayerbotAI* ai) { return new OmokkMoveAwayFromWarStompAction(ai); };
+            creators["enable shadow hunter vosh'gajin fight strategy"] = [](PlayerbotAI* ai) { return new VoshgajinEnableFightStrategyAction(ai); };
+            creators["disable shadow hunter vosh'gajin fight strategy"] = [](PlayerbotAI* ai) { return new VoshgajinDisableFightStrategyAction(ai); };
+            creators["enable war master voone fight strategy"] = [](PlayerbotAI* ai) { return new WarMasterVooneEnableFightStrategyAction(ai); };
+            creators["disable war master voone fight strategy"] = [](PlayerbotAI* ai) { return new WarMasterVooneDisableFightStrategyAction(ai); };
+            creators["enable mother smolderweb fight strategy"] = [](PlayerbotAI* ai) { return new MotherSmolderwebEnableFightStrategyAction(ai); };
+            creators["disable mother smolderweb fight strategy"] = [](PlayerbotAI* ai) { return new MotherSmolderwebDisableFightStrategyAction(ai); };
+            creators["enable urok doomhowl fight strategy"] = [](PlayerbotAI* ai) { return new UrokDoomhowlEnableFightStrategyAction(ai); };
+            creators["disable urok doomhowl fight strategy"] = [](PlayerbotAI* ai) { return new UrokDoomhowlDisableFightStrategyAction(ai); };
+            creators["urok move away from war stomp"] = [](PlayerbotAI* ai) { return new UrokMoveAwayFromWarStompAction(ai); };
+            creators["enable quartermaster zigris fight strategy"] = [](PlayerbotAI* ai) { return new QuartermasterZigrisEnableFightStrategyAction(ai); };
+            creators["disable quartermaster zigris fight strategy"] = [](PlayerbotAI* ai) { return new QuartermasterZigrisDisableFightStrategyAction(ai); };
+            creators["enable halycon fight strategy"] = [](PlayerbotAI* ai) { return new HalyconEnableFightStrategyAction(ai); };
+            creators["disable halycon fight strategy"] = [](PlayerbotAI* ai) { return new HalyconDisableFightStrategyAction(ai); };
+            creators["enable overlord wyrmthalak fight strategy"] = [](PlayerbotAI* ai) { return new OverlordWyrmthalakEnableFightStrategyAction(ai); };
+            creators["disable overlord wyrmthalak fight strategy"] = [](PlayerbotAI* ai) { return new OverlordWyrmthalakDisableFightStrategyAction(ai); };
+            creators["wyrmthalak move away from blizzard"] = [](PlayerbotAI* ai) { return new WyrmthalakMoveAwayFromBlizzardAction(ai); };
+            creators["enable pyroguard emberseer fight strategy"] = [](PlayerbotAI* ai) { return new PyroguardEmberseerEnableFightStrategyAction(ai); };
+            creators["disable pyroguard emberseer fight strategy"] = [](PlayerbotAI* ai) { return new PyroguardEmberseerDisableFightStrategyAction(ai); };
+            creators["emberseer move away from ignite"] = [](PlayerbotAI* ai) { return new EmberseerMoveAwayFromIgniteAction(ai); };
+            creators["enable solakar flamewreath fight strategy"] = [](PlayerbotAI* ai) { return new SolakarFlamewreathEnableFightStrategyAction(ai); };
+            creators["disable solakar flamewreath fight strategy"] = [](PlayerbotAI* ai) { return new SolakarFlamewreathDisableFightStrategyAction(ai); };
+            creators["enable jed runewatcher fight strategy"] = [](PlayerbotAI* ai) { return new JedRunewatcherEnableFightStrategyAction(ai); };
+            creators["disable jed runewatcher fight strategy"] = [](PlayerbotAI* ai) { return new JedRunewatcherDisableFightStrategyAction(ai); };
+            creators["enable the beast fight strategy"] = [](PlayerbotAI* ai) { return new TheBeastEnableFightStrategyAction(ai); };
+            creators["disable the beast fight strategy"] = [](PlayerbotAI* ai) { return new TheBeastDisableFightStrategyAction(ai); };
+            creators["the beast move away from conflagration"] = [](PlayerbotAI* ai) { return new TheBeastMoveAwayFromConflagrationAction(ai); };
+            creators["enable general drakkisath fight strategy"] = [](PlayerbotAI* ai) { return new GeneralDrakkisathEnableFightStrategyAction(ai); };
+            creators["disable general drakkisath fight strategy"] = [](PlayerbotAI* ai) { return new GeneralDrakkisathDisableFightStrategyAction(ai); };
+            creators["drakkisath move away from conflagration"] = [](PlayerbotAI* ai) { return new DrakkisathMoveAwayFromConflagrationAction(ai); };
 
             creators["enable onyxia's lair strategy"] = [](PlayerbotAI* ai) { return new OnyxiasLairEnableDungeonStrategyAction(ai); };
             creators["disable onyxia's lair strategy"] = [](PlayerbotAI* ai) { return new OnyxiasLairDisableDungeonStrategyAction(ai); };

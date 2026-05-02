@@ -2,7 +2,7 @@
 
 **Map ID:** 229 (both wings share the same map)  
 **Levels:** 55–60  
-**Status:** ⬜ TODO  
+**Status:** 🟢 IMPLEMENTED — build verified 2026-05-02  
 
 > **One map ID, two wings:** LBRS and UBRS share map 229. Use one instance strategy that covers all bosses in both wings. Boss fight strategies distinguish wings by NPC ID.
 >
@@ -15,7 +15,7 @@
 | Boss | NPC ID | Mechanic | Trigger Type | Action |
 |------|--------|----------|--------------|--------|
 | Highlord Omokk | 9196 | **War Stomp** (~8yd AoE physical), Blot (single-target stun) | `CloseToHostileCreatureHazardTrigger(9196, 8, 3)` | `MoveAwayFromCreature(9196, 10)` |
-| Shadow Hunter Vosh'gajin | 9218 | Hex (random frog polymorph), Curse of Blood. No positional AoE. | None — start/end only | — |
+| Shadow Hunter Vosh'gajin | 9236 | Hex (random frog polymorph), Curse of Blood. No positional AoE. | None — start/end only | — |
 | War Master Voone | 9237 | Cleave, Mortal Strike. No radial AoE. | None — start/end only | — |
 | Mother Smolderweb | 10596 | Web (immobilize), Summon Daughter of Smolderweb (adds). No positional AoE mechanic. | None — start/end only | — |
 | Urok Doomhowl | 10584 | Summon ogres (event), War Stomp. Event-triggered spawn encounter. | `CloseToHostileCreatureHazardTrigger(10584, 8, 3)` | `MoveAwayFromCreature(10584, 10)` |
@@ -42,6 +42,204 @@
 > **General Drakkisath Conflagration:** Drakkisath has two Chromatic Whelp adds (10442) at the start. Existing kill logic handles them. The Conflagration fires on random targets throughout the fight.
 >
 > **Urok Doomhowl:** Optional ogre event accessed via Roughshod Pike (item summon). May not be present every run. Register regardless.
+
+---
+
+## Boss Details
+
+### LBRS
+
+---
+
+#### Highlord Omokk
+**NPC:** 9196 | [Wowhead](https://www.wowhead.com/classic/npc=9196/highlord-omokk)
+
+Ogre lord at the entrance of LBRS. First real boss encountered.
+
+| Ability | Description |
+|---------|-------------|
+| War Stomp | ~8yd AoE physical knockback. Primary hazard. |
+| Blot | Single-target stun on random player. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9196, 8, 3)` → `MoveAwayFromCreature(9196, 10)`. Bots spread >10yd when War Stomp fires.
+
+---
+
+#### Shadow Hunter Vosh'gajin
+**NPC:** 9236 | [Wowhead](https://www.wowhead.com/classic/npc=9236/shadow-hunter-voshgajin)
+
+Troll shadow hunter. Curses and transforms players mid-fight.
+
+| Ability | Description |
+|---------|-------------|
+| Hex | Polymorphs random player into a frog (incapacitate). |
+| Curse of Blood | DoT curse on random player, increases Physical damage taken. |
+
+**Bot strategy:** No positional AoE — start/end triggers only. Hex breaks on damage so bot auto-attack handles it.
+
+---
+
+#### War Master Voone
+**NPC:** 9237 | [Wowhead](https://www.wowhead.com/classic/npc=9237/war-master-voone)
+
+Orc warrior boss. Straightforward melee fight.
+
+| Ability | Description |
+|---------|-------------|
+| Cleave | Frontal AoE melee swing hitting up to 2 targets. |
+| Mortal Strike | Heavy melee hit reducing healing received by 50%. |
+
+**Bot strategy:** No radial AoE — start/end triggers only. Tanks should be solo in front; Mortal Strike makes healing discipline important.
+
+---
+
+#### Mother Smolderweb
+**NPC:** 10596 | [Wowhead](https://www.wowhead.com/classic/npc=10596/mother-smolderweb)
+
+Undead spider matriarch. Add-heavy encounter.
+
+| Ability | Description |
+|---------|-------------|
+| Web | Immobilizes target, preventing movement. |
+| Summon Daughter of Smolderweb | Spawns spider adds during the fight. |
+| Crystallize | Encases a player in crystal (secondary effect). |
+
+**Bot strategy:** No positional AoE — start/end triggers only. Adds handled by kill-nearest logic. Web immobilize does not require movement response.
+
+---
+
+#### Urok Doomhowl
+**NPC:** 10584 | [Wowhead](https://www.wowhead.com/classic/npc=10584/urok-doomhowl)
+
+Optional ogre event boss. Requires Roughshod Pike item to summon.
+
+| Ability | Description |
+|---------|-------------|
+| War Stomp | ~8yd AoE physical knockback. |
+| Summon Ogres | Event-based wave spawns of ogre adds during fight. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(10584, 8, 3)` → `MoveAwayFromCreature(10584, 10)`. Optional — may not be present every run. Register regardless.
+
+---
+
+#### Quartermaster Zigris
+**NPC:** 9736 | [Wowhead](https://www.wowhead.com/classic/npc=9736/quartermaster-zigris)
+
+Goblin ranged attacker guarding LBRS loot room.
+
+| Ability | Description |
+|---------|-------------|
+| Shoot | Ranged attack at random players. |
+| Gouge | Incapacitates current melee target briefly. |
+
+**Bot strategy:** No positional AoE — start/end triggers only. Pure ranged/melee fight, no spreading required.
+
+---
+
+#### Halycon
+**NPC:** 10220 | [Wowhead](https://www.wowhead.com/classic/npc=10220/halycon)
+
+Wolf boss before Wyrmthalak. Paired with Gizrul the Slavener who activates on Halycon's death.
+
+| Ability | Description |
+|---------|-------------|
+| Howl | AoE fear affecting all nearby players. |
+| Summon Whelps | Spawns wolf whelp adds during fight. |
+
+**Bot strategy:** No movement mechanic — start/end triggers only. AoE fear handled by existing break-fear strategy. Kill Halycon fast before Gizrul activates.
+
+---
+
+#### Overlord Wyrmthalak
+**NPC:** 9568 | [Wowhead](https://www.wowhead.com/classic/npc=9568/overlord-wyrmthalak)
+
+Final LBRS boss. Dragonkin overlord with multiple AoE abilities and add summons.
+
+| Ability | Description |
+|---------|-------------|
+| War Stomp | ~8yd AoE physical knockback. |
+| Blizzard | ~10yd AoE frost damage zone. |
+| Summon Spirestone Warlords | Summons Spirestone orc adds mid-fight. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9568, 10, 3)` → `MoveAwayFromCreature(9568, 12)`. Both War Stomp and Blizzard fire during the fight — 12yd spread clears both. Adds handled by kill-nearest.
+
+---
+
+### UBRS
+
+---
+
+#### Pyroguard Emberseer
+**NPC:** 9816 | [Wowhead](https://www.wowhead.com/classic/npc=9816/pyroguard-emberseer)
+
+First UBRS boss. Caged at start — five Blackhand Incarcerators must be killed to free him.
+
+| Ability | Description |
+|---------|-------------|
+| Ignite | ~8yd fire aura active after being freed. Continuous AoE damage to nearby players. |
+| Fire Shield | Periodically envelops himself in a fire shield. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(9816, 8, 3)` → `MoveAwayFromCreature(9816, 10)`. Emberseer (9816) registered as fight trigger. Kill five Incarcerators first — bot kill-nearest handles them.
+
+---
+
+#### Solakar Flamewreath
+**NPC:** 10264 | [Wowhead](https://www.wowhead.com/classic/npc=10264/solakar-flamewreath)
+
+Drake rider boss. Wave-based whelp event before engaging the boss.
+
+| Ability | Description |
+|---------|-------------|
+| Father Flame Incubators | Egg waves that spawn whelps — must be killed before boss activates. |
+| Cleave | Standard frontal melee cleave. |
+
+**Bot strategy:** No radial AoE — start/end triggers only. Whelp wave handled by kill-nearest. Standard cleave fight once waves clear.
+
+---
+
+#### Jed Runewatcher
+**NPC:** 10509 | [Wowhead](https://www.wowhead.com/classic/npc=10509/jed-runewatcher)
+
+Rare spawn in UBRS. Optional — not present every run.
+
+| Ability | Description |
+|---------|-------------|
+| Arcane Missiles | Channeled arcane damage on random target. |
+| Power Word: Shield | Self-shields to absorb incoming damage. |
+
+**Bot strategy:** No positional AoE — start/end triggers only. Optional rare — register anyway. Interrupt Arcane Missiles if interrupt logic available.
+
+---
+
+#### The Beast
+**NPC:** 10430 | [Wowhead](https://www.wowhead.com/classic/npc=10430/the-beast)
+
+Core hound boss. One of the most dangerous UBRS encounters due to random-target Conflagration.
+
+| Ability | Description |
+|---------|-------------|
+| Conflagration | Targets random player with a fire blast; ~10yd splash to nearby players. Primary hazard. |
+| Frenzy | Enrages at low HP, massively increasing attack speed and damage. |
+| Immolation Trap | Places fire trap on the ground. |
+| Unbalancing Strike | Reduces target's defense skill. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(10430, 10, 4)` → `MoveAwayFromCreature(10430, 12)`. Spread ensures Conflagration splash hits fewer players. Frenzy countered by Tranquilizing Shot if hunter logic available.
+
+---
+
+#### General Drakkisath
+**NPC:** 10363 | [Wowhead](https://www.wowhead.com/classic/npc=10363/general-drakkisath)
+
+Final UBRS boss. Chromatic dragonkin general with two Chromatic Whelp adds (10442) at pull.
+
+| Ability | Description |
+|---------|-------------|
+| Conflagration | AoE fire cone targeting random players, ~8yd radius. Fires throughout fight. |
+| Cleave | Frontal melee cleave hitting multiple targets. |
+| War Stomp | AoE knockback hitting nearby players. |
+| Chromatic Whelp adds | Two whelps (NPC 10442) active at pull. |
+
+**Bot strategy:** `CloseToHostileCreatureHazardTrigger(10363, 8, 3)` → `MoveAwayFromCreature(10363, 10)`. Whelp adds (10442) handled by kill-nearest before switching to Drakkisath. Conflagration fires on random targets throughout — spread is critical.
 
 ---
 
@@ -86,7 +284,7 @@ playerbot/strategy/dungeons/BlackrockSpire/
 
 ## Build Status
 
-- [ ] `./build.sh` — clean, no new errors
+- [x] `./build.sh` — clean, no new errors (2026-05-02)
 
 ---
 

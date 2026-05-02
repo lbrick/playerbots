@@ -38,8 +38,8 @@ Map IDs from `worlddb > instance_template > map` or https://wow.tools/dbc/?dbc=m
 | 13 | Maraudon | Mara | 349 | 46–55 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
 | 14 | Temple of Atal'Hakkar | ST | 109 | 50–56 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
 | 15 | Blackrock Depths | BRD | 230 | 52–60 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
-| 16 | Lower Blackrock Spire | LBRS | 229 | 55–60 | 📋 PLANNED — see `BlackrockSpire/BRS_PLAN.md` (combined) |
-| 17 | Upper Blackrock Spire | UBRS | 229 | 55–60 | 📋 PLANNED — see `BlackrockSpire/BRS_PLAN.md` (combined) |
+| 16 | Lower Blackrock Spire | LBRS | 229 | 55–60 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
+| 17 | Upper Blackrock Spire | UBRS | 229 | 55–60 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
 | 18 | Dire Maul | DM | 429 | 55–60 | 📋 PLANNED — see `DireMaul/DM_PLAN.md` |
 | 19 | Stratholme | Strat | 329 | 56–60 | 📋 PLANNED — see `Stratholme/STRAT_PLAN.md` |
 | 20 | Scholomance | Scholo | 289 | 57–60 | 📋 PLANNED — see `Scholomance/SCHOLO_PLAN.md` |
@@ -191,7 +191,7 @@ Every dungeon requires changes to 5 files outside its own folder:
 | Boss | NPC ID | Wing | Key Mechanic |
 |------|--------|------|-------------|
 | Highlord Omokk | 9196 | LBRS | **War Stomp** ~8yd AoE |
-| Shadow Hunter Vosh'gajin | 9218 | LBRS | Hex polymorph — no positional AoE |
+| Shadow Hunter Vosh'gajin | 9236 | LBRS | Hex polymorph — no positional AoE |
 | War Master Voone | 9237 | LBRS | Cleave, Mortal Strike — no radial AoE |
 | Mother Smolderweb | 10596 | LBRS | Web, summons Daughter adds |
 | Urok Doomhowl | 10584 | LBRS | **War Stomp** ~8yd; ogre event spawn |
