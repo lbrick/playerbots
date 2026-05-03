@@ -167,6 +167,10 @@ void BalnazzarFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& trigger
     triggers.push_back(new TriggerNode(
         "balnazzar thunderclap",
         NextAction::array(0, new NextAction("balnazzar move away from thunderclap", ACTION_MOVE + 5), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "target casting balnazzar sleep",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
 }
 
 void BalnazzarFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
@@ -207,6 +211,14 @@ void MalekithePallidFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& t
     triggers.push_back(new TriggerNode(
         "maleki frost nova",
         NextAction::array(0, new NextAction("maleki move away from frost nova", ACTION_MOVE + 5), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "target casting maleki ice tomb",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "target casting maleki frostbolt",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
 }
 
 void MalekithePallidFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)

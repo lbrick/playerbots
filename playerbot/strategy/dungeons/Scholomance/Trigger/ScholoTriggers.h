@@ -239,4 +239,20 @@ namespace ai
         GandlingCurseAoeTrigger(PlayerbotAI* ai)
             : CloseToHostileCreatureHazardTrigger(ai, "gandling curse aoe", 1853, 8.0f, 3) {}
     };
+
+    // ── Ras Frostwhisper interrupt — Freeze (ID 18763, DB-verified) ─────────────
+    class RasFreezeSpellCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        RasFreezeSpellCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting ras freeze", 18763) {}
+    };
+
+    // ── Vectus interrupt — Flamestrike (ID 18399, DB-verified) ──────────────────
+    class VectusFlamestrikeSpellCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        VectusFlamestrikeSpellCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting vectus flamestrike", 18399) {}
+    };
 }

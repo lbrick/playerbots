@@ -126,6 +126,13 @@ void GelihastFightStrategy::InitDeadTriggers(std::list<TriggerNode*>& triggers)
 
 // ── LorgusJettFightStrategy ───────────────────────────────────────────────────
 
+void LorgusJettFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+{
+    triggers.push_back(new TriggerNode(
+        "target casting lorgus jett lightning bolt",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
+}
+
 void LorgusJettFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {
     triggers.push_back(new TriggerNode(
@@ -157,6 +164,13 @@ void BaronAquanisFightStrategy::InitDeadTriggers(std::list<TriggerNode*>& trigge
 }
 
 // ── KelrisFightStrategy ───────────────────────────────────────────────────────
+
+void KelrisFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+{
+    triggers.push_back(new TriggerNode(
+        "target casting kelris sleep",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
+}
 
 void KelrisFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {

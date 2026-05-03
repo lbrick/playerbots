@@ -305,6 +305,13 @@ void HedrumTheCreepFightStrategy::InitDeadTriggers(std::list<TriggerNode*>& trig
 
 // ── HighInterrogatorGerstanFightStrategy ──────────────────────────────────────
 
+void HighInterrogatorGerstanFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+{
+    triggers.push_back(new TriggerNode(
+        "target casting gerstahn mana burn",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
+}
+
 void HighInterrogatorGerstanFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {
     triggers.push_back(new TriggerNode(

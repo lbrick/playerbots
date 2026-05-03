@@ -130,6 +130,7 @@ namespace ai
         std::string getName() override { return "whitemane"; }
 
     private:
+        void InitCombatTriggers(std::list<TriggerNode*>& triggers) override;
         void InitNonCombatTriggers(std::list<TriggerNode*>& triggers) override;
         void InitDeadTriggers(std::list<TriggerNode*>& triggers) override;
     };

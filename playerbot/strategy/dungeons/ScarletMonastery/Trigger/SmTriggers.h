@@ -197,4 +197,12 @@ namespace ai
         FairbanksEndFightTrigger(PlayerbotAI* ai)
             : EndBossFightTrigger(ai, "end fairbanks fight", "fairbanks", 4542) {}
     };
+
+    // ── Whitemane interrupt — Heal (ID 12039, DB-verified) ──────────────────────
+    class WhitemaneHealCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        WhitemaneHealCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting whitemane heal", 12039) {}
+    };
 }

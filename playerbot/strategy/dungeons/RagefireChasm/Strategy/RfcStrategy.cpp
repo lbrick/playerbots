@@ -86,6 +86,13 @@ void TaragamanFightStrategy::InitDeadTriggers(std::list<TriggerNode*>& triggers)
 
 // ── JergoshFightStrategy ──────────────────────────────────────────────────────
 
+void JergoshFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+{
+    triggers.push_back(new TriggerNode(
+        "target casting jergosh immolate",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
+}
+
 void JergoshFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {
     triggers.push_back(new TriggerNode(

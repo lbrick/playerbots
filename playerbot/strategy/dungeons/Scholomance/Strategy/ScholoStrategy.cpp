@@ -187,6 +187,10 @@ void VectusFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode(
         "vectus blizzard",
         NextAction::array(0, new NextAction("vectus move away from blizzard", ACTION_MOVE + 5), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "target casting vectus flamestrike",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
 }
 
 void VectusFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
@@ -211,6 +215,10 @@ void RasFrostwhisperFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& t
     triggers.push_back(new TriggerNode(
         "ras frost nova",
         NextAction::array(0, new NextAction("ras move away from frost nova", ACTION_MOVE + 5), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "target casting ras freeze",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
 }
 
 void RasFrostwhisperFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)

@@ -133,6 +133,17 @@ void LordVyletongeFightStrategy::InitDeadTriggers(std::list<TriggerNode*>& trigg
 
 // ── CelebrasTheCursedFightStrategy ────────────────────────────────────────────
 
+void CelebrasTheCursedFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+{
+    triggers.push_back(new TriggerNode(
+        "target casting celebras wrath",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "target casting celebras roots",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
+}
+
 void CelebrasTheCursedFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {
     triggers.push_back(new TriggerNode(

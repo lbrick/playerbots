@@ -60,6 +60,7 @@ namespace ai
         std::string getName() override { return "celebras the cursed"; }
 
     private:
+        void InitCombatTriggers(std::list<TriggerNode*>& triggers) override;
         void InitNonCombatTriggers(std::list<TriggerNode*>& triggers) override;
         void InitDeadTriggers(std::list<TriggerNode*>& triggers) override;
     };

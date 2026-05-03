@@ -85,4 +85,12 @@ namespace ai
         BazzalanEndFightTrigger(PlayerbotAI* ai)
             : EndBossFightTrigger(ai, "end bazzalan fight", "bazzalan", 11519) {}
     };
+
+    // ── Jergosh interrupt — Immolate (ID 20800, DB-verified) ────────────────────
+    class JergoshImmolateCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        JergoshImmolateCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting jergosh immolate", 20800) {}
+    };
 }

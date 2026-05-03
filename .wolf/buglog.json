@@ -108,6 +108,18 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-30"
+    },
+    {
+      "id": "bug-002",
+      "timestamp": "2026-05-03",
+      "error_message": "Early classic dungeon triggers (SM, BFD, RFC, SFK, WC) missing from TriggerContext.h — trigger names unregistered, strategies never fire",
+      "file": "playerbot/strategy/triggers/TriggerContext.h",
+      "root_cause": "TriggerContext.h lacked includes and creators[] entries for RFC, SFK, WC, BFD, SM dungeons — trigger name strings not resolvable by NamedObjectContext",
+      "fix": "Added includes for RfcTriggers.h, SfkTriggers.h, WcTriggers.h, BfdTriggers.h, SmTriggers.h; registered all enter/leave/boss/interrupt triggers for all five dungeons",
+      "tags": ["trigger-context", "dungeon", "missing-registration", "early-classic"],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-03"
     }
   ]
 }

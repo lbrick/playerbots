@@ -138,4 +138,20 @@ namespace ai
         AkuMaiPoisonCloudTrigger(PlayerbotAI* ai)
             : CloseToHostileCreatureHazardTrigger(ai, "aku'mai poison cloud", 4829, 10.0f, 3) {}
     };
+
+    // ── Lorgus Jett interrupt — Lightning Bolt (ID 12167, DB-verified) ──────────
+    class LorgusJettLightningBoltCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        LorgusJettLightningBoltCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting lorgus jett lightning bolt", 12167) {}
+    };
+
+    // ── Kelris interrupt — Sleep (ID 8399, DB-verified) ─────────────────────────
+    class KelrisSleepCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        KelrisSleepCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting kelris sleep", 8399) {}
+    };
 }

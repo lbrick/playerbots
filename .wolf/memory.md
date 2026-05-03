@@ -2,6 +2,7 @@
 
 > Chronological action log. Hooks and AI append to this file automatically.
 > Old sessions are consolidated by the daemon weekly.
+| 08:03 | Dungeon interrupt triggers + party chat announce: added InterruptEnemyCastAction party announce, 13 new CastingTrigger classes across SM/BFD/RFC/Strat/Scholo/BRD/Mara, fixed missing TriggerContext.h registrations for RFC/SFK/WC/BFD/SM | DungeonActions.cpp, Sm/Bfd/Rfc/Strat/Scholo/Brd/MaraTriggers.h, Strategy h+cpp files, TriggerContext.h | build clean | ~6000 |
 | 00:00 | Restructured repo to mirror azerothcore-playerbots layout | src/, conf/, data/sql/, CMakeLists.txt | complete — all includes updated, old dirs removed | ~4000 |
 
 ## Session: 2026-04-16

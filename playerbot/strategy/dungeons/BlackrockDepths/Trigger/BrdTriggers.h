@@ -148,6 +148,14 @@ namespace ai
             : EndBossFightTrigger(ai, "end high interrogator gerstahn fight", "high interrogator gerstahn", 9018) {}
     };
 
+    // ── Gerstahn interrupt — Mana Burn (ID 14033, DB-verified) ──────────────────
+    class GersthahnManaBurnCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        GersthahnManaBurnCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting gerstahn mana burn", 14033) {}
+    };
+
     // Lord Roccor (9025) — DB verified; Earthquake ~10yd AoE
     class LordRoccorStartFightTrigger : public StartBossFightTrigger
     {

@@ -245,6 +245,13 @@ void MograineFightStrategy::InitDeadTriggers(std::list<TriggerNode*>& triggers)
 
 // ── WhitemaneFightStrategy ────────────────────────────────────────────────────
 
+void WhitemaneFightStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+{
+    triggers.push_back(new TriggerNode(
+        "target casting whitemane heal",
+        NextAction::array(0, new NextAction("interrupt enemy cast", ACTION_HIGH + 5), NULL)));
+}
+
 void WhitemaneFightStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {
     triggers.push_back(new TriggerNode(

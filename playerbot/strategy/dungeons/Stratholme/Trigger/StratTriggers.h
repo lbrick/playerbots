@@ -144,6 +144,22 @@ namespace ai
             : CloseToHostileCreatureHazardTrigger(ai, "maleki frost nova", 10438, 8.0f, 3) {}
     };
 
+    // ── Maleki interrupt — Ice Tomb (ID 16869, DB-verified) — traps player ───────
+    class MalekiIceTombCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        MalekiIceTombCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting maleki ice tomb", 16869) {}
+    };
+
+    // ── Maleki interrupt — Frostbolt (ID 17503, DB-verified) ────────────────────
+    class MalekiFrostboltCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        MalekiFrostboltCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting maleki frostbolt", 17503) {}
+    };
+
     // ── Undead: Ramstein the Gorger (10439) — Trample ~8yd AoE physical ─────────
     class RamsteintheGorgerStartFightTrigger : public StartBossFightTrigger
     {
@@ -186,5 +202,13 @@ namespace ai
     public:
         BaronUnholyAuraTrigger(PlayerbotAI* ai)
             : CloseToHostileCreatureHazardTrigger(ai, "baron unholy aura", 10440, 10.0f, 3) {}
+    };
+
+    // ── Balnazzar interrupt — Sleep (ID 12098, DB-verified) ─────────────────────
+    class BalnazzarSleepCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        BalnazzarSleepCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting balnazzar sleep", 12098) {}
     };
 }

@@ -292,7 +292,25 @@ bool InterruptEnemyCastAction::Execute(Event& event)
     for (const auto& spell : interruptSpells)
     {
         if (ai->CanCastSpell(spell, target, 0))
+        {
+            Group* group = bot->GetGroup();
+            if (group)
+            {
+                std::string targetSpellName = "the spell";
+                Spell* castingSpell = target->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+                if (!castingSpell)
+                    castingSpell = target->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
+                if (castingSpell && castingSpell->m_spellInfo)
+                    targetSpellName = castingSpell->m_spellInfo->SpellName[0];
+
+                std::string msg = std::string("Interrupting ") + targetSpellName + "!";
+                WorldPacket data;
+                ChatHandler::BuildChatPacket(data, CHAT_MSG_PARTY, msg.c_str(), LANG_UNIVERSAL,
+                    CHAT_TAG_NONE, bot->GetObjectGuid(), bot->GetName());
+                group->BroadcastPacket(data, true);
+            }
             return ai->CastSpell(spell, target);
+        }
     }
     return false;
 }

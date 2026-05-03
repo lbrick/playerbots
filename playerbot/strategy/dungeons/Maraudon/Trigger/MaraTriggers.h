@@ -85,6 +85,22 @@ namespace ai
             : EndBossFightTrigger(ai, "end celebras the cursed fight", "celebras the cursed", 12225) {}
     };
 
+    // ── Celebras interrupt — Wrath (ID 21807, DB-verified) ──────────────────────
+    class CelebrasWrathCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        CelebrasWrathCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting celebras wrath", 21807) {}
+    };
+
+    // ── Celebras interrupt — Entangling Roots (ID 12747, DB-verified) ───────────
+    class CelebrasRootsCastingTrigger : public TargetCastingSpellTrigger
+    {
+    public:
+        CelebrasRootsCastingTrigger(PlayerbotAI* ai)
+            : TargetCastingSpellTrigger(ai, "target casting celebras roots", 12747) {}
+    };
+
     // ── Boss: Landslide (12203) — DB verified; no positional mechanic ───────────
     class LandslideStartFightTrigger : public StartBossFightTrigger
     {
