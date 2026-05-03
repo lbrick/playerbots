@@ -2,7 +2,7 @@
 
 **Map ID:** 329  
 **Levels:** 56–60  
-**Status:** ⬜ TODO  
+**Status:** 🟢 IMPLEMENTED — build verified 2026-05-03; in-game verify pending  
 
 > **Two entrances, one map:** Main Gate (Scarlet/Living side) and Service Entrance (Undead/Baron side) both share map 329. One instance strategy covers both sides.
 >
@@ -212,17 +212,17 @@ playerbot/strategy/dungeons/Stratholme/
 
 ## Registration Checklist
 
-- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave stratholme (combat + noncombat)
-- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include StratTriggers.h + all Strat creators
-- [ ] `playerbot/strategy/actions/ActionContext.h` — include StratActions.h + all Strat creators
-- [ ] `playerbot/strategy/StrategyContext.h` — include StratStrategy.h + all strategy creators
-- [ ] `CMakeLists.txt` — `Ai_Dungeon_Strat` GLOB_RECURSE added + included in LIBRARY_SRCS
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave stratholme (combat + noncombat)
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include StratTriggers.h + all Strat creators
+- [x] `playerbot/strategy/actions/ActionContext.h` — include StratActions.h + all Strat creators
+- [x] `playerbot/strategy/StrategyContext.h` — include StratStrategy.h + all strategy creators
+- [x] `CMakeLists.txt` — GLOB_RECURSE auto-picks up StratStrategy.cpp (touched CMakeLists.txt to rescan)
 
 ---
 
 ## Build Status
 
-- [ ] `./build.sh` — clean, no new errors
+- [x] `./build-classic.sh` — clean, no errors (2026-05-03)
 
 ---
 

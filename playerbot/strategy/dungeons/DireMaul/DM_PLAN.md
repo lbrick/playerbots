@@ -2,7 +2,7 @@
 
 **Map ID:** 429  
 **Levels:** 55–60  
-**Status:** ⬜ TODO  
+**Status:** 🟢 IMPLEMENTED — build verified 2026-05-03; in-game verify pending  
 
 > **Three wings, one map ID:** East (Warpwood Quarter), West (Capital Gardens), North (Gordok Commons) all share map 429. One instance strategy covers all wings; boss fight strategies differentiate by NPC ID.
 >
@@ -319,17 +319,17 @@ playerbot/strategy/dungeons/DireMaul/
 
 ## Registration Checklist
 
-- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave dire maul (combat + noncombat)
-- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include DmTriggers.h + all DM creators
-- [ ] `playerbot/strategy/actions/ActionContext.h` — include DmActions.h + all DM creators
-- [ ] `playerbot/strategy/StrategyContext.h` — include DmStrategy.h + all strategy creators
-- [ ] `CMakeLists.txt` — `Ai_Dungeon_DM` GLOB_RECURSE added + included in LIBRARY_SRCS
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave dire maul (combat + noncombat)
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include DmTriggers.h + all DM creators
+- [x] `playerbot/strategy/actions/ActionContext.h` — include DmActions.h + all DM creators
+- [x] `playerbot/strategy/StrategyContext.h` — include DmStrategy.h + all strategy creators
+- [x] `CMakeLists.txt` — GLOB_RECURSE auto-picks up DmStrategy.cpp (touched CMakeLists.txt to rescan)
 
 ---
 
 ## Build Status
 
-- [ ] `./build.sh` — clean, no new errors
+- [x] `./build-classic.sh` — clean, no errors (2026-05-03)
 
 ---
 

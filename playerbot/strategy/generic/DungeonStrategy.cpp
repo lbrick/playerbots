@@ -72,6 +72,18 @@ void DungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
         NextAction::array(0, new NextAction("enable blackrock spire strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
+        "enter dire maul",
+        NextAction::array(0, new NextAction("enable dire maul strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter stratholme",
+        NextAction::array(0, new NextAction("enable stratholme strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter scholomance",
+        NextAction::array(0, new NextAction("enable scholomance strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
         "enter onyxia's lair",
         NextAction::array(0, new NextAction("enable onyxia's lair strategy", 100.0f), NULL)));
 
@@ -217,6 +229,30 @@ void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode(
         "leave blackrock spire",
         NextAction::array(0, new NextAction("disable blackrock spire strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter dire maul",
+        NextAction::array(0, new NextAction("enable dire maul strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave dire maul",
+        NextAction::array(0, new NextAction("disable dire maul strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter stratholme",
+        NextAction::array(0, new NextAction("enable stratholme strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave stratholme",
+        NextAction::array(0, new NextAction("disable stratholme strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter scholomance",
+        NextAction::array(0, new NextAction("enable scholomance strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave scholomance",
+        NextAction::array(0, new NextAction("disable scholomance strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
         "enter onyxia's lair",

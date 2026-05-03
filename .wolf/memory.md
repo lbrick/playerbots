@@ -44,3 +44,6 @@
 | 10:32 | Fixed MoveAwayFromCreature IDs in BrdActions.h (Grizzle 9028, Eviscerator 9029, Ok'thor 9030, Warder Stilgiss 9041) | BrdActions.h | fixed | ~300 |
 | 10:33 | Build clean after all NPC ID fixes | builddir-classic | success | ~200 |
 | 10:34 | Updated MARA_PLAN.md and BRD_PLAN.md with verified NPC IDs | MARA_PLAN.md, BRD_PLAN.md | updated | ~300 |
+| 01:00 | Implemented Dire Maul dungeon strategy (East/West/North, 15 bosses, 9 AoE triggers) | DireMaul/{Trigger/DmTriggers.h,Action/DmActions.h,Strategy/DmStrategy.h,.cpp} | build clean | ~4000 |
+| 01:30 | Implemented Stratholme dungeon strategy (Scarlet+Undead sides, 9 bosses, 5 AoE triggers) | Stratholme/{Trigger/StratTriggers.h,Action/StratActions.h,Strategy/StratStrategy.h,.cpp} | build clean | ~3500 |
+| 15:30 | Scholomance dungeon strategy implemented (12 bosses, 6 AoE hazards, map 289) | dungeons/Scholomance/* + TriggerContext.h + ActionContext.h + StrategyContext.h + DungeonStrategy.cpp | build clean [100%] | ~2800 |

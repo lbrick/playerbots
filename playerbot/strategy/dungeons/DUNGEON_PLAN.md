@@ -40,9 +40,9 @@ Map IDs from `worlddb > instance_template > map` or https://wow.tools/dbc/?dbc=m
 | 15 | Blackrock Depths | BRD | 230 | 52–60 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
 | 16 | Lower Blackrock Spire | LBRS | 229 | 55–60 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
 | 17 | Upper Blackrock Spire | UBRS | 229 | 55–60 | 🟢 IMPLEMENTED — build verified 2026-05-02; in-game verify pending |
-| 18 | Dire Maul | DM | 429 | 55–60 | 📋 PLANNED — see `DireMaul/DM_PLAN.md` |
-| 19 | Stratholme | Strat | 329 | 56–60 | 📋 PLANNED — see `Stratholme/STRAT_PLAN.md` |
-| 20 | Scholomance | Scholo | 289 | 57–60 | 📋 PLANNED — see `Scholomance/SCHOLO_PLAN.md` |
+| 18 | Dire Maul | DM | 429 | 55–60 | 🟢 IMPLEMENTED — build verified 2026-05-03; in-game verify pending |
+| 19 | Stratholme | Strat | 329 | 56–60 | 🟢 IMPLEMENTED — build verified 2026-05-03; in-game verify pending |
+| 20 | Scholomance | Scholo | 289 | 57–60 | 🟢 IMPLEMENTED — build verified 2026-05-03 |
 
 > **Note — LBRS/UBRS share map ID 229.** Use the same Enter/Leave triggers;
 > distinguish wings by boss NPC IDs in each fight strategy.

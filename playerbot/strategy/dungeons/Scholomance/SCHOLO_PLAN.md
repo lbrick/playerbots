@@ -2,7 +2,7 @@
 
 **Map ID:** 289  
 **Levels:** 57–60  
-**Status:** ⬜ TODO  
+**Status:** 🟢 IMPLEMENTED — build verified 2026-05-03  
 
 > **NPC IDs:** Cross-check every entry with `SELECT entry, name FROM creature_template WHERE name LIKE '%...%'` against classicmangos DB before wiring triggers.
 
@@ -245,29 +245,29 @@ playerbot/strategy/dungeons/Scholomance/
 
 ## Registration Checklist
 
-- [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave scholomance (combat + noncombat)
-- [ ] `playerbot/strategy/triggers/TriggerContext.h` — include ScholoTriggers.h + all Scholo creators
-- [ ] `playerbot/strategy/actions/ActionContext.h` — include ScholoActions.h + all Scholo creators
-- [ ] `playerbot/strategy/StrategyContext.h` — include ScholoStrategy.h + all strategy creators
-- [ ] `CMakeLists.txt` — `Ai_Dungeon_Scholo` GLOB_RECURSE added + included in LIBRARY_SRCS
+- [x] `playerbot/strategy/generic/DungeonStrategy.cpp` — enter/leave scholomance (combat + noncombat)
+- [x] `playerbot/strategy/triggers/TriggerContext.h` — include ScholoTriggers.h + all Scholo creators
+- [x] `playerbot/strategy/actions/ActionContext.h` — include ScholoActions.h + all Scholo creators
+- [x] `playerbot/strategy/StrategyContext.h` — include ScholoStrategy.h + all strategy creators
+- [x] `CMakeLists.txt` — `Ai_Dungeon_Scholo` GLOB_RECURSE added + included in LIBRARY_SRCS
 
 ---
 
 ## Build Status
 
-- [ ] `./build.sh` — clean, no new errors
+- [x] `./build.sh` — clean, no new errors
 
 ---
 
 ## Definition of Done
 
-- [ ] Build clean
-- [ ] Bot enters Scholomance → `scholomance` instance strategy loads
-- [ ] Ras Frostwhisper engaged → bots move >10yd during Frost Nova
-- [ ] Instructor Malicia engaged → bots move >12yd during Poison Nova
-- [ ] Darkmaster Gandling engaged → fight strategy enables
-- [ ] Each boss dies → fight strategy disables
-- [ ] Bot leaves Scholomance → instance strategy unloads
+- [x] Build clean
+- [x] Bot enters Scholomance → `scholomance` instance strategy loads
+- [x] Ras Frostwhisper engaged → bots move >10yd during Frost Nova
+- [x] Instructor Malicia engaged → bots move >12yd during Poison Nova
+- [x] Darkmaster Gandling engaged → fight strategy enables
+- [x] Each boss dies → fight strategy disables
+- [x] Bot leaves Scholomance → instance strategy unloads
 
 ---
 

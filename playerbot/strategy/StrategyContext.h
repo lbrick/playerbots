@@ -69,6 +69,9 @@
 #include "playerbot/strategy/dungeons/TempleOfAtalHakkar/Strategy/StStrategy.h"
 #include "playerbot/strategy/dungeons/BlackrockDepths/Strategy/BrdStrategy.h"
 #include "playerbot/strategy/dungeons/BlackrockSpire/Strategy/BrsStrategy.h"
+#include "playerbot/strategy/dungeons/DireMaul/Strategy/DmStrategy.h"
+#include "playerbot/strategy/dungeons/Stratholme/Strategy/StratStrategy.h"
+#include "playerbot/strategy/dungeons/Scholomance/Strategy/ScholoStrategy.h"
 #include "playerbot/strategy/raid/MoltenCore/Strategy/RaidMcStrategy.h"
 #include "playerbot/strategy/raid/BlackwingLair/Strategy/RaidBwlStrategy.h"
 #include "playerbot/strategy/raid/Karazhan/Strategy/RaidKaraStrategy.h"
@@ -333,6 +336,50 @@ namespace ai
             creators["jed runewatcher"]             = [](PlayerbotAI* ai) { return new JedRunewatcherFightStrategy(ai); };
             creators["the beast"]                   = [](PlayerbotAI* ai) { return new TheBeastFightStrategy(ai); };
             creators["general drakkisath"]          = [](PlayerbotAI* ai) { return new GeneralDrakkisathFightStrategy(ai); };
+            creators["dire maul"]                   = [](PlayerbotAI* ai) { return new DireMaulDungeonStrategy(ai); };
+            // Dire Maul East
+            creators["zevrim thornhoof"]            = [](PlayerbotAI* ai) { return new ZevrimThornhoofFightStrategy(ai); };
+            creators["hydrospawn"]                  = [](PlayerbotAI* ai) { return new HydrospawnFightStrategy(ai); };
+            creators["lethtendris"]                 = [](PlayerbotAI* ai) { return new LehtendrisFightStrategy(ai); };
+            creators["alzzin the wildshaper"]       = [](PlayerbotAI* ai) { return new AlzzinTheWildshaperFightStrategy(ai); };
+            // Dire Maul West
+            creators["tendris warpwood"]            = [](PlayerbotAI* ai) { return new TendrisWarpwoodFightStrategy(ai); };
+            creators["illyanna ravenoak"]           = [](PlayerbotAI* ai) { return new IllyannaRavenoakFightStrategy(ai); };
+            creators["magister kalendris"]          = [](PlayerbotAI* ai) { return new MagisterKalendrisFightStrategy(ai); };
+            creators["immol'thar"]                  = [](PlayerbotAI* ai) { return new ImmoltharFightStrategy(ai); };
+            creators["prince tortheldrin"]          = [](PlayerbotAI* ai) { return new PrinceTortheldrinFightStrategy(ai); };
+            // Dire Maul North
+            creators["guard mol'dar"]               = [](PlayerbotAI* ai) { return new GuardMoldarFightStrategy(ai); };
+            creators["stomper kreeg"]               = [](PlayerbotAI* ai) { return new StomperKreegFightStrategy(ai); };
+            creators["guard fengus"]                = [](PlayerbotAI* ai) { return new GuardFengusFightStrategy(ai); };
+            creators["guard slip'kik"]              = [](PlayerbotAI* ai) { return new GuardSlipkikFightStrategy(ai); };
+            creators["captain kromcrush"]           = [](PlayerbotAI* ai) { return new CaptainKromcrushFightStrategy(ai); };
+            creators["king gordok"]                 = [](PlayerbotAI* ai) { return new KingGordokFightStrategy(ai); };
+            creators["stratholme"]                  = [](PlayerbotAI* ai) { return new StratholmeDungeonStrategy(ai); };
+            // Stratholme Scarlet side
+            creators["hearthsinger forresten"]      = [](PlayerbotAI* ai) { return new HearthsingerForrestenFightStrategy(ai); };
+            creators["timmy the cruel"]             = [](PlayerbotAI* ai) { return new TimmytheCruelFightStrategy(ai); };
+            creators["cannon master willey"]        = [](PlayerbotAI* ai) { return new CannonMasterWilleyFightStrategy(ai); };
+            creators["archivist galford"]           = [](PlayerbotAI* ai) { return new ArchivistGalfordFightStrategy(ai); };
+            creators["balnazzar"]                   = [](PlayerbotAI* ai) { return new BalnazzarFightStrategy(ai); };
+            // Stratholme Undead side
+            creators["magistrate barthilas"]        = [](PlayerbotAI* ai) { return new MagistrateBarthilasFightStrategy(ai); };
+            creators["maleki the pallid"]           = [](PlayerbotAI* ai) { return new MalekithePallidFightStrategy(ai); };
+            creators["ramstein the gorger"]         = [](PlayerbotAI* ai) { return new RamsteintheGorgerFightStrategy(ai); };
+            creators["baron rivendare"]             = [](PlayerbotAI* ai) { return new BaronRivendareFightStrategy(ai); };
+            creators["scholomance"]                 = [](PlayerbotAI* ai) { return new ScholomanceDungeonStrategy(ai); };
+            creators["kirtonos the herald"]         = [](PlayerbotAI* ai) { return new KirtonostheHeraldFightStrategy(ai); };
+            creators["jandice barov"]               = [](PlayerbotAI* ai) { return new JandiceBarovFightStrategy(ai); };
+            creators["rattlegore"]                  = [](PlayerbotAI* ai) { return new RattlegoreFightStrategy(ai); };
+            creators["marduk blackpool"]            = [](PlayerbotAI* ai) { return new MardukBlackpoolFightStrategy(ai); };
+            creators["vectus"]                      = [](PlayerbotAI* ai) { return new VectusFightStrategy(ai); };
+            creators["ras frostwhisper"]            = [](PlayerbotAI* ai) { return new RasFrostwhisperFightStrategy(ai); };
+            creators["instructor malicia"]          = [](PlayerbotAI* ai) { return new InstructorMaliciaFightStrategy(ai); };
+            creators["doctor theolen krastinov"]    = [](PlayerbotAI* ai) { return new DoctorTheolenKrastinovFightStrategy(ai); };
+            creators["the ravenian"]                = [](PlayerbotAI* ai) { return new TheRavenianFightStrategy(ai); };
+            creators["lord alexei barov"]           = [](PlayerbotAI* ai) { return new LordAlexeiBarovFightStrategy(ai); };
+            creators["lady illucia barov"]          = [](PlayerbotAI* ai) { return new LadyIlluciaBarovFightStrategy(ai); };
+            creators["darkmaster gandling"]         = [](PlayerbotAI* ai) { return new DarkmasterGandlingFightStrategy(ai); };
             // Scarlet Monastery bosses
             creators["vishas"]           = [](PlayerbotAI* ai) { return new VishasFightStrategy(ai); };
             creators["fallen champion"]  = [](PlayerbotAI* ai) { return new FallenChampionFightStrategy(ai); };
