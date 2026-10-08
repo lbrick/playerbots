@@ -157,7 +157,7 @@ Follow the same `Action/Strategy/Trigger` pattern established in the Raid restru
 | `src/Ai/Base/StrategyContext.h` | Register `"new rpg"` → `NewRpgStrategy` |
 | `src/Ai/Base/actions/ActionContext.h` | Register all 7 new RPG action names |
 | `src/Ai/Base/triggers/TriggerContext.h` | Register 6 new RPG status triggers |
-| `conf/aiplayerbot.conf.dist.in` | Add `AiPlayerbot.EnableNewRpgStrategy = 1` with comment |
+| `playerbot/aiplayerbot.conf.dist.in` | Add `AiPlayerbot.EnableNewRpgStrategy = 1` with comment |
 | `CMakeLists.txt` | Add `GLOB_RECURSE` for `src/Ai/World/` |
 
 ---
