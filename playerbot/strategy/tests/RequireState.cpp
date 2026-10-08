@@ -40,6 +40,19 @@ TestResult RequireBotIs::Execute(const std::string& params, Player* bot,
                 return TestResult::FAIL;
             }
         }
+        else if (key == "race")
+        {
+            uint32 expectedRace = ChatHelper::parseRace(value);
+            if (!expectedRace)
+            {
+                return TestResult::FAIL;
+            }
+
+            if (bot->getRace() != expectedRace)
+            {
+                return TestResult::FAIL;
+            }
+        }
         else if (key == "role")
         {
             BotRoles expectedRole = ChatHelper::parseRole(value);
@@ -50,6 +63,19 @@ TestResult RequireBotIs::Execute(const std::string& params, Player* bot,
 
             BotRoles actualRole = AiFactory::GetPlayerRoles(bot);
             if ((actualRole & expectedRole) != expectedRole)
+            {
+                return TestResult::FAIL;
+            }
+        }
+        else if (key == "faction")
+        {
+            Team expectedTeam = ChatHelper::parseTeam(value);
+            if (expectedTeam == TEAM_BOTH_ALLOWED) // unknown faction string
+            {
+                return TestResult::FAIL;
+            }
+
+            if (bot->GetTeam() != expectedTeam)
             {
                 return TestResult::FAIL;
             }

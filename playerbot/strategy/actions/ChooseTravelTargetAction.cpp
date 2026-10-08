@@ -165,7 +165,7 @@ void ChooseTravelTargetAction::ReportTravelTarget(Player* bot, Player* requester
 
     TravelDestination* destination = newTarget->GetDestination();
 
-    TravelDestination* oldDestination;
+    TravelDestination* oldDestination = nullptr;
 
     if (oldTarget)
         oldDestination = oldTarget->GetDestination();
@@ -1437,6 +1437,13 @@ bool RequestQuestTravelTargetAction::Execute(Event& event)
 
 bool RequestQuestTravelTargetAction::isAllowed() const
 {
+#ifdef GenerateBotTests
+    if (AI_VALUE2(bool, "manual bool", "is running test"))
+        return true;
+#endif
+    if (AI_VALUE(bool, "has focus travel target"))
+        return true;
+
     if (AI_VALUE(bool, "should get money"))
         return urand(1, 100) < 90;
     else

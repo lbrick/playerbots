@@ -171,6 +171,7 @@ public:
     uint32 minRandomBotReviveTime, maxRandomBotReviveTime;
     uint32 minRandomBotPvpTime, maxRandomBotPvpTime;
     uint32 randomBotsMaxLoginsPerInterval;
+    uint32 loginDatabaseDelayMs;
     uint32 randomBotsPerInterval;
     uint32 minRandomBotsPriceChangeInterval, maxRandomBotsPriceChangeInterval;
     //Auction house settings
@@ -189,6 +190,7 @@ public:
     uint32 randomBotTeleLevel;
     bool logInGroupOnly, logValuesPerTick;
     bool logFilterPlayerBot;
+    uint32 actionHistorySize;   // per-bot action history ring buffer (0 = off)
     bool fleeingEnabled;
     bool summonAtInnkeepersEnabled;
     std::string combatStrategies, nonCombatStrategies, reactStrategies, deadStrategies;
@@ -332,6 +334,7 @@ public:
 
     std::string autoPickReward;
     bool autoEquipUpgradeLoot;
+    bool autoEnchantUpgradeLoot;
     bool syncQuestWithPlayer;
     bool syncQuestForPlayer;
     std::string autoTrainSpells;
@@ -354,10 +357,8 @@ public:
     uint32 loginBotsNearPlayerRange;
     std::vector<std::string> defaultLoginCriteria;
     std::vector<std::vector<std::string>> loginCriteria;
-#ifdef GenerateBotTests
     std::vector<std::string> startupRunTests;
     bool startupRunTestsPending = false;
-#endif
 
     bool jumpInBg;
     bool jumpWithPlayer;

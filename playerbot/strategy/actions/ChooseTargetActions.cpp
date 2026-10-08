@@ -91,13 +91,14 @@ bool AttackEnemyPlayerAction::isUseful()
 
 bool AttackEnemyFlagCarrierAction::isUseful()
 {
-    Unit* target = context->GetValue<Unit*>("enemy flag carrier")->Get();
+    PlayerbotAI* ai = bot->GetPlayerbotAI();
+    Unit* target = ai->GetUnit(context->GetValue<ObjectGuid>("enemy flag carrier")->Get());
     return target && sServerFacade.IsDistanceLessOrEqualThan(sServerFacade.GetDistance2d(bot, target), 75.0f) && (bot->HasAura(23333) || bot->HasAura(23335) || bot->HasAura(34976));
 }
 
 bool SelectNewTargetAction::Execute(Event& event)
 {
-    Unit* target = AI_VALUE(Unit*, "current target");
+    Unit* target = ai->GetUnit(AI_VALUE(ObjectGuid, "current target"));
     if (target && sServerFacade.UnitIsDead(target))
     {
         // Save the dead target for later looting
@@ -119,15 +120,35 @@ bool SelectNewTargetAction::Execute(Event& event)
     // Save the old target and clear the current target
     if(target)
     {
-        SET_AI_VALUE(Unit*, "old target", target);
-        SET_AI_VALUE(Unit*, "current target", nullptr);
+        SET_AI_VALUE(ObjectGuid, "old target", target->GetObjectGuid());
+        SET_AI_VALUE(ObjectGuid, "current target", ObjectGuid());
     }
     
     // Stop attacking
     bot->SetSelectionGuid(ObjectGuid());
     ai->InterruptSpell();
     bot->AttackStop();
+    // Stop pet attacking
+    Pet* pet = bot->GetPet();
+    if (pet)
+    {
+        UnitAI* creatureAI = ((Creature*)pet)->AI();
+        if (creatureAI)
+        {
+            // Send pet action packet
+            const ObjectGuid& petGuid = pet->GetObjectGuid();
+            const ObjectGuid& targetGuid = ObjectGuid();
+            const uint8 flag = ACT_COMMAND;
+            const uint32 spellId = COMMAND_FOLLOW;
+            const uint32 command = (flag << 24) | spellId;
 
+            WorldPacket data(CMSG_PET_ACTION);
+            data << petGuid;
+            data << command;
+            data << targetGuid;
+            bot->GetSession()->HandlePetAction(data);
+        }
+    }
 
     bool moreAttackers = false;
     // Check if there is any enemy targets available to attack
@@ -154,31 +175,6 @@ bool SelectNewTargetAction::Execute(Event& event)
         {
             moreAttackers = true;
             return ai->DoSpecificAction("tank assist", event, true);
-        }
-    }
-    
-    if (!moreAttackers)
-    {
-        // Stop pet attacking
-        Pet* pet = bot->GetPet();
-        if (pet)
-        {
-            UnitAI* creatureAI = ((Creature*)pet)->AI();
-            if (creatureAI)
-            {
-                // Send pet action packet
-                const ObjectGuid& petGuid = pet->GetObjectGuid();
-                const ObjectGuid& targetGuid = ObjectGuid();
-                const uint8 flag = ACT_COMMAND;
-                const uint32 spellId = COMMAND_FOLLOW;
-                const uint32 command = (flag << 24) | spellId;
-
-                WorldPacket data(CMSG_PET_ACTION);
-                data << petGuid;
-                data << command;
-                data << targetGuid;
-                bot->GetSession()->HandlePetAction(data);
-            }
         }
     }
 
