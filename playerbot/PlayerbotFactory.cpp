@@ -24,6 +24,8 @@
 #endif
 #include "playerbot/strategy/ItemVisitors.h"
 
+#include <unordered_set>
+
 using namespace ai;
 
 #define PLAYER_SKILL_INDEX(x)       (PLAYER_SKILL_INFO_1_1 + ((x)*3))
@@ -544,6 +546,56 @@ void PlayerbotFactory::AddConsumables()
    }
 }
 
+// Collects every creature entry that has a world spawn, including the random,
+// conditional and spawn group entries a spawn can resolve to.
+static std::unordered_set<uint32> BuildSpawnedCreatureEntries()
+{
+    std::unordered_set<uint32> entries;
+
+    auto worker = [&entries](CreatureDataPair const& dataPair)
+    {
+        entries.insert(dataPair.second.id);
+#ifdef CMANGOS
+        if (std::vector<uint32> const* randomEntries = sObjectMgr.GetAllRandomCreatureEntries(dataPair.first))
+            entries.insert(randomEntries->begin(), randomEntries->end());
+
+        if (CreatureConditionalSpawn const* cSpawn = ObjectMgr::GetCreatureConditionalSpawn(dataPair.first))
+        {
+            entries.insert(cSpawn->EntryAlliance);
+            entries.insert(cSpawn->EntryHorde);
+        }
+#endif
+        return false;
+    };
+    sObjectMgr.DoCreatureData(worker);
+
+#ifdef CMANGOS
+    if (auto container = sObjectMgr.GetSpawnGroupContainer())
+    {
+        for (auto const& [groupId, group] : container->spawnGroupMap)
+        {
+            if (group.Type != SPAWN_GROUP_CREATURE || group.DbGuids.empty())
+                continue;
+
+            for (SpawnGroupRandomEntry const& randomEntry : group.RandomEntries)
+                entries.insert(randomEntry.Entry);
+        }
+    }
+#endif
+
+    entries.erase(0);
+    return entries;
+}
+
+// Tameable templates without a spawn (test, placeholder and unused rows) can
+// never be tamed by a player, so hunter bots should not get them as pets.
+// Built once on first use; empty spawn data disables the filter.
+static bool HasWorldSpawn(uint32 entry)
+{
+    static std::unordered_set<uint32> const spawnedEntries = BuildSpawnedCreatureEntries();
+    return spawnedEntries.empty() || spawnedEntries.count(entry);
+}
+
 void PlayerbotFactory::InitPet()
 {
     // Randomize a new pet (only for hunters)
@@ -572,6 +624,9 @@ void PlayerbotFactory::InitPet()
                 continue;
 
             if ((int)co->MinLevel > (int)bot->GetLevel())
+                continue;
+
+            if (!HasWorldSpawn(id))
                 continue;
 
 			ids.push_back(id);
@@ -3887,58 +3942,74 @@ void PlayerbotFactory::InitTradeSkills()
     {
         std::vector<uint32> firstSkills;
         std::vector<uint32> secondSkills;
-        switch (bot->getClass())
+        switch (urand(0, 4))
         {
-        case CLASS_WARRIOR:
-        case CLASS_PALADIN:
-#ifdef MANGOSBOT_TWO
-        case CLASS_DEATH_KNIGHT:
-#endif
-            firstSkills.push_back(SKILL_BLACKSMITHING);
-            secondSkills.push_back(SKILL_ENGINEERING);
-            break;
-        case CLASS_SHAMAN:
-        case CLASS_DRUID:
-        case CLASS_HUNTER:
-        case CLASS_ROGUE:
-            firstSkills.push_back(SKILL_SKINNING);
-            firstSkills.push_back(SKILL_ENGINEERING);
-            secondSkills.push_back(SKILL_LEATHERWORKING);
-            break;
-        }
-
-        if (firstSkills.empty() || secondSkills.empty())
-        {
-            switch (urand(0, 6))
-            {
             case 0:
-                firstSkill = SKILL_HERBALISM;
-                secondSkill = SKILL_ALCHEMY;
-                break;
-            case 1:
-                firstSkill = SKILL_HERBALISM;
-                secondSkill = SKILL_MINING;
-                break;
-            case 2:
-                firstSkill = SKILL_MINING;
-                secondSkill = SKILL_SKINNING;
-                break;
-            case 3:
+                switch (urand(0, 7))
+                {
+                    case 0:
+                        firstSkill = SKILL_HERBALISM;
+                        secondSkill = SKILL_ALCHEMY;
+                        break;
+                    case 1:
+                        firstSkill = SKILL_HERBALISM;
+                        secondSkill = SKILL_MINING;
+                        break;
+                    case 2:
+                        firstSkill = SKILL_MINING;
+                        secondSkill = SKILL_SKINNING;
+                        break;
+                    case 3:
 #ifdef MANGOSBOT_ZERO
-                firstSkill = SKILL_HERBALISM;
-                secondSkill = SKILL_SKINNING;
+                        firstSkill = SKILL_HERBALISM;
+                        secondSkill = SKILL_SKINNING;
 #else
-                firstSkill = SKILL_JEWELCRAFTING;
-                secondSkill = SKILL_MINING;
+                        firstSkill = SKILL_JEWELCRAFTING;
+                        secondSkill = SKILL_MINING;
 #endif
-            }
+                        break;
+                    case 4:
+                        firstSkill = SKILL_ENCHANTING;
+                        secondSkill = SKILL_SKINNING;
+                        break;
+                    case 5:
+                        firstSkill = SKILL_ENCHANTING;
+                        secondSkill = SKILL_HERBALISM;
+                        break;
+                }
+                break;
+            default:
+                switch (bot->getClass())
+                {
+                    case CLASS_WARRIOR:
+                    case CLASS_PALADIN:
+#ifdef MANGOSBOT_TWO
+                    case CLASS_DEATH_KNIGHT:
+#endif
+                        firstSkills.push_back(SKILL_BLACKSMITHING);
+                        secondSkills.push_back(SKILL_ENGINEERING);
+                        break;
+                    case CLASS_SHAMAN:
+                    case CLASS_DRUID:
+                    case CLASS_HUNTER:
+                    case CLASS_ROGUE:
+                        firstSkills.push_back(SKILL_SKINNING);
+                        firstSkills.push_back(SKILL_ENGINEERING);
+                        secondSkills.push_back(SKILL_LEATHERWORKING);
+                        break;
+                    case CLASS_WARLOCK:
+                    case CLASS_MAGE:
+                    case CLASS_PRIEST:
+                        firstSkills.push_back(SKILL_TAILORING);
+#ifndef MANGOSBOT_ZERO
+                        firstSkills.push_back(SKILL_JEWELCRAFTING);
+#endif
+                        secondSkills.push_back(SKILL_ENCHANTING);
+                }
+                firstSkill = firstSkills[urand(0, firstSkills.size() - 1)];
+                secondSkill = secondSkills[urand(0, secondSkills.size() - 1)];
+                break;
         }
-        else
-        {
-            firstSkill = firstSkills[urand(0, firstSkills.size() - 1)];
-            secondSkill = secondSkills[urand(0, secondSkills.size() - 1)];
-        }
-
         sRandomPlayerbotMgr.SetValue(bot, "firstSkill", firstSkill);
         sRandomPlayerbotMgr.SetValue(bot, "secondSkill", secondSkill);
     }
@@ -4006,27 +4077,45 @@ void PlayerbotFactory::InitTradeSkills()
             SpellEntry const* proto = sServerFacade.LookupSpellInfo(tSpell->spell);
             if (!proto)
                 continue;
-
+            
             SpellEntry const* spell = sServerFacade.LookupSpellInfo(tSpell->spell);
             if (spell)
             {
                 std::string SpellName = spell->SpellName[0];
+#ifdef MANGOSBOT_ZERO
                 if (spell->Effect[EFFECT_INDEX_1] == SPELL_EFFECT_SKILL_STEP)
+#elif defined(MANGOSBOT_ONE) || defined(MANGOSBOT_TWO) // TBC OR WOTLK
+                if (spell->Effect[EFFECT_INDEX_1] == SPELL_EFFECT_SKILL || spell->Effect[EFFECT_INDEX_1] == SPELL_EFFECT_SKILL_STEP)
+#endif
                 {
                     uint32 skill = spell->EffectMiscValue[EFFECT_INDEX_1];
 
-                    if (skill && !bot->HasSkill(skill))
+                    if (skill)
                     {
                         SkillLineEntry const* pSkill = sSkillLineStore.LookupEntry(skill);
                         if (pSkill)
                         {
-                            if (SpellName.find("Apprentice") != std::string::npos && pSkill->categoryId == SKILL_CATEGORY_PROFESSION || pSkill->categoryId == SKILL_CATEGORY_SECONDARY)
-                                continue;
+                            if (!bot->HasSkill(skill))
+                            {
+#ifdef MANGOSBOT_ZERO
+                                if (SpellName.find("Apprentice") != std::string::npos && pSkill->categoryId == SKILL_CATEGORY_PROFESSION || pSkill->categoryId == SKILL_CATEGORY_SECONDARY)
+                                    continue;
+#elif defined(MANGOSBOT_ONE) || defined(MANGOSBOT_TWO) // TBC OR WOTLK
+                                std::string SpellRank = spell->Rank[0];
+                                if (SpellName.find("Apprentice") != std::string::npos && (pSkill->categoryId == SKILL_CATEGORY_PROFESSION || pSkill->categoryId == SKILL_CATEGORY_SECONDARY))
+                                    continue;
+                                else if (SpellRank.find("Apprentice") != std::string::npos && (pSkill->categoryId == SKILL_CATEGORY_PROFESSION || pSkill->categoryId == SKILL_CATEGORY_SECONDARY))
+                                    continue;
+#endif
+                            }
+                            else
+                                bot->learnSpell(spell->Id, false);
                         }
                     }
+                    
                 }
             }
-
+            
 #ifdef MANGOSBOT_ZERO
             if (tSpell->learnedSpell)
             {
@@ -4230,17 +4319,68 @@ void PlayerbotFactory::SetRandomSkill(uint16 id)
 {
     uint32 maxValue = level * 5; // vanilla 60*5 = 300
 
-// do not let skill go beyond limit even if maxlevel > blizzlike
-#ifndef MANGOSBOT_ZERO
-	if (level > 60)
+    SkillLineEntry const* pSkill = sSkillLineStore.LookupEntry(id);
+    if (!pSkill)
+        return;
+
+    SkillRangeType skillType = GetSkillRangeType(pSkill, false);
+
+    // if this is not a profession type of skill or skill that is 1/1
+    if (skillType != SKILL_RANGE_LEVEL && skillType != SKILL_RANGE_MONO)
     {
+        // do not let skill go beyond limit even if maxlevel > blizzlike
+#ifndef MANGOSBOT_ZERO
+            if (level > 60)
+            {
 #ifdef MANGOSBOT_ONE
-        maxValue = (level + 5) * 5;   // tbc (70 + 5)*5 = 375
+                maxValue = (level + 5) * 5;   // tbc (70 + 5)*5 = 375
 #else
-        maxValue = (level + 10) * 5;  // wotlk (80 + 10)*5 = 450
+                maxValue = (level + 10) * 5;  // wotlk (80 + 10)*5 = 450
 #endif
-	}
+            }
 #endif
+    }
+    else
+    {
+        // profession based levels. They should learn ranks from trainers, but for now assume
+        // scaling similar to riding skill
+#ifdef MANGOSBOT_ZERO
+        if (bot->GetLevel() >= 35)
+            maxValue = 300;
+        else if (bot->GetLevel() >= 20)
+            maxValue = 225;
+        else if (bot->GetLevel() >= 10)
+            maxValue = 150;
+        else 
+            maxValue = 75;
+#endif
+#ifdef MANGOSBOT_ONE
+        if (bot->GetLevel() >= 50)
+            maxValue = 375;
+        else if (bot->GetLevel() >= 35)
+            maxValue = 300;
+        else if (bot->GetLevel() >= 20)
+            maxValue = 225;
+        else if (bot->GetLevel() >= 10)
+            maxValue = 150;
+        else 
+            maxValue = 75;
+#endif
+#ifdef MANGOSBOT_TWO
+        if (bot->GetLevel() >= 65)
+            maxValue = 450;
+        else if (bot->GetLevel() >= 50)
+            maxValue = 375;
+        else if (bot->GetLevel() >= 35)
+            maxValue = 300;
+        else if (bot->GetLevel() >= 20)
+            maxValue = 225;
+        else if (bot->GetLevel() >= 10)
+            maxValue = 150;
+        else 
+            maxValue = 75;
+#endif
+    }
 
     uint32 value = urand(maxValue - level, maxValue);
     uint32 curValue = bot->GetSkillValue(id);

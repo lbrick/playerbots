@@ -31,7 +31,7 @@ float Formation::GetAngle()
     if (Formation::IsNullLocation(loc) || loc.mapid == -1)
         return 0.0f;
 
-    Unit* followTarget = AI_VALUE(Unit*, "follow target");
+    Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
 
     float angle = WorldPosition(followTarget).getAngleTo(loc) - followTarget->GetOrientation();
     if (angle < 0) angle += 2 * M_PI_F;
@@ -45,7 +45,7 @@ float Formation::GetOffset()
     if (Formation::IsNullLocation(loc) || loc.mapid == -1)
         return 0.0f;
 
-    Unit* followTarget = AI_VALUE(Unit*, "follow target");
+    Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
 
     float distance = sqrt(WorldPosition(followTarget).sqDistance2d(loc));
 
@@ -56,7 +56,7 @@ WorldLocation FollowFormation::GetLocation()
 {
     float range = ai->GetRange("follow");
 
-    Unit* followTarget = AI_VALUE(Unit*, "follow target");
+    Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
     if (!followTarget)
         return Formation::NullLocation;
 
@@ -70,7 +70,7 @@ WorldLocation FollowFormation::GetLocation()
 
 WorldLocation MoveAheadFormation::GetLocation()
 {
-    Unit* followTarget = AI_VALUE(Unit*, "follow target");
+    Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
     if (!followTarget)
         return WorldLocation();
 
@@ -144,7 +144,7 @@ namespace ai
         NearFormation(PlayerbotAI* ai) : MoveAheadFormation(ai, "near") {}
         virtual WorldLocation GetLocationInternal() override
         {
-            Unit* followTarget = AI_VALUE(Unit*, "follow target");
+            Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
             if (!ai->IsSafe(followTarget))
                 return WorldLocation();
 
@@ -153,15 +153,7 @@ namespace ai
             float x = followTarget->GetPositionX() + cos(angle) * range;
             float y = followTarget->GetPositionY() + sin(angle) * range;
             float z = followTarget->GetPositionZ();
-#ifdef MANGOSBOT_TWO
-            float ground = followTarget->GetMap()->GetHeight(followTarget->GetPhaseMask(), x, y, z);
-#else
-            float ground = followTarget->GetMap()->GetHeight(x, y, z);
-#endif
-            //if (ground <= INVALID_HEIGHT)
-            //    return Formation::NullLocation;
 
-            // prevent going into terrain
             float ox, oy, oz;
             followTarget->GetPosition(ox, oy, oz);
 #ifdef MANGOSBOT_TWO
@@ -189,7 +181,7 @@ namespace ai
         ChaosFormation(PlayerbotAI* ai) : MoveAheadFormation(ai, "chaos"), lastChangeTime(0) {}
         virtual WorldLocation GetLocationInternal() override
         {
-            Unit* followTarget = AI_VALUE(Unit*, "follow target");
+            Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
             if (!ai->IsSafe(followTarget))
                 return WorldLocation();
 
@@ -240,8 +232,8 @@ namespace ai
         {
             float range = ai->GetRange("follow");
 
-            Unit* target = AI_VALUE(Unit*, "current target");
-            Unit* followTarget = AI_VALUE(Unit*, "follow target");
+            Unit* target = ai->GetUnit(AI_VALUE(ObjectGuid, "current target"));
+            Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
             if (!target && target != bot)
                 target = followTarget;
 
@@ -281,7 +273,7 @@ namespace ai
 
             float range = ai->GetRange("follow");
 
-            Player* followTarget = (Player*)AI_VALUE(Unit*, "follow target");
+            Player* followTarget = (Player*)ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
             if (!followTarget)
                 return Formation::NullLocation;
 
@@ -317,7 +309,7 @@ namespace ai
 
             float range = ai->GetRange("follow");
 
-            Player* followTarget = (Player*)AI_VALUE(Unit*, "follow target");
+            Player* followTarget = (Player*)ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
             if (!followTarget)
                 return Formation::NullLocation;
 
@@ -375,7 +367,7 @@ namespace ai
         virtual std::string GetTargetName() override { return "master target"; }
         virtual float GetAngle() override 
         {             
-            Unit* followTarget = AI_VALUE(Unit*, "follow target");
+            Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
 
             float currentAngle = WorldPosition(followTarget).getAngleTo(bot) - followTarget->GetOrientation();
             float followAngle = currentAngle;
@@ -415,7 +407,7 @@ namespace ai
             if (followPosition.isSet())
                 return;
 
-            Unit* followTarget = AI_VALUE(Unit*, "follow target");
+            Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
 
             if (!ai->IsSafe(followTarget) || sServerFacade.GetDistance2d(bot, followTarget) > sPlayerbotAIConfig.reactDistance)
             {
@@ -436,7 +428,7 @@ namespace ai
 
         virtual WorldLocation GetLocationInternal() override
         {
-            Unit* followTarget = AI_VALUE(Unit*, "follow target");
+            Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
 
             if (!ai->IsSafe(followTarget))
                 return Formation::NullLocation;
@@ -458,7 +450,7 @@ namespace ai
 
 float Formation::GetFollowAngle()
 {
-    Player* followTarget = (Player*)AI_VALUE(Unit*, "follow target");
+    Player* followTarget = (Player*)ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
 
     Group* group = bot->GetGroup();
     PlayerbotAI* ai = bot->GetPlayerbotAI();

@@ -84,8 +84,8 @@ void DungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
         NextAction::array(0, new NextAction("enable scholomance strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
-        "enter onyxia's lair",
-        NextAction::array(0, new NextAction("enable onyxia's lair strategy", 100.0f), NULL)));
+        "enter onyxias lair",
+        NextAction::array(0, new NextAction("enable onyxias lair strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
         "enter molten core",
@@ -98,6 +98,10 @@ void DungeonStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode(
         "enter karazhan",
         NextAction::array(0, new NextAction("enable karazhan strategy", 100.0f), NULL)));
+    
+    triggers.push_back(new TriggerNode(
+        "enter mechanar",
+        NextAction::array(0, new NextAction("enable mechanar strategy", 100.0f), NULL)));
 }
 
 void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
@@ -255,12 +259,12 @@ void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
         NextAction::array(0, new NextAction("disable scholomance strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
-        "enter onyxia's lair",
-        NextAction::array(0, new NextAction("enable onyxia's lair strategy", 100.0f), NULL)));
+        "enter onyxias lair",
+        NextAction::array(0, new NextAction("enable onyxias lair strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
-        "leave onyxia's lair",
-        NextAction::array(0, new NextAction("disable onyxia's lair strategy", 100.0f), NULL)));
+        "leave onyxias lair",
+        NextAction::array(0, new NextAction("disable onyxias lair strategy", 100.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
         "enter molten core",
@@ -285,4 +289,12 @@ void DungeonStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode(
         "leave karazhan",
         NextAction::array(0, new NextAction("disable karazhan strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "enter mechanar",
+        NextAction::array(0, new NextAction("enable mechanar strategy", 100.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "leave mechanar",
+        NextAction::array(0, new NextAction("disable mechanar strategy", 100.0f), NULL)));
 }

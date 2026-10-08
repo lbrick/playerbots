@@ -236,7 +236,7 @@ uint8 RandomPlayerbotFactory::GetRandomRace(uint8 cls, Team team)
         totalClassProb += sPlayerbotAIConfig.classRaceProbability[cls][race];
     }
 
-    uint32 randomProb = urand(0, totalClassProb);
+    uint32 randomProb = totalClassProb > 0 ? urand(0, totalClassProb - 1) : 0;
 
     for (uint32 race = 1; race < MAX_RACES; ++race)
     {
@@ -247,6 +247,12 @@ uint8 RandomPlayerbotFactory::GetRandomRace(uint8 cls, Team team)
             return race;
 
         randomProb -= sPlayerbotAIConfig.classRaceProbability[cls][race];
+    }
+
+    for (uint8 race : availableRaces[cls])
+    {
+        if (isRaceForTeam(race, team))
+            return race;
     }
 
     return availableRaces[cls].front();
@@ -828,8 +834,13 @@ void RandomPlayerbotFactory::CreateRandomBots()
 
     sLog.outString("Creating random bot characters...");
     uint32 botsCreated = 0;
-    BarGoLink bar1(totalCharCount);
-
+    BarGoLink bar1(sPlayerbotAIConfig.randomBotAccountCount*
+#ifdef MANGOSBOT_TWO
+        10
+#else
+        9
+#endif
+    );
 
     // Shallow copy of the fixed config so we can modify it
     std::map<std::pair<uint8, uint8>, uint32> remaining = sPlayerbotAIConfig.fixedClassRaceCounts;

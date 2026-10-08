@@ -52,7 +52,6 @@
 #endif
 
 #include "generic/DungeonStrategy.h"
-#include "playerbot/strategy/raid/OnyxiasLair/Strategy/RaidOnyStrategy.h"
 #include "playerbot/strategy/dungeons/RagefireChasm/Strategy/RfcStrategy.h"
 #include "playerbot/strategy/dungeons/WailingCaverns/Strategy/WcStrategy.h"
 #include "playerbot/strategy/dungeons/Deadmines/Strategy/DmStrategy.h"
@@ -72,10 +71,12 @@
 #include "playerbot/strategy/dungeons/DireMaul/Strategy/DmStrategy.h"
 #include "playerbot/strategy/dungeons/Stratholme/Strategy/StratStrategy.h"
 #include "playerbot/strategy/dungeons/Scholomance/Strategy/ScholoStrategy.h"
-#include "playerbot/strategy/raid/MoltenCore/Strategy/RaidMcStrategy.h"
-#include "playerbot/strategy/raid/BlackwingLair/Strategy/RaidBwlStrategy.h"
-#include "playerbot/strategy/raid/Karazhan/Strategy/RaidKaraStrategy.h"
-#include "playerbot/strategy/raid/Naxxramas/Strategy/RaidNaxxStrategy.h"
+#include "generic/OnyxiasLairDungeonStrategies.h"
+#include "generic/MoltenCoreDungeonStrategies.h"
+#include "generic/BlackwingLairDungeonStrategies.h"
+#include "generic/KarazhanDungeonStrategies.h"
+#include "generic/NaxxramasDungeonStrategies.h"
+#include "generic/MechanarDungeonStrategies.h"
 
 namespace ai
 {
@@ -119,6 +120,7 @@ namespace ai
             creators["rpg explore"] = [](PlayerbotAI* ai) { return new RpgExploreStrategy(ai); };
             creators["rpg maintenance"] = [](PlayerbotAI* ai) { return new RpgMaintenanceStrategy(ai); };
             creators["rpg guild"] = [](PlayerbotAI* ai) { return new RpgGuildStrategy(ai); };
+            creators["rpg bank"] = [](PlayerbotAI* ai) { return new RpgBankStrategy(ai); };
             creators["rpg bg"] = [](PlayerbotAI* ai) { return new RpgBgStrategy(ai); };
             creators["rpg player"] = [](PlayerbotAI* ai) { return new RpgPlayerStrategy(ai); };
             creators["rpg craft"] = [](PlayerbotAI* ai) { return new RpgCraftStrategy(ai); };
@@ -162,6 +164,8 @@ namespace ai
             creators["debug xp"] = [](PlayerbotAI* ai) { return new DebugXpStrategy(ai); };
             creators["debug equip"] = [](PlayerbotAI* ai) { return new DebugEquipStrategy(ai); };
             creators["debug logname"] = [](PlayerbotAI* ai) { return new DebugLogNameStrategy(ai); };
+            creators["debug heartbeat"] = [](PlayerbotAI* ai) { return new DebugHeartbeatStrategy(ai); };
+            creators["debug reactions"] = [](PlayerbotAI* ai) { return new DebugReactionsStrategy(ai); };
             creators["rtsc"] = [](PlayerbotAI* ai) { return new RTSCStrategy(ai); };
             creators["rtsc jump"] = [](PlayerbotAI* ai) { return new RTSCSJumptrategy(ai); };
             creators["maintenance"] = [](PlayerbotAI* ai) { return new MaintenanceStrategy(ai); };
@@ -169,6 +173,7 @@ namespace ai
             creators["guild"] = [](PlayerbotAI* ai) { return new GuildStrategy(ai); };
             creators["grind"] = [](PlayerbotAI* ai) { return new GrindingStrategy(ai); };
             creators["avoid aoe"] = [](PlayerbotAI* ai) { return new AvoidAoeStrategy(ai); };
+            creators["avoid specific creatures"] = [](PlayerbotAI* ai) { return new AvoidSpecificCreaturesStrategy(ai); };
             creators["wait for attack"] = [](PlayerbotAI* ai) { return new WaitForAttackStrategy(ai); };
             creators["pull back"] = [](PlayerbotAI* ai) { return new PullBackStrategy(ai); };
             creators["focus heal targets"] = [](PlayerbotAI* ai) { return new FocusHealTargetsStrategy(ai); };
@@ -200,12 +205,13 @@ namespace ai
             creators["temple of atal'hakkar"] = [](PlayerbotAI* ai) { return new TempleOfAtalHakkarDungeonStrategy(ai); };
             creators["blackrock depths"] = [](PlayerbotAI* ai) { return new BlackrockDepthsDungeonStrategy(ai); };
             creators["blackrock spire"] = [](PlayerbotAI* ai) { return new BlackrockSpireDungeonStrategy(ai); };
-            creators["onyxia's lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairDungeonStrategy(ai); };
+            creators["onyxias lair"] = [](PlayerbotAI* ai) { return new OnyxiasLairDungeonStrategy(ai); };
             creators["molten core"] = [](PlayerbotAI* ai) { return new MoltenCoreDungeonStrategy(ai); };
             creators["blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairDungeonStrategy(ai); };
             creators["karazhan"] = [](PlayerbotAI* ai) { return new KarazhanDungeonStrategy(ai); };
             creators["naxxramas"] = [](PlayerbotAI* ai) { return new NaxxramasDungeonStrategy(ai); };
             creators["new rpg"] = [](PlayerbotAI* ai) { return new NewRpgStrategy(ai); };
+            creators["mechanar"] = [](PlayerbotAI* ai) { return new MechanarDungeonStrategy(ai); };
 
             // Dungeon Boss Strategies
             creators["kresh"]      = [](PlayerbotAI* ai) { return new KreshFightStrategy(ai); };
@@ -399,8 +405,11 @@ namespace ai
             creators["magmadar"] = [](PlayerbotAI* ai) { return new MagmadarFightStrategy(ai); };
             creators["suppression room"] = [](PlayerbotAI* ai) { return new SuppressionRoomStrategy(ai); };
             creators["netherspite"] = [](PlayerbotAI* ai) { return new NetherspiteFightStrategy(ai); };
+            creators["shade of aran"] = [](PlayerbotAI* ai) { return new ShadeOfAranFightStrategy(ai); };
+            creators["big bad wolf"] = [](PlayerbotAI* ai) { return new BigBadWolfFightStrategy(ai); };
             creators["prince malchezaar"] = [](PlayerbotAI* ai) { return new PrinceMalchezaarFightStrategy(ai); };
             creators["four horseman"] = [](PlayerbotAI* ai) { return new FourHorsemanFightStrategy(ai); };
+            creators["nethermancer sepethrea"] = [](PlayerbotAI* ai) { return new NethermancerSepethreaFightStrategy(ai); };
 
 #ifdef GenerateBotTests
             creators["test"] = [](PlayerbotAI* ai) { return new TestStrategy(ai); };

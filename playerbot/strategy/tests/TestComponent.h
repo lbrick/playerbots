@@ -10,6 +10,10 @@ namespace ai
 {
     class TestContext;
 
+    // Summed XP total (level floor + current XP) over all in-world group members, or just the bot
+    // when ungrouped. Monotonic per member; callers measure the delta against a captured baseline.
+    uint32 GetPartyXpTotal(Player* bot);
+
     class TextComponent
     {
     public:
@@ -22,7 +26,7 @@ namespace ai
         static TestResult TryExtractBetween(const std::string& input, const std::string& beginDelimiter,
             const std::string& endDelimiter, std::string& value, std::string& message,
             const std::string& componentName);
-        static TestResult TryParseComparisonValue(const std::string& input, char& op, std::string& value,
+        static TestResult TryParseComparisonValue(const std::string& input, std::string& valueName, std::string& op, std::string& valueToCompareTo,
             std::string& message, const std::string& componentName);
         static TestResult TryParseUInt32Strict(const std::string& input, uint32& outValue,
             std::string& message, const std::string& componentName);

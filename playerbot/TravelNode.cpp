@@ -865,9 +865,8 @@ void TravelPath::makeShortCut(WorldPosition startPos, float maxDist, Unit* bot)
         newPath.push_back(p);
     }
 
-    if (newPath.empty() || minDist > maxDistSq || newPath.front().point.getMapId() != startPos.getMapId())
+    if (newPath.empty() || minDist > maxDistSq || newPath.front().point.getMapId() != startPos.getMapId()) //New path doesn't work. Just use full path.
     {
-        clear();
         return;
     }
 
@@ -1102,13 +1101,18 @@ bool TravelPath::UpcommingSpecialMovement(WorldPosition startPos, float maxDist,
     //Teleport to end of transport.
     if (sPlayerbotAIConfig.transportTeleportType == 2 && nextP->type == PathNodeType::NODE_TRANSPORT)
     {
+        if (prevP->point.sqDistance2d(startPos) > INTERACTION_DISTANCE * INTERACTION_DISTANCE) //Can we teleport or do we need to walk first?
+            return false; //Walk to startP (last non transport point)
+
         for (auto p = startP + 1; p != fullPath.end(); p++) //Move along the transport path to the end of the boat ride. 
         {
             if (p->type != PathNodeType::NODE_TRANSPORT)
             {
-                cutTo(*prevP, false); //PrevP = where transport will stop, startP = dock where we want to walk to.
+                cutTo(*prevP, false); //PrevP = where transport will stop, p = dock where we teleport to
                 return true;
             }
+
+            prevP = p;
         }
     }    
 
@@ -1119,10 +1123,10 @@ void TravelPath::ClipPath(PlayerbotAI* ai, Unit* mover, bool ignoreEnemyTargets)
 {
     auto startP = getNextPoint(mover, 0.0f, false);
 
-    cutTo(*startP, false);
-
     if (startP == fullPath.end())
         return;
+
+    cutTo(*startP, false);
 
     AiObjectContext* context = ai->GetAiObjectContext();
     std::list<ObjectGuid> targets;
@@ -1501,7 +1505,7 @@ TravelNodeRoute TravelNodeMap::getRoute(TravelNode* start, TravelNode* goal, Uni
     if (start == goal)
         return TravelNodeRoute();
 
-    if(!start->hasRouteTo(goal))
+    if (!start->hasRouteTo(goal) && start->getName() != "Bot Pos")
         return TravelNodeRoute();
 
     //Basic A* algoritm
@@ -1920,7 +1924,7 @@ TravelPath TravelNodeMap::getFullPath(WorldPosition startPos, WorldPosition endP
 
 bool TravelNodeMap::cropUselessNode(TravelNode* startNode)
 {
-    if (!startNode->isLinked() || startNode->isImportant())
+    if (!startNode->isLinked() || startNode->isImportant() || startNode->isPortal())
         return false;
 
     std::vector<TravelNode*> ignore = { startNode };
