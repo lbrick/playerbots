@@ -431,7 +431,7 @@ In-game verification (with `LogFileLevel = 3`):
 | Class name | `<Name>DungeonStrategy` | `<Name>DungeonStrategy` (same) |
 | CMake | `GLOB_RECURSE Playerbot_Dungeons`, no edit | `GLOB_RECURSE Playerbot_Raids`, no edit |
 | Extra hooks | rare | `InitReactionTriggers`, `InitCombatMultipliers` common for phase fights |
-| `.cpp` for Triggers/Actions | rarely | sometimes (upstream Karazhan, Molten Core have them) |
+| `.cpp` for Triggers/Actions | rarely | usually (every upstream raid but Blackwing Lair has them) |
 
 ---
 
