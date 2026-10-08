@@ -1,6 +1,6 @@
 # Classic / TBC Raid Implementation Plan
 
-**Target:** cmangos-playerbots `playerbot/strategy/raid/`  
+**Target:** cmangos-playerbots. Raids we write go in `playerbot/strategy/raid/<RaidName>/`; upstream-owned raids stay in upstream's flat files (see `RAID_GUIDE.md`, Where Raid Code Lives)  
 **Guide:** `RAID_GUIDE.md` in this directory
 
 ---
@@ -11,13 +11,13 @@ Map IDs from `worlddb > instance_template > map`.
 
 | # | Raid | Short | Map ID | Size | Status |
 |---|------|-------|--------|------|--------|
-| 1 | Onyxia's Lair | Ony | 249 | 40 | 🟡 CODED — boss triggers/mechanics present, in-game verify pending |
-| 2 | Molten Core | MC | 409 | 40 | 🟡 CODED — multi-boss triggers/AoE mechanics present, in-game verify pending |
-| 3 | Blackwing Lair | BWL | 469 | 40 | 🟡 CODED — triggers.cpp present (complex impl), in-game verify pending |
+| 1 | Onyxia's Lair | Ony | 249 | 40 | ⬆️ UPSTREAM: instance strategy + `OnyxiaFightStrategy`; 4 trigger, 4 action classes |
+| 2 | Molten Core | MC | 409 | 40 | ⬆️ UPSTREAM: instance strategy + `MagmadarFightStrategy`; 9 trigger, 9 action classes |
+| 3 | Blackwing Lair | BWL | 469 | 40 | ⬆️ UPSTREAM: instance strategy + `SuppressionRoomStrategy`; 5 trigger, 6 action classes |
 | 4 | Zul'Gurub | ZG | 309 | 20 | 📋 PLANNED — see ZG Boss Reference below |
 | 5 | Ruins of Ahn'Qiraj | AQ20 | 509 | 20 | 📋 PLANNED — see AQ20 Boss Reference below |
 | 6 | Temple of Ahn'Qiraj | AQ40 | 531 | 40 | 📋 PLANNED — see AQ40 Boss Reference below |
-| 7 | Naxxramas | Naxx | 533 | 40 | 🔴 SKELETON — enter/leave triggers only, no boss mechanics |
+| 7 | Naxxramas | Naxx | 533 | 40 | ⬆️ UPSTREAM: instance strategy + `FourHorsemanFightStrategy`; 4 trigger, 4 action classes |
 
 ---
 
@@ -25,7 +25,7 @@ Map IDs from `worlddb > instance_template > map`.
 
 | # | Raid | Short | Map ID | Size | Status |
 |---|------|-------|--------|------|--------|
-| 8 | Karazhan | Kara | 532 | 10 | 🟡 CODED — triggers.cpp + actions.cpp present, in-game verify pending |
+| 8 | Karazhan | Kara | 532 | 10 | ⬆️ UPSTREAM: instance strategy + Netherspite, Shade of Aran, Big Bad Wolf, Prince Malchezaar fight strategies; 24 trigger, 25 action classes |
 | 9 | Gruul's Lair | Gruul | 565 | 25 | 📋 PLANNED |
 | 10 | Magtheridon's Lair | Mag | 544 | 25 | 📋 PLANNED |
 | 11 | Serpentshrine Cavern | SSC | 548 | 25 | 📋 PLANNED |
@@ -45,6 +45,7 @@ Map IDs from `worlddb > instance_template > map`.
 | 🟡 CODED | Files exist with real mechanics, in-game verify pending |
 | 🔴 SKELETON | Files exist but boss mechanics are stubs/missing |
 | 📋 PLANNED | No implementation yet |
+| ⬆️ UPSTREAM | Owned by upstream `cmangos/playerbots`, in its flat `*Dungeon*` files; counts as of upstream `da4419af`. Change in place, never copy into `raid/` |
 
 ---
 
@@ -107,19 +108,20 @@ Map IDs from `worlddb > instance_template > map`.
 
 ## Registration Checklist (per raid)
 
-Every raid requires changes to 5 files outside its own folder:
+Every raid we write requires changes to 4 files outside its own folder:
 
 - [ ] `playerbot/strategy/generic/DungeonStrategy.cpp` — add enter/leave triggers (both combat + noncombat)
 - [ ] `playerbot/strategy/triggers/TriggerContext.h` — include header + register all triggers
 - [ ] `playerbot/strategy/actions/ActionContext.h` — include header + register all enable/disable actions
 - [ ] `playerbot/strategy/StrategyContext.h` — include header + register instance + boss fight strategies
-- [ ] `CMakeLists.txt` — add `GLOB_RECURSE Ai_<RaidName>` entry (see existing raid entries as pattern)
+
+`CMakeLists.txt` needs no edit: `GLOB_RECURSE Playerbot_Raids` already covers `playerbot/strategy/raid/`. Reconfigure after adding files.
 
 ---
 
 ## Definition of Done (per raid)
 
-- [ ] `./build.sh` clean with no errors or new warnings
+- [ ] `./build-classic.sh` and `./build-tbc.sh` (after `configure`) exit 0 with no new errors or warnings
 - [ ] Bot enters raid — instance strategy loads (verify via strategy debug log)
 - [ ] Each boss engaged — boss fight strategy enables (verify log)
 - [ ] Each boss dies/resets — boss fight strategy disables (verify log)
