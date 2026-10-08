@@ -25,9 +25,30 @@ layer boss-specific mechanics on top.
 
 ---
 
-## File Structure
+## Where Raid Code Lives
 
-Each raid lives in its own subdirectory under `playerbot/strategy/raid/`:
+Raid code has two homes, decided by who owns the raid (decision record:
+[`.okf/decisions/raid-layout-follows-upstream.md`](https://github.com/lbrick/cmangos-dev/blob/main/.okf/decisions/raid-layout-follows-upstream.md)
+in lbrick/cmangos-dev).
+
+**Upstream-owned raids** live in upstream `cmangos/playerbots`'s flat files. Change them in
+place; never copy them into `strategy/raid/`, or every upstream change becomes a hand port and
+a merge conflict.
+
+| Raid | Actions | Triggers | Strategies |
+|---|---|---|---|
+| Onyxia's Lair | `actions/OnyxiasLairDungeonActions.*` | `triggers/OnyxiasLairDungeonTriggers.*` | `generic/OnyxiasLairDungeonStrategies.*` |
+| Molten Core | `actions/MoltenCoreDungeonActions.*` | `triggers/MoltenCoreDungeonTriggers.*` | `generic/MoltenCoreDungeonStrategies.*` |
+| Blackwing Lair | `actions/BlackwingLairDungeonActions.h` | `triggers/BlackwingLairDungeonTriggers.h` | `generic/BlackwingLairDungeonStrategies.*` |
+| Naxxramas | `actions/NaxxramasDungeonActions.*` | `triggers/NaxxramasDungeonTriggers.*` | `generic/NaxxramasDungeonStrategies.*` |
+| Karazhan | `actions/KarazhanDungeonActions.*` | `triggers/KarazhanDungeonTriggers.*` | `generic/KarazhanDungeonStrategies.*` |
+
+All paths are under `playerbot/strategy/`. Upstream's 5-man Mechanar strategy uses the same
+flat pattern.
+
+**Raids this workspace writes** go in their own subdirectory under `playerbot/strategy/raid/`.
+None has code yet; `raid/ZulGurub/` holds only `ZG_PLAN.md`. The rest of this guide describes
+this layout:
 
 ```
 playerbot/strategy/raid/
@@ -44,8 +65,8 @@ playerbot/strategy/raid/
 ```
 
 **Naming conventions:**
-- Directory: full raid name, PascalCase, no spaces: `MoltenCore`, `ZulGurub`, `AhnQirajTemple`
-- File prefix: `Raid` + short abbreviation: `RaidMc`, `RaidZg`, `RaidAq40`
+- Directory: full raid name, PascalCase, no spaces: `ZulGurub`, `AhnQirajTemple`
+- File prefix: `Raid` + short abbreviation: `RaidZg`, `RaidAq40`
 - Class names: `<FullName>DungeonStrategy`, `<Boss>FightStrategy`
 - Strategy string names: lowercase with spaces/apostrophes: `"molten core"`, `"ragnaros"`, `"zul'gurub"`
 
@@ -352,25 +373,22 @@ creators["<boss>"]      = [](PlayerbotAI* ai) { return new <Boss>FightStrategy(a
 
 ### 5e — CMakeLists.txt
 
-Add alongside the other raid GLOB entries:
-
-```cmake
-file(GLOB_RECURSE Ai_<RaidName> ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/raid/<RaidName>/*.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/playerbot/strategy/raid/<RaidName>/*.h)
-```
-
-Then add `${Ai_<RaidName>}` to the `target_sources(...)` or `add_library(...)` call where other
-raid globs are listed.
+No edit. `CMakeLists.txt` collects every `.cpp` and `.h` under `playerbot/strategy/raid/` with
+one `GLOB_RECURSE` (`Playerbot_Raids`). Because it is a glob, CMake only sees new files after a
+reconfigure (Step 6).
 
 ---
 
 ## Step 6 — Build and Verify
 
+From the `cmangos-dev` workspace root, reconfigure (new files) and build both cores:
+
 ```bash
-./build.sh
+./build-classic.sh configure && ./build-classic.sh
+./build-tbc.sh configure && ./build-tbc.sh
 ```
 
-Expected: clean build with no new errors or warnings.
+Expected: both exit 0 with no new errors or warnings.
 
 In-game verification (with `LogFileLevel = 3`):
 - Enter raid → log shows `enable <raid name> strategy`
@@ -408,12 +426,12 @@ In-game verification (with `LogFileLevel = 3`):
 
 | | Dungeons | Raids |
 |--|---------|-------|
-| Directory | `strategy/dungeons/<Name>/` | `strategy/raid/<Name>/` |
-| File prefix | `<Name>` (e.g. `RfcStrategy.h`) | `Raid<Short>` (e.g. `RaidMcStrategy.h`) |
+| Directory | `strategy/dungeons/<Name>/` | `strategy/raid/<Name>/` (upstream raids: flat files, see above) |
+| File prefix | `<Name>` (e.g. `RfcStrategy.h`) | `Raid<Short>` (e.g. `RaidZgStrategy.h`) |
 | Class name | `<Name>DungeonStrategy` | `<Name>DungeonStrategy` (same) |
-| CMakeLists label | `Ai_Dungeon_<Name>` | `Ai_<Name>` |
+| CMake | `GLOB_RECURSE Playerbot_Dungeons`, no edit | `GLOB_RECURSE Playerbot_Raids`, no edit |
 | Extra hooks | rare | `InitReactionTriggers`, `InitCombatMultipliers` common for phase fights |
-| `.cpp` for Triggers/Actions | rarely | sometimes (BWL, Karazhan have them) |
+| `.cpp` for Triggers/Actions | rarely | sometimes (upstream Karazhan, Molten Core have them) |
 
 ---
 
@@ -424,5 +442,10 @@ In-game verification (with `LogFileLevel = 3`):
 - **Map IDs:** Cross-check with `worlddb > instance_template.map` before wiring triggers
 - **Bosses with no positional mechanic** still need start/end fight triggers for strategy lifecycle
 - **Phase fights** (Onyxia phase 2, Ragnaros submerge): use `InitReactionTriggers` + `InitCombatMultipliers`
-  to swap behaviour between phases. Check `OnyxiasLair/` as the canonical phase-fight pattern
-- **Reference implementations:** `OnyxiasLair/` (single boss, phases), `MoltenCore/` (multi-boss, AoE)
+  to swap behaviour between phases. Check upstream's Onyxia files as the canonical phase-fight pattern
+- **Reference implementations** (upstream, flat files under `playerbot/strategy/`):
+  `generic/OnyxiasLairDungeonStrategies.cpp` (single boss, phases),
+  `generic/MoltenCoreDungeonStrategies.cpp` (multi-boss, AoE),
+  `generic/KarazhanDungeonStrategies.cpp` (several fight strategies, the most complete)
+- **Strategy keys:** upstream dropped the apostrophe from Onyxia's key (`"onyxias lair"`,
+  `99e6f15e`). Match the key the trigger, action and strategy creators use exactly.
