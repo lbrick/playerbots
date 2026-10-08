@@ -121,3 +121,6 @@ ipch
 
 botpch.pch
 /.vs
+
+# OpenWolf state (removed; lbrick/cmangos-dev#5)
+/.wolf/
