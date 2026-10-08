@@ -422,7 +422,7 @@ bool SpreadFromAlliesAction::Execute(Event& event)
         {
             if (MoveTo(bot->GetMapId(), validPoint->getX(), validPoint->getY(), validPoint->getZ(), false, IsReaction(), false, true))
             {
-                if (IsReaction())
+                if (!IsReaction())
                     WaitForReach(validPoint->distance(botPosition));
                 return true;
             }
