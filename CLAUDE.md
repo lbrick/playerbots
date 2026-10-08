@@ -8,7 +8,8 @@ adds only module-specific facts.
 ## Layout
 
 Source sits under `playerbot/` (bot engine, managers, strategies) and `ahbot/` (auction house
-bot). Includes carry the directory prefix, double-quoted: `#include "playerbot/WorldPosition.h"`.
+bot). Cross-directory includes carry the directory prefix, `#include "playerbot/WorldPosition.h"`;
+same-directory includes use the bare filename.
 
 ## Include Restrictions
 
