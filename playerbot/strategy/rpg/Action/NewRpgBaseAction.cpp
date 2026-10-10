@@ -1166,7 +1166,7 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
 
         case RPG_WANDER_RANDOM:
         {
-            Unit* target = AI_VALUE(Unit*, "grind target");
+            Unit* target = ai->GetUnit(AI_VALUE(ObjectGuid, "grind target"));
             return target != nullptr;
         }
 
