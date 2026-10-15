@@ -930,6 +930,27 @@ static bool IsInCapitalCity(Player* bot)
     return zone && (zone->flags & AREA_FLAG_CAPITAL);
 }
 
+// Inside an inn's rest area. The core only sets REST_TYPE_IN_TAVERN when a client reports the
+// area trigger (WorldSession::HandleAreaTriggerOpcode), which random bots never send, so test
+// the tavern triggers directly.
+static bool IsInTavern(Player* bot)
+{
+    static std::vector<AreaTriggerEntry const*> const taverns = []()
+    {
+        std::vector<AreaTriggerEntry const*> list;
+        for (uint32 i = 0; i < sAreaTriggerStore.GetNumRows(); ++i)
+            if (AreaTriggerEntry const* at = sAreaTriggerStore.LookupEntry(i))
+                if (sObjectMgr.IsTavernAreaTrigger(at->id))
+                    list.push_back(at);
+        return list;
+    }();
+
+    for (AreaTriggerEntry const* at : taverns)
+        if (IsPointInAreaTriggerZone(at, bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ()))
+            return true;
+    return false;
+}
+
 WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
 {
     WorldPosition botPos(bot);
@@ -1169,6 +1190,17 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
         if (acc >= roll) { chosen = status; break; }
     }
 
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+    {
+        static char const* const names[] = { "idle", "go_grind", "go_camp", "wander_random",
+            "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "none" };
+        sLog.outString("[New RPG status] bot=%s status=%s zone=%u area=%u resting=%u capital=%u tavern=%u grind_target=%u",
+            bot->GetName(), names[chosen <= RPG_STATUS_END ? chosen : RPG_STATUS_END],
+            bot->GetZoneId(), bot->GetAreaId(), (uint32)bot->GetRestType(),
+            IsInCapitalCity(bot) ? 1u : 0u, IsInTavern(bot) ? 1u : 0u,
+            ai->GetUnit(AI_VALUE(ObjectGuid, "grind target")) ? 1u : 0u);
+    }
+
     switch (chosen)
     {
         case RPG_WANDER_RANDOM:
@@ -1259,7 +1291,12 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
         case RPG_WANDER_RANDOM:
         {
             Unit* target = ai->GetUnit(AI_VALUE(ObjectGuid, "grind target"));
-            return target != nullptr;
+            if (target != nullptr)
+                return true;
+
+            // Towns and cities have no grind target, so bots there could never wander: allow it
+            // in a capital zone and in an inn's rest area.
+            return IsInCapitalCity(bot) || IsInTavern(bot);
         }
 
         case RPG_GO_GRIND:

@@ -205,6 +205,10 @@ AiPlayerbot.LogRpgQuestEvents = 0
 # the server log. Off by default: with many bots it adds many lines.
 AiPlayerbot.LogRpgTravelEvents = 0
 
+# Log each new RPG status the random status roll picks to the server log, with the bot's
+# zone and whether it is resting. Off by default: with many bots it adds many lines.
+AiPlayerbot.LogRpgStatusEvents = 0
+
 # Relative probability weights for each RPG state when transitioning from IDLE.
 # Higher values make that state more likely to be chosen.
 AiPlayerbot.RpgStatusProbWeight.WanderRandom = 15
