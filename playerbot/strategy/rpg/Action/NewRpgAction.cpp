@@ -501,12 +501,23 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 NEWRPG_LOG("[New RPG] %s TravelNode candidate (%.1f %.1f %.1f mapId=%u)",
                               bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
 
-                // BOAT-3: detect transport link to next node (boat/zeppelin)
+                // BOAT-3: detect a teleport link to the next node: a transport (boat, zeppelin,
+                // elevator) or an area trigger (a portal such as Darnassus -> Rut'theran). Bots
+                // never fire area triggers by walking into them, so both become teleport legs.
+                // Area triggers into instanceable maps (dungeon entrances) stay walk links.
                 auto isTransportLink = [](TravelNode* from, TravelNode* to)
                 {
                     auto* links = from->getLinks();
                     auto linkIt = links->find(to);
-                    return linkIt != links->end() && linkIt->second->getPathType() == TravelNodePathType::transport;
+                    if (linkIt == links->end())
+                        return false;
+                    TravelNodePathType type = linkIt->second->getPathType();
+                    if (type == TravelNodePathType::transport)
+                        return true;
+                    if (type != TravelNodePathType::areaTrigger)
+                        return false;
+                    MapEntry const* mapEntry = sMapStore.LookupEntry(to->getPosition()->getMapId());
+                    return mapEntry && !mapEntry->Instanceable();
                 };
                 TravelNode* nextNode = (i + 1 < nodes.size()) ? nodes[i + 1] : nullptr;
                 bool isTransportLeg = nextNode && isTransportLink(node, nextNode);
