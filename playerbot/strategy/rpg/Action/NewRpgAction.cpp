@@ -502,15 +502,14 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                               bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
 
                 // BOAT-3: detect transport link to next node (boat/zeppelin)
-                bool isTransportLeg = false;
-                TravelNode* nextNode = (i + 1 < nodes.size()) ? nodes[i + 1] : nullptr;
-                if (nextNode)
+                auto isTransportLink = [](TravelNode* from, TravelNode* to)
                 {
-                    auto* links = node->getLinks();
-                    auto linkIt = links->find(nextNode);
-                    if (linkIt != links->end() && linkIt->second->getPathType() == TravelNodePathType::transport)
-                        isTransportLeg = true;
-                }
+                    auto* links = from->getLinks();
+                    auto linkIt = links->find(to);
+                    return linkIt != links->end() && linkIt->second->getPathType() == TravelNodePathType::transport;
+                };
+                TravelNode* nextNode = (i + 1 < nodes.size()) ? nodes[i + 1] : nullptr;
+                bool isTransportLeg = nextNode && isTransportLink(node, nextNode);
 
                 if (!isTransportLeg)
                 {
@@ -542,7 +541,14 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     // Underground elevator docks (Z~-40) are legitimate and must pass through.
                     if (nextNode)
                     {
-                        WorldPosition destDock = *nextNode->getPosition();
+                        // A crossing is a chain of transport links: in the travel-node data a boat
+                        // route runs dock -> boat -> boat -> dock, where the boat nodes are the
+                        // transport's stop positions at sea level (TaxiPathNode). Walk to the first
+                        // node of the chain and teleport to the last one, never to a boat node.
+                        size_t last = i + 1;
+                        while (last + 1 < nodes.size() && isTransportLink(nodes[last], nodes[last + 1]))
+                            ++last;
+                        WorldPosition destDock = *nodes[last]->getPosition();
 
                         // BUG-2: skip previously rejected destDocks (persists across waypoint rebuilds)
                         bool alreadyRejected = false;
@@ -550,7 +556,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                             if (rej.distance(destDock) < 1.0f) { alreadyRejected = true; break; }
                         if (alreadyRejected)
                         {
-                            ++i;
+                            i = last;
                             continue;
                         }
 
@@ -563,7 +569,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                                           bot->GetName(), destDock.getZ(), destDock.getX(), destDock.getY(), destDock.getMapId());
                             LogTravelEvent("leg_rejected", nodePos, destDock, "reason=dest_z");
                             dataPtr->rejectedTransportDocks.push_back(destDock);  // BUG-2: cache rejection
-                            ++i;  // consume nextNode
+                            i = last;  // consume the rest of the chain
                             continue;
                         }
 
@@ -575,7 +581,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                         else
                             NEWRPG_LOG("[New RPG] %s TravelNode transport source dock (%.1f %.1f %.1f map=%u)",
                                           bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
-                        dataPtr->waypoints.push_back({destDock, true});
+                        dataPtr->waypoints.push_back({destDock, true, nodePos});
                         LogTravelEvent("leg_built", nodePos, destDock);
                         if (isElevator)
                             NEWRPG_LOG("[New RPG] %s elevator route: dest platform (%.1f %.1f %.1f map=%u) [teleport]",
@@ -583,7 +589,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                         else
                             NEWRPG_LOG("[New RPG] %s TravelNode transport dest dock (%.1f %.1f %.1f map=%u) [teleport]",
                                           bot->GetName(), destDock.getX(), destDock.getY(), destDock.getZ(), destDock.getMapId());
-                        ++i;
+                        i = last;
                     }
                 }
             }
@@ -626,9 +632,12 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         // BOAT-4: transport teleport handler — walk to source dock, then TeleportTo dest dock
         if (front.teleport)
         {
-            float distToDock = WorldPosition(bot).distance(wp);
+            // The source dock, not the destination: the destination is across the water or on
+            // another map, so a bot measured against it would walk toward it and never teleport.
+            WorldPosition sourceDock = front.from != WorldPosition() ? front.from : wp;
+            float distToDock = WorldPosition(bot).distance(sourceDock);
             if (distToDock > 20.0f)
-                return MoveFarTo(wp);
+                return MoveFarTo(sourceDock);
 
             // TRANSPORT-1/2: second-layer guard — reject bad sea-level docks (Z~0 on main world)
             // Elevator docks (Z~-40) are legitimate and must pass through
