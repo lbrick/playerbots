@@ -519,6 +519,7 @@ bool PlayerbotAIConfig::Initialize()
 	//SPP switches
     enableGreet = config.GetBoolDefault("AiPlayerbot.EnableGreet", false);
     enableNewRpgStrategy = config.GetBoolDefault("AiPlayerbot.EnableNewRpgStrategy", true);
+    logRpgQuestEvents = config.GetBoolDefault("AiPlayerbot.LogRpgQuestEvents", false);
     RpgStatusProbWeight[RPG_WANDER_RANDOM]  = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.WanderRandom", 15);
     RpgStatusProbWeight[RPG_WANDER_NPC]     = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.WanderNpc",    20);
     RpgStatusProbWeight[RPG_GO_GRIND]       = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.GoGrind",       5);

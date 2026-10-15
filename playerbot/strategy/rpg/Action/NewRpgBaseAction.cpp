@@ -326,6 +326,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 // Creature failures (faction/phase/hostility) are permanent — mark low priority.
                 // Game object failures count against the object once per interaction; see
                 // RecordQuestGoFailure for the back-off.
+                LogQuestEvent("accept_failed", item.m_qId, guid, object);
                 if (!guid.IsGameObject())
                 {
                     ai->lowPriorityQuest.insert(item.m_qId);
@@ -347,6 +348,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                     ai->TellPlayerNoFacing(GetMaster(),"Quest accepted " + ChatHelper::formatQuest(quest));
                 BroadcastHelper::BroadcastQuestAccepted(ai, bot, quest);
                 ai->rpgStatistic.questAccepted++;
+                LogQuestEvent("accepted", item.m_qId, guid, object);
                 NEWRPG_LOG("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
             }
         }
@@ -358,6 +360,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 ai->TellPlayerNoFacing(GetMaster(),"Quest rewarded " + ChatHelper::formatQuest(quest));
             BroadcastHelper::BroadcastQuestTurnedIn(ai, bot, quest);
             ai->rpgStatistic.questRewarded++;
+            LogQuestEvent("turned_in", quest->GetQuestId(), guid, object);
             NEWRPG_LOG("[New RPG] %s turned in quest %u", bot->GetName(), quest->GetQuestId());
         }
     }
@@ -368,6 +371,26 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
         ai->questGoBackoff.erase(guid.GetRawValue());
 
     return true;
+}
+
+// One server log line per quest accept, failed accept, turn-in or abandoned quest giver,
+// when AiPlayerbot.LogRpgQuestEvents is on. in_range repeats the core's own interaction
+// test (Player::GetNPCIfCanInteractWith, Player::GetGameObjectIfCanInteractWith); distance
+// is edge to edge and only indicative, since the core test adds combat reach.
+void NewRpgBaseAction::LogQuestEvent(char const* event, uint32 questId, ObjectGuid guid, WorldObject* questGiver)
+{
+    if (!sPlayerbotAIConfig.logRpgQuestEvents)
+        return;
+
+    int inRange = -1;
+    if (GameObject* go = dynamic_cast<GameObject*>(questGiver))
+        inRange = go->IsWithinDistInMap(bot, go->GetInteractionDistance()) ? 1 : 0;
+    else if (questGiver)
+        inRange = questGiver->IsWithinDistInMap(bot, INTERACTION_DISTANCE) ? 1 : 0;
+
+    sLog.outString("[New RPG quest] bot=%s event=%s quest=%u giver=%s:%u in_range=%d distance=%.1f",
+        bot->GetName(), event, questId, guid.IsGameObject() ? "gameobject" : "creature",
+        guid.GetCounter(), inRange, questGiver ? bot->GetDistance(questGiver) : -1.0f);
 }
 
 bool NewRpgBaseAction::IsInQuestInteractRange(WorldObject* questGiver)
@@ -409,8 +432,11 @@ void NewRpgBaseAction::RecordQuestGoFailure(ObjectGuid guid)
     backoff.delay = questGoBackoffBase << (backoff.failures - 1);
 
     if (backoff.failures >= questGoMaxFailures)
+    {
+        LogQuestEvent("gave_up", 0, guid, GetWorldObjectByGuid(ai, bot, guid));
         NEWRPG_LOG("[New RPG] %s gave up on quest GO %u after %u failures",
                       bot->GetName(), guid.GetCounter(), backoff.failures);
+    }
     else
         NEWRPG_LOG("[New RPG] %s quest GO %u failure %u, retry in %u ms",
                       bot->GetName(), guid.GetCounter(), backoff.failures, backoff.delay);

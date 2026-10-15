@@ -32,6 +32,7 @@ protected:
     bool IsInQuestInteractRange(WorldObject* questGiver);
     bool IsQuestGoBackedOff(WorldObject* questGiver);
     void RecordQuestGoFailure(ObjectGuid guid);
+    void LogQuestEvent(char const* event, uint32 questId, ObjectGuid guid, WorldObject* questGiver);
     uint32 BestRewardIndex(Quest const* quest);
     bool IsQuestWorthDoing(Quest const* quest);
     bool IsQuestCapableDoing(Quest const* quest);

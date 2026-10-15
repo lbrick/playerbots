@@ -229,6 +229,7 @@ public:
 	std::list<uint32> pvpProhibitedZoneIds;
     bool enableGreet;
     bool enableNewRpgStrategy;
+    bool logRpgQuestEvents;
     std::unordered_map<ai::NewRpgStatus, uint32> RpgStatusProbWeight;
     bool randomBotShowHelmet;
     bool randomBotShowCloak;
