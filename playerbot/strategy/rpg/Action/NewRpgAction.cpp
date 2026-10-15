@@ -15,6 +15,8 @@ using namespace ai;
 
 bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
 {
+    CheckStuckTeleport();
+
     NewRpgInfo& info = ai->rpgInfo;
     NewRpgStatus status = info.GetStatus();
     switch (status)
