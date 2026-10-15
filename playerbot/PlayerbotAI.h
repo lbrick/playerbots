@@ -758,8 +758,8 @@ public:
     NewRpgInfo     rpgInfo;
     NewRpgStatistic rpgStatistic;
     std::set<uint32> lowPriorityQuest;  // quests that have been abandoned; avoid retrying
-    struct QuestGoBackoff { uint32 failures{0}; uint32 lastFailure{0}; uint32 delay{0}; };
-    std::unordered_map<uint64, QuestGoBackoff> questGoBackoff;  // failed quest interactions per game object (raw guid)
+    struct QuestGiverBackoff { uint32 failures{0}; uint32 lastFailure{0}; uint32 delay{0}; };
+    std::unordered_map<uint64, QuestGiverBackoff> questGiverBackoff;  // failed quest approaches and interactions per quest giver (raw guid)
     std::vector<WorldPosition> badPositions;  // positions that triggered stuck-teleport; filtered from selection
     uint32 currentStayZoneId{0};     // zone bot is currently staying in (resets on CHANGE_ZONE arrival)
     uint32 currentStayBadCount{0};   // bad positions accumulated this stay; escape trigger for 7.1

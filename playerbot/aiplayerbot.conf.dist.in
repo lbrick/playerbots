@@ -196,6 +196,11 @@ AiPlayerbot.EnableGreet = 1
 # Disable to fall back to legacy RPG behaviour.
 AiPlayerbot.EnableNewRpgStrategy = 1
 
+# Log each new RPG quest accept, failed accept, turn-in and abandoned quest giver (gave_up)
+# to the server log, with in_range (the core's interaction test) and the bot's distance.
+# Off by default: with many bots it adds many lines.
+AiPlayerbot.LogRpgQuestEvents = 0
+
 # Relative probability weights for each RPG state when transitioning from IDLE.
 # Higher values make that state more likely to be chosen.
 AiPlayerbot.RpgStatusProbWeight.WanderRandom = 15

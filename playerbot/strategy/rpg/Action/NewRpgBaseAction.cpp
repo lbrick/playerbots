@@ -292,8 +292,8 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
     if (!object || !CanInteractWithQuestGiver(object))
         return false;
 
-    // The core rejects a game object outside its interaction range and logs "too far away";
-    // never send the request from further out.
+    // The core rejects a quest giver outside its interaction range (and logs "too far away"
+    // for a game object); never send the request from further out.
     if (!IsInQuestInteractRange(object))
         return false;
 
@@ -325,7 +325,8 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
             {
                 // Creature failures (faction/phase/hostility) are permanent — mark low priority.
                 // Game object failures count against the object once per interaction; see
-                // RecordQuestGoFailure for the back-off.
+                // RecordQuestGiverFailure for the back-off.
+                LogQuestEvent("accept_failed", item.m_qId, guid, object);
                 if (!guid.IsGameObject())
                 {
                     ai->lowPriorityQuest.insert(item.m_qId);
@@ -347,6 +348,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                     ai->TellPlayerNoFacing(GetMaster(),"Quest accepted " + ChatHelper::formatQuest(quest));
                 BroadcastHelper::BroadcastQuestAccepted(ai, bot, quest);
                 ai->rpgStatistic.questAccepted++;
+                LogQuestEvent("accepted", item.m_qId, guid, object);
                 NEWRPG_LOG("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
             }
         }
@@ -358,62 +360,82 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 ai->TellPlayerNoFacing(GetMaster(),"Quest rewarded " + ChatHelper::formatQuest(quest));
             BroadcastHelper::BroadcastQuestTurnedIn(ai, bot, quest);
             ai->rpgStatistic.questRewarded++;
+            LogQuestEvent("turned_in", quest->GetQuestId(), guid, object);
             NEWRPG_LOG("[New RPG] %s turned in quest %u", bot->GetName(), quest->GetQuestId());
         }
     }
 
     if (goFailed)
-        RecordQuestGoFailure(guid);
-    else if (guid.IsGameObject())
-        ai->questGoBackoff.erase(guid.GetRawValue());
+        RecordQuestGiverFailure(guid);
+    else
+        ai->questGiverBackoff.erase(guid.GetRawValue());
 
     return true;
 }
 
-bool NewRpgBaseAction::IsInQuestInteractRange(WorldObject* questGiver)
+// One server log line per quest accept, failed accept, turn-in or abandoned quest giver,
+// when AiPlayerbot.LogRpgQuestEvents is on. in_range repeats the core's own interaction
+// test (Player::GetNPCIfCanInteractWith, Player::GetGameObjectIfCanInteractWith); distance
+// is edge to edge and only indicative, since the core test adds combat reach.
+void NewRpgBaseAction::LogQuestEvent(char const* event, uint32 questId, ObjectGuid guid, WorldObject* questGiver)
 {
-    // Creatures keep their existing behaviour; only game objects are range-checked here.
-    GameObject* go = dynamic_cast<GameObject*>(questGiver);
-    if (!go)
-        return true;
+    if (!sPlayerbotAIConfig.logRpgQuestEvents)
+        return;
 
-    return go->IsWithinDistInMap(bot, go->GetInteractionDistance());
+    int inRange = -1;
+    if (GameObject* go = dynamic_cast<GameObject*>(questGiver))
+        inRange = go->IsWithinDistInMap(bot, go->GetInteractionDistance()) ? 1 : 0;
+    else if (questGiver)
+        inRange = questGiver->IsWithinDistInMap(bot, INTERACTION_DISTANCE) ? 1 : 0;
+
+    sLog.outString("[New RPG quest] bot=%s event=%s quest=%u giver=%s:%u in_range=%d distance=%.1f",
+        bot->GetName(), event, questId, guid.IsGameObject() ? "gameobject" : "creature",
+        guid.GetCounter(), inRange, questGiver ? bot->GetDistance(questGiver) : -1.0f);
 }
 
-bool NewRpgBaseAction::IsQuestGoBackedOff(WorldObject* questGiver)
+bool NewRpgBaseAction::IsInQuestInteractRange(WorldObject* questGiver)
 {
-    ObjectGuid guid = questGiver->GetObjectGuid();
-    if (!guid.IsGameObject())
+    // Mirror the core checks: Player::GetGameObjectIfCanInteractWith and
+    // Player::GetNPCIfCanInteractWith.
+    if (GameObject* go = dynamic_cast<GameObject*>(questGiver))
+        return go->IsWithinDistInMap(bot, go->GetInteractionDistance());
+
+    return questGiver->IsWithinDistInMap(bot, INTERACTION_DISTANCE);
+}
+
+bool NewRpgBaseAction::IsQuestGiverBackedOff(WorldObject* questGiver)
+{
+    auto it = ai->questGiverBackoff.find(questGiver->GetObjectGuid().GetRawValue());
+    if (it == ai->questGiverBackoff.end())
         return false;
 
-    auto it = ai->questGoBackoff.find(guid.GetRawValue());
-    if (it == ai->questGoBackoff.end())
-        return false;
-
-    if (it->second.failures >= questGoMaxFailures)
+    if (it->second.failures >= questGiverMaxFailures)
         return true;
 
-    // An approach counted as a failure has arrived: let the bot use the object.
+    // An approach counted as a failure has arrived: let the bot use the quest giver.
     if (IsInQuestInteractRange(questGiver))
         return false;
 
     return WorldTimer::getMSTimeDiff(it->second.lastFailure, WorldTimer::getMSTime()) < it->second.delay;
 }
 
-void NewRpgBaseAction::RecordQuestGoFailure(ObjectGuid guid)
+void NewRpgBaseAction::RecordQuestGiverFailure(ObjectGuid guid)
 {
-    PlayerbotAI::QuestGoBackoff& backoff = ai->questGoBackoff[guid.GetRawValue()];
+    PlayerbotAI::QuestGiverBackoff& backoff = ai->questGiverBackoff[guid.GetRawValue()];
     ++backoff.failures;
     // 30 s, 60 s, 120 s, then skipped for the rest of the session
     backoff.lastFailure = WorldTimer::getMSTime();
-    backoff.delay = questGoBackoffBase << (backoff.failures - 1);
+    backoff.delay = questGiverBackoffBase << (backoff.failures - 1);
 
-    if (backoff.failures >= questGoMaxFailures)
-        NEWRPG_LOG("[New RPG] %s gave up on quest GO %u after %u failures",
-                      bot->GetName(), guid.GetCounter(), backoff.failures);
+    if (backoff.failures >= questGiverMaxFailures)
+    {
+        LogQuestEvent("gave_up", 0, guid, GetWorldObjectByGuid(ai, bot, guid));
+        NEWRPG_LOG("[New RPG] %s gave up on quest giver %s after %u failures",
+                      bot->GetName(), guid.GetString().c_str(), backoff.failures);
+    }
     else
-        NEWRPG_LOG("[New RPG] %s quest GO %u failure %u, retry in %u ms",
-                      bot->GetName(), guid.GetCounter(), backoff.failures, backoff.delay);
+        NEWRPG_LOG("[New RPG] %s quest giver %s failure %u, retry in %u ms",
+                      bot->GetName(), guid.GetString().c_str(), backoff.failures, backoff.delay);
 }
 
 bool NewRpgBaseAction::CanInteractWithQuestGiver(Object* questGiver)
@@ -660,10 +682,10 @@ bool NewRpgBaseAction::SearchQuestGiverAndAcceptOrReward()
         }
 
         bool moving = MoveWorldObjectTo(npcOrGo);
-        // Each approach to a game object counts as an attempt, so an object the bot never
-        // reaches backs off instead of being chosen again on every tick.
-        if (moving && npcOrGo.IsGameObject())
-            RecordQuestGoFailure(npcOrGo);
+        // Each approach counts as an attempt, so a quest giver the bot never reaches backs
+        // off instead of being chosen again on every tick.
+        if (moving)
+            RecordQuestGiverFailure(npcOrGo);
         return moving;
     }
     return false;
@@ -686,7 +708,7 @@ ObjectGuid NewRpgBaseAction::ChooseNpcOrGoToInteract(bool questgiverOnly, float 
             continue;
         if (distanceLimit && bot->GetDistance(object) > distanceLimit)
             continue;
-        if (IsQuestGoBackedOff(object))
+        if (IsQuestGiverBackedOff(object))
             continue;
         if (CanInteractWithQuestGiver(object) && HasQuestToAcceptOrReward(object))
         {
@@ -703,7 +725,7 @@ ObjectGuid NewRpgBaseAction::ChooseNpcOrGoToInteract(bool questgiverOnly, float 
             continue;
         if (distanceLimit && bot->GetDistance(object) > distanceLimit)
             continue;
-        if (IsQuestGoBackedOff(object))
+        if (IsQuestGiverBackedOff(object))
             continue;
         if (CanInteractWithQuestGiver(object) && HasQuestToAcceptOrReward(object))
         {
