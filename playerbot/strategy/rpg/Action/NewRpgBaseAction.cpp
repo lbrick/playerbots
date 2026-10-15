@@ -78,6 +78,20 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         ai->rpgInfo.stuckTs = WorldTimer::getMSTime();
         ai->rpgInfo.stuckAttempts = 0;
 
+        // The bot already stuck-teleported to this position (within 50 yd): teleporting again
+        // repeats the same failure, so give the target up instead.
+        if (IsPosBad(dest))
+        {
+            if (sPlayerbotAIConfig.logRpgTravelEvents)
+            {
+                std::string zone = "zone=" + std::to_string(bot->GetZoneId());
+                LogTravelEvent("stuck_abandoned", WorldPosition(bot), dest, zone.c_str());
+            }
+            ai->rpgInfo.abandonMoveFar = true;
+            ai->rpgInfo.abandonStartT  = ai->rpgInfo.startT;
+            return false;
+        }
+
         AreaTableEntry const* areaEntry = GetAreaEntryByAreaID(bot->GetZoneId());
         std::string zoneName = areaEntry ? ai->GetLocalizedAreaName(areaEntry) : "unknown";
 

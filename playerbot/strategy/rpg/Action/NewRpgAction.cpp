@@ -19,6 +19,24 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
 
     NewRpgInfo& info = ai->rpgInfo;
     NewRpgStatus status = info.GetStatus();
+
+    if (info.abandonMoveFar)
+    {
+        info.abandonMoveFar = false;
+        if (info.abandonStartT == info.startT && status != RPG_IDLE)
+        {
+            // A quest whose objective cannot be reached is not picked again this session.
+            if (auto* quest = std::get_if<NewRpgInfo::DoQuest>(&info.data))
+            {
+                ai->lowPriorityQuest.insert(quest->questId);
+                ai->rpgStatistic.questAbandoned++;
+            }
+            NEWRPG_LOG("[New RPG] %s gave up an unreachable move target", bot->GetName());
+            info.ChangeToIdle();
+            return true;
+        }
+    }
+
     switch (status)
     {
         case RPG_IDLE:
