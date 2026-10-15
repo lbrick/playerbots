@@ -29,6 +29,9 @@ protected:
     bool HasQuestToAcceptOrReward(WorldObject* object);
     bool InteractWithNpcOrGoForQuest(ObjectGuid guid);
     bool CanInteractWithQuestGiver(Object* questGiver);
+    bool IsInQuestInteractRange(WorldObject* questGiver);
+    bool IsQuestGoBackedOff(WorldObject* questGiver);
+    void RecordQuestGoFailure(ObjectGuid guid);
     uint32 BestRewardIndex(Quest const* quest);
     bool IsQuestWorthDoing(Quest const* quest);
     bool IsQuestCapableDoing(Quest const* quest);
@@ -53,6 +56,10 @@ protected:
 protected:
     const float  pathFinderDis = 70.0f;
     const uint32 stuckTime     = 90 * 1000;  // ms before teleport stuck-recovery fires
+    // Quest game objects: retry delay doubles from this after each failed approach or
+    // interaction; after questGoMaxFailures the object is skipped for the session.
+    const uint32 questGoBackoffBase  = 30 * 1000;
+    const uint32 questGoMaxFailures  = 4;
 };
 
 } // namespace ai
