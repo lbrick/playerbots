@@ -78,6 +78,20 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         ai->rpgInfo.stuckTs = WorldTimer::getMSTime();
         ai->rpgInfo.stuckAttempts = 0;
 
+        // The bot already stuck-teleported to this position (within 50 yd): teleporting again
+        // repeats the same failure, so give the target up instead.
+        if (IsPosBad(dest))
+        {
+            if (sPlayerbotAIConfig.logRpgTravelEvents)
+            {
+                std::string zone = "zone=" + std::to_string(bot->GetZoneId());
+                LogTravelEvent("stuck_abandoned", WorldPosition(bot), dest, zone.c_str());
+            }
+            ai->rpgInfo.abandonMoveFar = true;
+            ai->rpgInfo.abandonStartT  = ai->rpgInfo.startT;
+            return false;
+        }
+
         AreaTableEntry const* areaEntry = GetAreaEntryByAreaID(bot->GetZoneId());
         std::string zoneName = areaEntry ? ai->GetLocalizedAreaName(areaEntry) : "unknown";
 
@@ -122,7 +136,16 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             }
         }
 
-        return bot->TeleportTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), bot->GetOrientation());
+        WorldPosition from(bot);
+        bool teleported = bot->TeleportTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), bot->GetOrientation());
+        if (sPlayerbotAIConfig.logRpgTravelEvents)
+        {
+            ai->rpgInfo.stuckTeleportFrom = from;
+            ai->rpgInfo.stuckTeleportTo   = dest;
+            ai->rpgInfo.stuckTeleportTs   = WorldTimer::getMSTime();
+            ai->rpgInfo.stuckTeleportOk   = teleported;
+        }
+        return teleported;
     }
 
     // Close enough: use normal MoveTo.
@@ -409,6 +432,28 @@ void NewRpgBaseAction::LogTravelEvent(char const* event, WorldPosition const& fr
     sLog.outString("[New RPG travel] bot=%s event=%s from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f%s%s",
         bot->GetName(), event, from.getMapId(), from.getX(), from.getY(), from.getZ(),
         to.getMapId(), to.getX(), to.getY(), to.getZ(), *detail ? " " : "", detail);
+}
+
+// Logs where a bot is 5 s after a stuck teleport, so a teleport that did not move the bot
+// shows in the travel log (lbrick/cmangos-dev#59).
+void NewRpgBaseAction::CheckStuckTeleport()
+{
+    NewRpgInfo& info = ai->rpgInfo;
+    if (!info.stuckTeleportTs || bot->IsBeingTeleported() || !bot->IsInWorld())
+        return;
+    if (WorldTimer::getMSTimeDiff(info.stuckTeleportTs, WorldTimer::getMSTime()) < 5000)
+        return;
+
+    info.stuckTeleportTs = 0;
+    WorldPosition now(bot);
+    float moved    = now.getMapId() == info.stuckTeleportFrom.getMapId() ? now.distance(info.stuckTeleportFrom) : -1.0f;
+    float toTarget = now.getMapId() == info.stuckTeleportTo.getMapId() ? now.distance(info.stuckTeleportTo) : -1.0f;
+    char detail[256];
+    snprintf(detail, sizeof(detail), "now=%u:%.1f,%.1f,%.1f moved=%.1f to_target=%.1f ok=%u alive=%u charmed=%u combat=%u transport=%u",
+        now.getMapId(), now.getX(), now.getY(), now.getZ(), moved, toTarget,
+        info.stuckTeleportOk ? 1u : 0u, bot->IsAlive() ? 1u : 0u, bot->HasCharmer() ? 1u : 0u,
+        bot->IsInCombat() ? 1u : 0u, bot->GetTransport() ? 1u : 0u);
+    LogTravelEvent("stuck_teleport_check", info.stuckTeleportFrom, info.stuckTeleportTo, detail);
 }
 
 bool NewRpgBaseAction::IsInQuestInteractRange(WorldObject* questGiver)

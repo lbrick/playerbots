@@ -98,6 +98,15 @@ struct NewRpgInfo
     uint32 stuckTs{0};
     uint32 stuckAttempts{0};
     WorldPosition moveFarPos;
+    // Last stuck teleport, checked once a few seconds later (AiPlayerbot.LogRpgTravelEvents)
+    WorldPosition stuckTeleportFrom;
+    WorldPosition stuckTeleportTo;
+    uint32 stuckTeleportTs{0};
+    bool stuckTeleportOk{false};
+    // Set when the bot is stuck again on a position it already stuck-teleported to; the status
+    // update drops the current status if it is still the one that started at abandonStartT.
+    bool abandonMoveFar{false};
+    uint32 abandonStartT{0};
     // END MOVE_FAR
 
     using RpgData = std::variant<

@@ -206,7 +206,8 @@ AiPlayerbot.EnableNewRpgStrategy = 1
 # Off by default: with many bots it adds many lines.
 AiPlayerbot.LogRpgQuestEvents = 0
 
-# Log each new RPG transport leg built or rejected, transport teleport, stuck teleport and
+# Log each new RPG transport leg built or rejected, transport teleport, stuck teleport, the
+# bot's position 5 s after a stuck teleport, a target given up after a second stuck, and
 # zone arrival to the server log. Off by default: with many bots it adds many lines.
 AiPlayerbot.LogRpgTravelEvents = 0
 
