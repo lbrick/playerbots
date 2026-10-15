@@ -442,6 +442,11 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 
         NEWRPG_LOG("[New RPG] %s arrived zone %u, cleared %zu lowPriorityQuest entries",
                       bot->GetName(), newZone, toRemove.size());
+        if (sPlayerbotAIConfig.logRpgTravelEvents)
+        {
+            std::string zone = "zone=" + std::to_string(newZone);
+            LogTravelEvent("zone_arrived", WorldPosition(bot), dest, zone.c_str());
+        }
 
         // Reset per-stay bad count for the new zone (7.1)
         ai->currentStayZoneId = newZone;
@@ -556,6 +561,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                         {
                             NEWRPG_LOG("[New RPG] %s TravelNode transport dest dock invalid Z=%.1f (%.1f %.1f map=%u) — skipping leg",
                                           bot->GetName(), destDock.getZ(), destDock.getX(), destDock.getY(), destDock.getMapId());
+                            LogTravelEvent("leg_rejected", nodePos, destDock, "reason=dest_z");
                             dataPtr->rejectedTransportDocks.push_back(destDock);  // BUG-2: cache rejection
                             ++i;  // consume nextNode
                             continue;
@@ -570,6 +576,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                             NEWRPG_LOG("[New RPG] %s TravelNode transport source dock (%.1f %.1f %.1f map=%u)",
                                           bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
                         dataPtr->waypoints.push_back({destDock, true});
+                        LogTravelEvent("leg_built", nodePos, destDock);
                         if (isElevator)
                             NEWRPG_LOG("[New RPG] %s elevator route: dest platform (%.1f %.1f %.1f map=%u) [teleport]",
                                           bot->GetName(), destDock.getX(), destDock.getY(), destDock.getZ(), destDock.getMapId());
@@ -630,6 +637,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             {
                 NEWRPG_LOG("[New RPG] %s transport teleport dest invalid Z=%.1f (%.1f %.1f map=%u) — resetting",
                               bot->GetName(), wp.getZ(), wp.getX(), wp.getY(), wp.getMapId());
+                LogTravelEvent("teleport_rejected", WorldPosition(bot), wp, "reason=dest_z");
                 dataPtr->waypoints.erase(dataPtr->waypoints.begin());
                 ai->rpgInfo.Reset();
                 return false;
@@ -642,6 +650,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             else
                 NEWRPG_LOG("[New RPG] %s transport teleport to (%.1f %.1f %.1f map=%u)",
                               bot->GetName(), wp.getX(), wp.getY(), wp.getZ(), wp.getMapId());
+            LogTravelEvent("teleported", WorldPosition(bot), wp);
             dataPtr->waypoints.erase(dataPtr->waypoints.begin());
             ai->rpgInfo.SetMoveFarTo(WorldPosition());
             return bot->TeleportTo(wp.getMapId(), wp.getX(), wp.getY(), wp.getZ(), bot->GetOrientation());

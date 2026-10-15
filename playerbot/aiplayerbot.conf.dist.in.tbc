@@ -203,6 +203,10 @@ AiPlayerbot.EnableNewRpgStrategy = 1
 # Off by default: with many bots it adds many lines.
 AiPlayerbot.LogRpgQuestEvents = 0
 
+# Log each new RPG transport leg built or rejected, transport teleport and zone arrival to
+# the server log. Off by default: with many bots it adds many lines.
+AiPlayerbot.LogRpgTravelEvents = 0
+
 # Show helmet and cloak on randombots (reset required)
 AiPlayerbot.RandomBotShowHelmet = 1
 AiPlayerbot.RandomBotShowCloak = 1

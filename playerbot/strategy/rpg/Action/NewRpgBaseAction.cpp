@@ -393,6 +393,18 @@ void NewRpgBaseAction::LogQuestEvent(char const* event, uint32 questId, ObjectGu
         guid.GetCounter(), inRange, questGiver ? bot->GetDistance(questGiver) : -1.0f);
 }
 
+// One server log line per transport leg built or rejected, transport teleport and zone
+// arrival, when AiPlayerbot.LogRpgTravelEvents is on.
+void NewRpgBaseAction::LogTravelEvent(char const* event, WorldPosition const& from, WorldPosition const& to, char const* detail)
+{
+    if (!sPlayerbotAIConfig.logRpgTravelEvents)
+        return;
+
+    sLog.outString("[New RPG travel] bot=%s event=%s from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f%s%s",
+        bot->GetName(), event, from.getMapId(), from.getX(), from.getY(), from.getZ(),
+        to.getMapId(), to.getX(), to.getY(), to.getZ(), *detail ? " " : "", detail);
+}
+
 bool NewRpgBaseAction::IsInQuestInteractRange(WorldObject* questGiver)
 {
     // Mirror the core checks: Player::GetGameObjectIfCanInteractWith and
