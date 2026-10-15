@@ -1169,6 +1169,16 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
         if (acc >= roll) { chosen = status; break; }
     }
 
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+    {
+        static char const* const names[] = { "idle", "go_grind", "go_camp", "wander_random",
+            "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "none" };
+        sLog.outString("[New RPG status] bot=%s status=%s zone=%u area=%u resting=%u capital=%u grind_target=%u",
+            bot->GetName(), names[chosen <= RPG_STATUS_END ? chosen : RPG_STATUS_END],
+            bot->GetZoneId(), bot->GetAreaId(), (uint32)bot->GetRestType(),
+            IsInCapitalCity(bot) ? 1u : 0u, ai->GetUnit(AI_VALUE(ObjectGuid, "grind target")) ? 1u : 0u);
+    }
+
     switch (chosen)
     {
         case RPG_WANDER_RANDOM:
