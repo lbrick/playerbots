@@ -87,6 +87,12 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             dest.getX(), dest.getY(), dest.getZ(), dest.getMapId(),
             zoneName.c_str(), bot->GetZoneId());
 
+        if (sPlayerbotAIConfig.logRpgTravelEvents)
+        {
+            std::string zone = "zone=" + std::to_string(bot->GetZoneId());
+            LogTravelEvent("stuck_teleport", WorldPosition(bot), dest, zone.c_str());
+        }
+
         PushBadPosition(dest);
         uint32 botZone = bot->GetZoneId();
         if (ai->currentStayZoneId == 0)
