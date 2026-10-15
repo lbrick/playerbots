@@ -81,6 +81,7 @@ struct NewRpgInfo
         {
             WorldPosition pos;
             bool teleport{false};  // true = TeleportTo (transport dock-to-dock), false = MoveFarTo
+            WorldPosition from{};  // teleport only: the source dock the bot must reach first
         };
         std::vector<Waypoint> waypoints{};   // TravelNode multi-hop path; empty = direct
         bool waypointsBuilt{false};          // true after first TravelNode build — no rebuild

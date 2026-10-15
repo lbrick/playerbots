@@ -33,6 +33,7 @@ protected:
     bool IsQuestGiverBackedOff(WorldObject* questGiver);
     void RecordQuestGiverFailure(ObjectGuid guid);
     void LogQuestEvent(char const* event, uint32 questId, ObjectGuid guid, WorldObject* questGiver);
+    void LogTravelEvent(char const* event, WorldPosition const& from, WorldPosition const& to, char const* detail = "");
     uint32 BestRewardIndex(Quest const* quest);
     bool IsQuestWorthDoing(Quest const* quest);
     bool IsQuestCapableDoing(Quest const* quest);

@@ -230,6 +230,7 @@ public:
     bool enableGreet;
     bool enableNewRpgStrategy;
     bool logRpgQuestEvents;
+    bool logRpgTravelEvents;
     std::unordered_map<ai::NewRpgStatus, uint32> RpgStatusProbWeight;
     bool randomBotShowHelmet;
     bool randomBotShowCloak;
