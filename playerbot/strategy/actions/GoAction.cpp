@@ -601,6 +601,7 @@ bool GoAction::TellHowToGo(TravelDestination* dest, Player* requester) const
     bot->HandleEmoteCommand(EMOTE_ONESHOT_POINT);
     ai->Poi(poi.getX(), poi.getY());
 
+    route.cleanTempNodes();
     return true;
 }
 
