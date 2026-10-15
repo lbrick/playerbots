@@ -1792,6 +1792,7 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
                     {
                         endPath.clear();
                         badEndNodes.push_back(endNode);
+                        route.cleanTempNodes(); // the route is dropped; free its portal nodes
                         break;
                     }
                 }
@@ -1841,6 +1842,7 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
             }           
 
             badStartNodes.push_back(startNode);
+            route.cleanTempNodes(); // the route is dropped; free its portal nodes
         }
     }
 
@@ -1882,6 +1884,9 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
                     return route;
                 }
             }
+
+            // No route: botNode was never handed to a returned route.
+            delete botNode;
         }
     }
 
@@ -1910,6 +1915,7 @@ TravelPath TravelNodeMap::getFullPath(WorldPosition startPos, WorldPosition endP
     if (route.isEmpty())
     {
         route.cleanTempNodes();
+        sTravelNodeMap.m_nMapMtx.unlock_shared();
         return movePath;
     }
 

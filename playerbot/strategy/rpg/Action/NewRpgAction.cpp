@@ -613,6 +613,8 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             NEWRPG_LOG("[New RPG] %s CHANGE_ZONE built %zu waypoints via TravelNode",
                           bot->GetName(), dataPtr->waypoints.size());
         }
+        // The waypoints hold copies of the node positions; free the route's portal nodes.
+        route.cleanTempNodes();
     }
 
     // Prune waypoints that became bad since list was built.
