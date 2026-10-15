@@ -524,11 +524,14 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 
                 if (!isTransportLeg)
                 {
-                    // Normal node: normalize mapId, apply Z guard + IsPosBad + isMmapLoaded
+                    // Normal node: normalize mapId, then coordinate sanity + IsPosBad + isMmapLoaded.
+                    // No absolute height bound: real terrain runs from below Z 0 (Thousand Needles,
+                    // Undercity) to above Z 1,300 (Teldrassil). Unreachable nodes are caught by
+                    // isMmapLoaded and by stuck recovery, which marks the target bad.
                     nodePos.setMapId(bot->GetMapId());
-                    if (nodePos.getZ() < 0.0f || nodePos.getZ() > 450.0f)
+                    if (!nodePos.isValid())
                     {
-                        NEWRPG_LOG("[New RPG] %s TravelNode candidate filtered (invalid Z %.1f)",
+                        NEWRPG_LOG("[New RPG] %s TravelNode candidate filtered (invalid coordinates Z %.1f)",
                                       bot->GetName(), nodePos.getZ());
                         continue;
                     }
@@ -548,7 +551,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     if (IsPosBad(nodePos)) continue;
 
                     // TRANSPORT-1/2: validate dest dock before committing — reject bad DB nodes
-                    // Only sea-level (Z~0 on main world) and above-world (Z>450) are bad.
+                    // Only a sea-level end on the main world (Z~0, a boat stop) is bad.
                     // Underground elevator docks (Z~-40) are legitimate and must pass through.
                     if (nextNode)
                     {
@@ -572,7 +575,9 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                         }
 
                         bool onMainWorld = (destDock.getMapId() == 0 || destDock.getMapId() == 1);
-                        bool badDest = destDock.getZ() > 450.0f ||
+                        // Only a sea-level end on the main world is bad (a boat stop, #35); high
+                        // ends such as the Darnassus portal exit (Z 1,316) are real.
+                        bool badDest = !destDock.isValid() ||
                                        (onMainWorld && destDock.getZ() > -5.0f && destDock.getZ() < 2.0f);
                         if (badDest)
                         {
@@ -653,7 +658,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             // TRANSPORT-1/2: second-layer guard — reject bad sea-level docks (Z~0 on main world)
             // Elevator docks (Z~-40) are legitimate and must pass through
             bool onMainWorld = (wp.getMapId() == 0 || wp.getMapId() == 1);
-            if (wp.getZ() > 450.0f || (onMainWorld && wp.getZ() > -5.0f && wp.getZ() < 2.0f))
+            if (!wp.isValid() || (onMainWorld && wp.getZ() > -5.0f && wp.getZ() < 2.0f))
             {
                 NEWRPG_LOG("[New RPG] %s transport teleport dest invalid Z=%.1f (%.1f %.1f map=%u) — resetting",
                               bot->GetName(), wp.getZ(), wp.getX(), wp.getY(), wp.getMapId());

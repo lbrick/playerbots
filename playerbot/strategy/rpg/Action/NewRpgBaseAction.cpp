@@ -980,7 +980,7 @@ WorldPosition NewRpgBaseAction::SelectRandomGrindPos(Player* bot)
         {
             if (!wp || wp->getMapId() != botPos.getMapId())
                 continue;
-            if (wp->getZ() < 0.0f || wp->getZ() > 450.0f)
+            if (!wp->isValid())
                 continue;
             if (!inCity &&
                 sTerrainMgr.GetZoneId(botPos.getMapId(), wp->getX(), wp->getY(), wp->getZ()) != bot->GetZoneId())
@@ -1040,7 +1040,7 @@ WorldPosition NewRpgBaseAction::SelectRandomCampPos(Player* bot)
         {
             if (!wp || wp->getMapId() != botPos.getMapId())
                 continue;
-            if (wp->getZ() < 0.0f || wp->getZ() > 450.0f)
+            if (!wp->isValid())
                 continue;
             if (dist < 50.f)
                 continue;
@@ -1410,7 +1410,7 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
         for (auto& [dest, wp, dist] : pointList)
         {
             if (!wp || wp->getMapId() != mapId) continue;
-            if (wp->getZ() < 0.0f) continue;
+            if (!wp->isValid()) continue;
             uint32 zone = sTerrainMgr.GetZoneId(mapId, wp->getX(), wp->getY(), wp->getZ());
             if (!zone) continue;
             zoneScores[zone] += 3.0f - (dist / 10000.0f);
@@ -1428,7 +1428,7 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
         for (auto& [dest, wp, dist] : pointList)
         {
             if (!wp || wp->getMapId() != mapId) continue;
-            if (wp->getZ() < 0.0f) continue;
+            if (!wp->isValid()) continue;
             auto* qDest = dynamic_cast<QuestRelationTravelDestination*>(dest);
             if (!qDest) continue;
             Quest const* quest = sObjectMgr.GetQuestTemplate(qDest->GetQuestId());
@@ -1454,7 +1454,7 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
         for (auto& [dest, wp, dist] : pointList)
         {
             if (!wp || wp->getMapId() != mapId) continue;
-            if (wp->getZ() < 0.0f) continue;
+            if (!wp->isValid()) continue;
             auto* qDest = dynamic_cast<QuestObjectiveTravelDestination*>(dest);
             if (!qDest) continue;
             uint32 qId = qDest->GetQuestId();
@@ -1558,7 +1558,7 @@ WorldPosition NewRpgBaseAction::SelectBestZoneForBot(Player* bot)
         for (auto& [dest, wp, dist] : pointList)
         {
             if (!wp || wp->getMapId() != botPos.getMapId()) continue;
-            if (wp->getZ() < 0.0f) continue;
+            if (!wp->isValid()) continue;
             if (IsPosBad(*wp)) continue;
             uint32 zone = sTerrainMgr.GetZoneId(wp->getMapId(), wp->getX(), wp->getY(), wp->getZ());
             if (zone == bestZone)
