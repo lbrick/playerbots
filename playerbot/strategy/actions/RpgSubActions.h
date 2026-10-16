@@ -200,6 +200,9 @@ namespace ai
         RpgGetMailAction(PlayerbotAI* ai, std::string name = "rpg get mail") : RpgSubAction(ai, name) {}
 
         virtual std::string GetRpgActionName() const override { return "getting mail from"; };
+        // RpgHelper::InRange allows 7.5 yd, past the core's mailbox range: wait until the bot is
+        // close enough for the mail packets to be accepted (lbrick/cmangos-dev#60).
+        virtual bool isUseful() override;
     private:
         virtual std::string ActionName() override { return "mail"; }
         virtual Event ActionEvent(Event event) override { return Event("rpg action", "take"); }
