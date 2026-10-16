@@ -49,6 +49,8 @@ protected:
     WorldPosition SelectRandomCampPos(Player* bot);
     bool SelectRandomFlightTaxiNode(ObjectGuid& flightMaster, std::vector<uint32>& path);
     bool IsPosBad(const WorldPosition& pos) const;
+    Player* GetRealPlayerInRange(float range) const;
+    bool StuckTeleport(WorldPosition const& dest);
     void PushBadPosition(const WorldPosition& pos);
     bool RandomChangeStatus(std::vector<NewRpgStatus> candidateStatus);
     bool CheckRpgStatusAvailable(NewRpgStatus status);
@@ -59,6 +61,7 @@ protected:
 protected:
     const float  pathFinderDis = 70.0f;
     const uint32 stuckTime     = 90 * 1000;  // ms before teleport stuck-recovery fires
+    const float stuckObserverRange = 60.0f;  // no stuck teleport with a real player this close
     // Quest givers: retry delay doubles from this after each failed approach or game object
     // interaction; after questGiverMaxFailures the giver is skipped for the session.
     const uint32 questGiverBackoffBase  = 30 * 1000;
