@@ -50,6 +50,7 @@ protected:
     bool SelectRandomFlightTaxiNode(ObjectGuid& flightMaster, std::vector<uint32>& path);
     bool IsPosBad(const WorldPosition& pos) const;
     Player* GetRealPlayerInRange(float range) const;
+    bool StuckTeleport(WorldPosition const& dest);
     void PushBadPosition(const WorldPosition& pos);
     bool RandomChangeStatus(std::vector<NewRpgStatus> candidateStatus);
     bool CheckRpgStatusAvailable(NewRpgStatus status);

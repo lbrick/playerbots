@@ -92,9 +92,9 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             return false;
         }
 
-        // A real player within sight would watch the bot vanish: defer the teleport by one stuck
-        // interval and keep walking; it fires once no real player is in range
-        // (lbrick/cmangos-dev#41).
+        // A real player within sight would watch the bot vanish: skip the teleport this interval
+        // and keep walking with the normal path below; it fires on a later check once no real
+        // player is in range (lbrick/cmangos-dev#41).
         if (Player* observer = GetRealPlayerInRange(stuckObserverRange))
         {
             if (sPlayerbotAIConfig.logRpgTravelEvents)
@@ -104,63 +104,9 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
                     bot->GetZoneId(), observer->GetName(), bot->GetDistance(observer));
                 LogTravelEvent("stuck_deferred", WorldPosition(bot), dest, detail);
             }
-            return false;
         }
-
-        AreaTableEntry const* areaEntry = GetAreaEntryByAreaID(bot->GetZoneId());
-        std::string zoneName = areaEntry ? ai->GetLocalizedAreaName(areaEntry) : "unknown";
-
-        NEWRPG_LOG("[New RPG] Teleport %s from (%.1f,%.1f,%.1f,%u) to (%.1f,%.1f,%.1f,%u) stuck moving far - Zone: %s (%u)",
-            bot->GetName(),
-            bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot->GetMapId(),
-            dest.getX(), dest.getY(), dest.getZ(), dest.getMapId(),
-            zoneName.c_str(), bot->GetZoneId());
-
-        if (sPlayerbotAIConfig.logRpgTravelEvents)
-        {
-            std::string zone = "zone=" + std::to_string(bot->GetZoneId());
-            LogTravelEvent("stuck_teleport", WorldPosition(bot), dest, zone.c_str());
-        }
-
-        PushBadPosition(dest);
-        uint32 botZone = bot->GetZoneId();
-        if (ai->currentStayZoneId == 0)
-            ai->currentStayZoneId = botZone;
-        if (botZone == ai->currentStayZoneId)
-            ai->currentStayBadCount++;
-
-        // 8.1: evict the failed dest from CHANGE_ZONE waypoints — prevents stuck attractor loop
-        // BOAT-5: use .pos from Waypoint struct
-        if (auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&ai->rpgInfo.data))
-        {
-            if (!cz->waypoints.empty())
-            {
-                WorldPosition check = cz->waypoints.front().pos;
-                check.setMapId(bot->GetMapId());
-                if (check.distance(dest) < 5.0f)
-                {
-                    cz->waypoints.erase(cz->waypoints.begin());
-                    if (cz->waypoints.empty())
-                        cz->waypointsBuilt = false;
-                }
-            }
-            else if (cz->waypointsBuilt)
-            {
-                // No waypoints left but stuck on direct dest — force fresh route build
-                cz->waypointsBuilt = false;
-            }
-        }
-
-        WorldPosition from(bot);
-        bool teleported = bot->TeleportTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), bot->GetOrientation());
-        if (sPlayerbotAIConfig.logRpgTravelEvents)
-        {
-            ai->rpgInfo.stuckTeleportFrom = from;
-            ai->rpgInfo.stuckTeleportTo   = dest;
-            ai->rpgInfo.stuckTeleportTs   = WorldTimer::getMSTime();
-            ai->rpgInfo.stuckTeleportOk   = teleported;
-        }
-        return teleported;
+        else
+            return StuckTeleport(dest);
     }
 
     // Close enough: use normal MoveTo.
@@ -224,6 +170,65 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         return MoveTo(bot->GetMapId(), rx, ry, rz, false, false, false, true);
 
     return false;
+}
+
+// Stuck recovery: marks dest bad, drops it from CHANGE_ZONE waypoints and teleports the bot to it.
+bool NewRpgBaseAction::StuckTeleport(WorldPosition const& dest)
+{
+    AreaTableEntry const* areaEntry = GetAreaEntryByAreaID(bot->GetZoneId());
+    std::string zoneName = areaEntry ? ai->GetLocalizedAreaName(areaEntry) : "unknown";
+
+    NEWRPG_LOG("[New RPG] Teleport %s from (%.1f,%.1f,%.1f,%u) to (%.1f,%.1f,%.1f,%u) stuck moving far - Zone: %s (%u)",
+        bot->GetName(),
+        bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot->GetMapId(),
+        dest.getX(), dest.getY(), dest.getZ(), dest.getMapId(),
+        zoneName.c_str(), bot->GetZoneId());
+
+    if (sPlayerbotAIConfig.logRpgTravelEvents)
+    {
+        std::string zone = "zone=" + std::to_string(bot->GetZoneId());
+        LogTravelEvent("stuck_teleport", WorldPosition(bot), dest, zone.c_str());
+    }
+
+    PushBadPosition(dest);
+    uint32 botZone = bot->GetZoneId();
+    if (ai->currentStayZoneId == 0)
+        ai->currentStayZoneId = botZone;
+    if (botZone == ai->currentStayZoneId)
+        ai->currentStayBadCount++;
+
+    // 8.1: evict the failed dest from CHANGE_ZONE waypoints — prevents stuck attractor loop
+    // BOAT-5: use .pos from Waypoint struct
+    if (auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&ai->rpgInfo.data))
+    {
+        if (!cz->waypoints.empty())
+        {
+            WorldPosition check = cz->waypoints.front().pos;
+            check.setMapId(bot->GetMapId());
+            if (check.distance(dest) < 5.0f)
+            {
+                cz->waypoints.erase(cz->waypoints.begin());
+                if (cz->waypoints.empty())
+                    cz->waypointsBuilt = false;
+            }
+        }
+        else if (cz->waypointsBuilt)
+        {
+            // No waypoints left but stuck on direct dest — force fresh route build
+            cz->waypointsBuilt = false;
+        }
+    }
+
+    WorldPosition from(bot);
+    bool teleported = bot->TeleportTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), bot->GetOrientation());
+    if (sPlayerbotAIConfig.logRpgTravelEvents)
+    {
+        ai->rpgInfo.stuckTeleportFrom = from;
+        ai->rpgInfo.stuckTeleportTo   = dest;
+        ai->rpgInfo.stuckTeleportTs   = WorldTimer::getMSTime();
+        ai->rpgInfo.stuckTeleportOk   = teleported;
+    }
+    return teleported;
 }
 
 // A player in range on a real client session, with or without playerbot AI attached
