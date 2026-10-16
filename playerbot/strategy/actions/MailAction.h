@@ -12,6 +12,7 @@ namespace ai
 
     public:
         static ObjectGuid FindMailbox(PlayerbotAI* ai);
+        static bool IsMailboxInRange(Player* bot, GameObject* mailbox);
 
     protected:
         void RemoveMail(Player* bot, uint32 id, ObjectGuid mailbox);

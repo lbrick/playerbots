@@ -1,6 +1,7 @@
 
 #include "playerbot/playerbot.h"
 #include "RpgSubActions.h"
+#include "MailAction.h"
 #include "ChooseRpgTargetAction.h"
 #include "playerbot/PlayerbotAIConfig.h"
 #include "playerbot/strategy/values/PossibleRpgTargetsValue.h"
@@ -1008,3 +1009,12 @@ bool RpgGuildBankWithdrawAction::Execute(Event& event)
     return result;
 }
 #endif
+
+bool RpgGetMailAction::isUseful()
+{
+    if (!rpg->InRange())
+        return false;
+
+    GameObject* mailbox = ai->GetGameObject(rpg->guid());
+    return mailbox && MailProcessor::IsMailboxInRange(bot, mailbox);
+}

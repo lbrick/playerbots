@@ -338,6 +338,17 @@ void MailProcessor::RemoveMail(Player* bot, uint32 id, ObjectGuid mailbox)
     bot->GetSession()->HandleMailDelete(packet);
 }
 
+// Mirrors the range test of Player::GetGameObjectIfCanInteractWith, which every mail packet
+// handler runs: a mailbox outside it refuses each packet (lbrick/cmangos-dev#60).
+bool MailProcessor::IsMailboxInRange(Player* bot, GameObject* mailbox)
+{
+#ifdef MANGOSBOT_ZERO
+    return mailbox->IsWithinDistInMap(bot, mailbox->GetInteractionDistance()) && mailbox->IsSpawned();
+#else
+    return mailbox->IsAtInteractDistance(bot) && mailbox->IsSpawned();
+#endif
+}
+
 ObjectGuid MailProcessor::FindMailbox(PlayerbotAI* ai)
 {
     std::list<ObjectGuid> gos = *ai->GetAiObjectContext()->GetValue<std::list<ObjectGuid> >("nearest game objects no los");
@@ -345,7 +356,7 @@ ObjectGuid MailProcessor::FindMailbox(PlayerbotAI* ai)
     for (std::list<ObjectGuid>::iterator i = gos.begin(); i != gos.end(); ++i)
     {
         GameObject* go = ai->GetGameObject(*i);
-        if (go && go->GetGoType() == GAMEOBJECT_TYPE_MAILBOX)
+        if (go && go->GetGoType() == GAMEOBJECT_TYPE_MAILBOX && IsMailboxInRange(ai->GetBot(), go))
         {
             mailbox = go->GetObjectGuid();
             break;
