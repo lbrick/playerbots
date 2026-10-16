@@ -444,6 +444,9 @@ public:
     void HandleMasterIncomingPacket(const WorldPacket& packet);
     void HandleMasterOutgoingPacket(const WorldPacket& packet);
 	void HandleTeleportAck();
+    // Item cooldown of a cheat cast-time item spell, applied once the cast ends (lbrick/cmangos-dev#50)
+    void AddPendingItemCooldown(uint32 spellId, uint32 itemId) { pendingItemCooldowns.emplace_back(spellId, itemId); }
+    void ApplyPendingItemCooldowns();
     void ChangeEngine(BotState type);
     void DoNextAction(bool minimal = false);
     bool CanDoSpecificAction(const std::string& name, bool isUseful = true, bool isPossible = true);
@@ -758,6 +761,7 @@ public:
     NewRpgInfo     rpgInfo;
     NewRpgStatistic rpgStatistic;
     std::set<uint32> lowPriorityQuest;  // quests that have been abandoned; avoid retrying
+    std::vector<std::pair<uint32, uint32>> pendingItemCooldowns;  // spell id, item id
     struct QuestGiverBackoff { uint32 failures{0}; uint32 lastFailure{0}; uint32 delay{0}; };
     std::unordered_map<uint64, QuestGiverBackoff> questGiverBackoff;  // failed quest approaches and interactions per quest giver (raw guid)
     std::vector<WorldPosition> badPositions;  // positions that triggered stuck-teleport; filtered from selection

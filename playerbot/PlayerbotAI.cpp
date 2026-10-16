@@ -279,6 +279,9 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     if (!bot->IsInWorld() || bot->IsBeingTeleported())
         return;
 
+    if (!pendingItemCooldowns.empty())
+        ApplyPendingItemCooldowns();
+
     AiObjectContext* context = aiObjectContext;
     std::string mapString = WorldPosition(bot).isInstance() ? "I" : std::to_string(bot->GetMapId());
     auto pmo = sPerformanceMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAI " + mapString, nullptr, bot->GetMapId(), bot->GetInstanceId());
@@ -1462,6 +1465,39 @@ void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
 
 	DoNextAction(minimal);
     LogKillEvents();
+}
+
+// Applies the item cooldowns of cheat item casts (no item spent) whose cast has ended, so they
+// land after the core's own end-of-cast cooldown instead of colliding with it
+// (lbrick/cmangos-dev#50).
+void PlayerbotAI::ApplyPendingItemCooldowns()
+{
+    for (auto it = pendingItemCooldowns.begin(); it != pendingItemCooldowns.end();)
+    {
+        uint32 spellId = it->first;
+        bool casting = false;
+        for (CurrentSpellTypes type : { CURRENT_GENERIC_SPELL, CURRENT_CHANNELED_SPELL })
+        {
+            Spell* spell = bot->GetCurrentSpell(type);
+            if (spell && spell->m_spellInfo->Id == spellId && spell->getState() != SPELL_STATE_FINISHED)
+                casting = true;
+        }
+
+        if (casting)
+        {
+            ++it;
+            continue;
+        }
+
+        SpellEntry const* spellInfo = sSpellTemplate.LookupEntry<SpellEntry>(spellId);
+        ItemPrototype const* proto = sObjectMgr.GetItemPrototype(it->second);
+        if (spellInfo && proto)
+        {
+            bot->RemoveSpellCooldown(*spellInfo, false);
+            bot->AddCooldown(*spellInfo, proto, false);
+        }
+        it = pendingItemCooldowns.erase(it);
+    }
 }
 
 void PlayerbotAI::HandleTeleportAck()
