@@ -11,6 +11,7 @@
 #include "playerbot/strategy/values/ItemUsageValue.h"
 #include "playerbot/BroadcastHelper.h"
 #include "playerbot/ServerFacade.h"
+#include "Tools/Formulas.h"
 #include "playerbot/ChatHelper.h"
 #include "playerbot/strategy/values/TravelValues.h"
 #include "playerbot/TravelMgr.h"
@@ -1402,14 +1403,24 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
 
         case RPG_CHANGE_ZONE:
         {
+            // A quest at most 3 levels above the bot holds it in its zone only if do_quest could
+            // work on it here: an objective or turn-in within reach on this map, and not grey.
+            // Quests for another zone or continent no longer block the zone change
+            // (lbrick/cmangos-dev#62).
             bool hasDoable = false;
-            uint8 bLevel = bot->GetLevel();
+            int32 bLevel = (int32)bot->GetLevel();
+            int32 grayLevel = (int32)MaNGOS::XP::GetGrayLevel(bot->GetLevel());
             for (uint8 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
             {
                 uint32 qId = bot->GetQuestSlotQuestId(slot);
                 if (!qId || ai->lowPriorityQuest.count(qId)) continue;
                 Quest const* q = sObjectMgr.GetQuestTemplate(qId);
-                if (q && (int32)q->GetQuestLevel() <= (int32)bLevel + 3) { hasDoable = true; break; }
+                if (!q) continue;
+                int32 qLevel = q->GetQuestLevel();   // -1: scales with the player, never grey
+                if (qLevel > bLevel + 3 || (qLevel > 0 && qLevel <= grayLevel)) continue;
+                WorldPosition pos;
+                int32 objIdx;
+                if (GetQuestPOIPosAndObjectiveIdx(qId, pos, objIdx)) { hasDoable = true; break; }
             }
             if (hasDoable) return false;
             WorldPosition dest = SelectBestZoneForBot(bot);
