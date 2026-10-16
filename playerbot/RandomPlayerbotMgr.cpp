@@ -660,6 +660,9 @@ void RandomPlayerbotMgr::LogPlayerLocation()
 
 void RandomPlayerbotMgr::UpdateAIInternal(uint32 elapsed, bool minimal)
 {
+    // World thread, outside the map update: safe to read the performance data (lbrick/cmangos-dev#56)
+    sPerformanceMonitor.ExportMetrics();
+
 #ifdef MEMORY_MONITOR
     sMemoryMonitor.Print();
     sMemoryMonitor.LogCount(sConfig.GetStringDefault("LogsDir") + "/" + "memory.csv");

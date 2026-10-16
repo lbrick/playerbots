@@ -5,6 +5,10 @@
 #include "Database/DatabaseEnv.h"
 #include "playerbot/PlayerbotAI.h"
 
+#ifdef BUILD_METRICS
+#include "Metric/Metric.h"
+#endif
+
 PerformanceMonitor::PerformanceMonitor() 
 {
 
@@ -290,6 +294,104 @@ void PerformanceMonitor::Reset()
             }
         }
     }
+}
+
+#ifdef BUILD_METRICS
+static char const* PerfMetricTag(PerformanceMetric metric)
+{
+    switch (metric)
+    {
+        case PERF_MON_VALUE: return "value";
+        case PERF_MON_TRIGGER: return "trigger";
+        case PERF_MON_ACTION: return "action";
+        case PERF_MON_RNDBOT: return "rndbot";
+        case PERF_MON_TOTAL: return "total";
+        default: return "unknown";
+    }
+}
+
+// Line protocol writes tag values raw and the exporter rejects a whole batch over one bad line,
+// so names keep only [A-Za-z0-9_.] and are never empty.
+static std::string PerfMetricName(std::string const& name)
+{
+    std::string out;
+    out.reserve(name.size());
+    for (char c : name)
+        out += (isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '.') ? c : '_';
+    return out.empty() ? "_" : out;
+}
+#endif
+
+// Every 60 s sends the bot AI time spent in that minute to the core metrics (lbrick/cmangos-dev#56):
+// one series per type (value, trigger, action, rndbot, and total = PlayerbotAI::UpdateAI) and the 49
+// names with the most time. The values are deltas of the running totals, so .pmon keeps its output.
+// Call it only from the world thread outside the map update: map threads write this data without
+// a lock, and new names add entries to the maps read here.
+void PerformanceMonitor::ExportMetrics()
+{
+#ifdef BUILD_METRICS
+    if (!sPlayerbotAIConfig.perfMonEnabled)
+        return;
+
+    uint32 now = WorldTimer::getMSTime();
+    if (lastExport && WorldTimer::getMSTimeDiff(lastExport, now) < 60 * IN_MILLISECONDS)
+        return;
+    bool first = !lastExport;
+    lastExport = now;
+
+    std::map<PerformanceMetric, uint64> typeTotals;
+    std::map<std::pair<PerformanceMetric, std::string>, uint64> nameTotals;
+    for (auto& [mapId, mapData] : mapsData)
+        for (auto& [instanceId, instanceData] : mapData)
+            for (auto& [metric, namedData] : instanceData)
+                for (auto& [stack, performanceData] : namedData)
+                {
+                    if (stack.empty())
+                        continue;
+                    if (metric == PERF_MON_TOTAL)
+                    {
+                        // Same filter as the .pmon total: the per-map PlayerbotAI::UpdateAI entries
+                        if (stack[0].find("PlayerbotAI::UpdateAI ") == 0)
+                            typeTotals[metric] += performanceData.totalTime;
+                        continue;
+                    }
+                    typeTotals[metric] += performanceData.totalTime;
+                    nameTotals[{metric, stack.back()}] += performanceData.totalTime;
+                }
+
+    // A .pmon reset lowers the running totals; count from zero then
+    auto delta = [](uint64 cur, uint64 last) { return cur >= last ? cur - last : cur; };
+
+    if (!first)
+    {
+        for (PerformanceMetric metric : { PERF_MON_VALUE, PERF_MON_TRIGGER, PERF_MON_ACTION, PERF_MON_RNDBOT, PERF_MON_TOTAL })
+        {
+            metric::measurement meas("playerbots.perfmon", { { "type", PerfMetricTag(metric) } });
+            meas.add_field("ms", std::to_string(delta(typeTotals[metric], lastTypeTotals[metric])));
+        }
+
+        std::vector<std::pair<uint64, std::pair<PerformanceMetric, std::string>>> top;
+        for (auto& [key, total] : nameTotals)
+        {
+            auto last = lastNameTotals.find(key);
+            uint64 d = delta(total, last == lastNameTotals.end() ? 0 : last->second);
+            if (d)
+                top.push_back({ d, key });
+        }
+        size_t topCount = std::min<size_t>(top.size(), 49);
+        std::partial_sort(top.begin(), top.begin() + topCount, top.end(),
+            [](auto const& a, auto const& b) { return a.first > b.first; });
+        for (size_t i = 0; i < topCount; ++i)
+        {
+            metric::measurement meas("playerbots.perfmon.top",
+                { { "type", PerfMetricTag(top[i].second.first) }, { "name", PerfMetricName(top[i].second.second) } });
+            meas.add_field("ms", std::to_string(top[i].first));
+        }
+    }
+
+    lastTypeTotals = std::move(typeTotals);
+    lastNameTotals = std::move(nameTotals);
+#endif
 }
 
 void PerformanceMonitor::Init(uint32 mapId, uint32 instanceId)

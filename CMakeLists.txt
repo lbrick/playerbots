@@ -165,6 +165,11 @@ if (BUILD_AHBOT)
   add_definitions(-DBUILD_AHBOT)
 endif()
 
+# Define BUILD_METRICS if need: the PerformanceMonitor exports through the core metrics
+if (BUILD_METRICS)
+  add_definitions(-DBUILD_METRICS)
+endif()
+
 if(PCH)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endif()
