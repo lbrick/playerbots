@@ -1015,7 +1015,9 @@ AiPlayerbot.RandomBotTeleportDistance = 100
 # Command server port, 0 - disabled
 #AiPlayerbot.CommandServerPort = 8888
 
-#Enables performance monitor
+#Enables performance monitor (.pmon). In a core built with BUILD_METRICS and Metric.Enable = 1, it
+# also sends the bot AI time per minute as playerbots.perfmon (per type) and
+# playerbots.perfmon.top (49 costliest names) to the core metrics.
 #AiPlayerbot.PerfMonEnabled = 0
 
 # Default action logging history for cdebug history.

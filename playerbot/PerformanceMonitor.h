@@ -79,9 +79,16 @@ class PerformanceMonitor
         void PrintStats(bool perTick = false,  bool fullStack = false, bool showMap = false);
         void Reset();
         void Init(uint32 mapId, uint32 instanceId);
+        void ExportMetrics();
     private:
         performanceMetricMap data;
         performanceMapMap mapsData;
+#ifdef BUILD_METRICS
+        // ExportMetrics state: time of the last export and the running totals it last sent
+        uint32 lastExport = 0;
+        std::map<PerformanceMetric, uint64> lastTypeTotals;
+        std::map<std::pair<PerformanceMetric, std::string>, uint64> lastNameTotals;
+#endif
         //std::mutex lock;
 };
 
