@@ -674,6 +674,10 @@ bool UseAction::UseItemInternal(Player* requester, uint32 itemId, Unit* unit, Ga
                 ai->StopMoving();
             }
 
+            // GetCastedTime() is the spell timer, still 0 before the start; read the cast time from
+            // the spell data instead.
+            const bool hasCastTime = GetSpellCastTime(spellInfo, bot) > 0 || IsChanneledSpell(spellInfo);
+
             const SpellCastResult result = spell->ForceSpellStart(&targets);
 
             // Check for using item on trade item
@@ -692,7 +696,7 @@ bool UseAction::UseItemInternal(Player* requester, uint32 itemId, Unit* unit, Ga
                         // The core adds the spell's cooldown when a cast-time spell finishes; adding
                         // the item cooldown now collides with it ("already existing cooldown"), so
                         // it waits until the cast has ended (lbrick/cmangos-dev#50).
-                        if (isCastedSpell)
+                        if (hasCastTime)
                         {
                             ai->AddPendingItemCooldown(spellInfo->Id, itemId);
                         }
