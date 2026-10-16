@@ -689,8 +689,18 @@ bool UseAction::UseItemInternal(Player* requester, uint32 itemId, Unit* unit, Ga
                 {
                     if (!HasItemCooldown(itemId))
                     {
-                        bot->RemoveSpellCooldown(*spellInfo, false);
-                        bot->AddCooldown(*spellInfo, proto, false);
+                        // The core adds the spell's cooldown when a cast-time spell finishes; adding
+                        // the item cooldown now collides with it ("already existing cooldown"), so
+                        // it waits until the cast has ended (lbrick/cmangos-dev#50).
+                        if (isCastedSpell)
+                        {
+                            ai->AddPendingItemCooldown(spellInfo->Id, itemId);
+                        }
+                        else
+                        {
+                            bot->RemoveSpellCooldown(*spellInfo, false);
+                            bot->AddCooldown(*spellInfo, proto, false);
+                        }
                     }
                 }
 
