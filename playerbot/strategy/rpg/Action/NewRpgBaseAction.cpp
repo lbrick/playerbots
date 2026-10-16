@@ -92,6 +92,21 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             return false;
         }
 
+        // A real player within sight would watch the bot vanish: defer the teleport by one stuck
+        // interval and keep walking; it fires once no real player is in range
+        // (lbrick/cmangos-dev#41).
+        if (Player* observer = GetRealPlayerInRange(stuckObserverRange))
+        {
+            if (sPlayerbotAIConfig.logRpgTravelEvents)
+            {
+                char detail[128];
+                snprintf(detail, sizeof(detail), "zone=%u observer=%s distance=%.1f",
+                    bot->GetZoneId(), observer->GetName(), bot->GetDistance(observer));
+                LogTravelEvent("stuck_deferred", WorldPosition(bot), dest, detail);
+            }
+            return false;
+        }
+
         AreaTableEntry const* areaEntry = GetAreaEntryByAreaID(bot->GetZoneId());
         std::string zoneName = areaEntry ? ai->GetLocalizedAreaName(areaEntry) : "unknown";
 
@@ -209,6 +224,26 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         return MoveTo(bot->GetMapId(), rx, ry, rz, false, false, false, true);
 
     return false;
+}
+
+// A player in range on a real client session, with or without playerbot AI attached
+// (PlayerbotAI::IsRealPlayer).
+Player* NewRpgBaseAction::GetRealPlayerInRange(float range) const
+{
+    if (!bot->IsInWorld())
+        return nullptr;
+
+    for (auto const& ref : bot->GetMap()->GetPlayers())
+    {
+        Player* player = ref.getSource();
+        if (!player || player == bot || !player->IsInWorld())
+            continue;
+        if (player->GetPlayerbotAI() && !player->GetPlayerbotAI()->IsRealPlayer())
+            continue;
+        if (player->IsWithinDistInMap(bot, range))
+            return player;
+    }
+    return nullptr;
 }
 
 bool NewRpgBaseAction::IsPosBad(const WorldPosition& pos) const
