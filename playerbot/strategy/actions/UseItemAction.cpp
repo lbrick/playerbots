@@ -667,16 +667,16 @@ bool UseAction::UseItemInternal(Player* requester, uint32 itemId, Unit* unit, Ga
                 itemUsed->SetUsedInSpell(true);
             }
 
-            // Stop the movement for casted items
-            const bool isCastedSpell = spell->GetCastedTime() > 0 || IsChanneledSpell(spellInfo);
-            if (isCastedSpell)
-            {
-                ai->StopMoving();
-            }
-
             // GetCastedTime() is the spell timer, still 0 before the start; read the cast time from
             // the spell data instead.
             const bool hasCastTime = GetSpellCastTime(spellInfo, bot) > 0 || IsChanneledSpell(spellInfo);
+
+            // Stop the movement for casted items, or the bot's own movement interrupts the cast
+            // (lbrick/cmangos-dev#63).
+            if (hasCastTime)
+            {
+                ai->StopMoving();
+            }
 
             const SpellCastResult result = spell->ForceSpellStart(&targets);
 
