@@ -107,6 +107,10 @@ struct NewRpgInfo
     // update drops the current status if it is still the one that started at abandonStartT.
     bool abandonMoveFar{false};
     uint32 abandonStartT{0};
+    // Set when the move target is on another map than the bot (lbrick/cmangos-dev#67); the status
+    // update drops the current status if it is still the one that started at crossMapStartT.
+    bool crossMapMoveFar{false};
+    uint32 crossMapStartT{0};
     // END MOVE_FAR
 
     using RpgData = std::variant<

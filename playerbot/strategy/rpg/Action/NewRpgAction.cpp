@@ -37,6 +37,18 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         }
     }
 
+    if (info.crossMapMoveFar)
+    {
+        info.crossMapMoveFar = false;
+        if (info.crossMapStartT == info.startT && status != RPG_IDLE)
+        {
+            // The target is valid on the map the bot left, so a quest is not marked low priority.
+            NEWRPG_LOG("[New RPG] %s dropped a move target on another map", bot->GetName());
+            info.ChangeToIdle();
+            return true;
+        }
+    }
+
     switch (status)
     {
         case RPG_IDLE:
@@ -514,6 +526,9 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 NEWRPG_LOG("[New RPG] %s badPos (%.1f %.1f %.1f mapId=%u)",
                               bot->GetName(), bad.getX(), bad.getY(), bad.getZ(), bad.getMapId());
 
+            // The map of the route segment being walked: the bot's map until a transport leg
+            // crosses to another one (lbrick/cmangos-dev#67).
+            uint32 segmentMapId = bot->GetMapId();
             for (size_t i = 0; i < nodes.size(); ++i)
             {
                 TravelNode* node = nodes[i];
@@ -544,11 +559,12 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 
                 if (!isTransportLeg)
                 {
-                    // Normal node: normalize mapId, then coordinate sanity + IsPosBad + isMmapLoaded.
+                    // Normal node: normalize mapId to the segment's map, then coordinate sanity +
+                    // IsPosBad + isMmapLoaded.
                     // No absolute height bound: real terrain runs from below Z 0 (Thousand Needles,
                     // Undercity) to above Z 1,300 (Teldrassil). Unreachable nodes are caught by
                     // isMmapLoaded and by stuck recovery, which marks the target bad.
-                    nodePos.setMapId(bot->GetMapId());
+                    nodePos.setMapId(segmentMapId);
                     if (!nodePos.isValid())
                     {
                         NEWRPG_LOG("[New RPG] %s TravelNode candidate filtered (invalid coordinates Z %.1f)",
@@ -590,6 +606,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                             if (rej.distance(destDock) < 1.0f) { alreadyRejected = true; break; }
                         if (alreadyRejected)
                         {
+                            segmentMapId = destDock.getMapId();
                             i = last;
                             continue;
                         }
@@ -605,6 +622,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                                           bot->GetName(), destDock.getZ(), destDock.getX(), destDock.getY(), destDock.getMapId());
                             LogTravelEvent("leg_rejected", nodePos, destDock, "reason=dest_z");
                             dataPtr->rejectedTransportDocks.push_back(destDock);  // BUG-2: cache rejection
+                            segmentMapId = destDock.getMapId();
                             i = last;  // consume the rest of the chain
                             continue;
                         }
@@ -619,6 +637,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                                           bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
                         dataPtr->waypoints.push_back({destDock, true, nodePos});
                         LogTravelEvent("leg_built", nodePos, destDock);
+                        segmentMapId = destDock.getMapId();
                         if (isElevator)
                             NEWRPG_LOG("[New RPG] %s elevator route: dest platform (%.1f %.1f %.1f map=%u) [teleport]",
                                           bot->GetName(), destDock.getX(), destDock.getY(), destDock.getZ(), destDock.getMapId());
