@@ -18,6 +18,7 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
     CheckStuckTeleport();
 
     NewRpgInfo& info = ai->rpgInfo;
+    info.statusUpdateTs = WorldTimer::getMSTime();
     NewRpgStatus status = info.GetStatus();
 
     if (info.abandonMoveFar)
