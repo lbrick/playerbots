@@ -108,11 +108,29 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         // repeats the same failure, so give the target up instead.
         if (IsPosBad(dest))
         {
+            uint32 now = WorldTimer::getMSTime();
             if (sPlayerbotAIConfig.logRpgTravelEvents)
             {
-                std::string zone = "zone=" + std::to_string(bot->GetZoneId());
-                LogTravelEvent("stuck_abandoned", WorldPosition(bot), dest, zone.c_str());
+                std::string detail = "zone=" + std::to_string(bot->GetZoneId());
+                // An earlier abandon is still unconsumed: record whether the status update has run
+                // since it was set and what the engines last executed (lbrick/cmangos-dev#66).
+                if (ai->rpgInfo.abandonMoveFar)
+                {
+                    NewRpgInfo const& info = ai->rpgInfo;
+                    char pending[160];
+                    snprintf(pending, sizeof(pending), " pending=1 flag_age=%u update_age=%d start_match=%u state=%u",
+                        WorldTimer::getMSTimeDiff(info.abandonFlagTs, now) / IN_MILLISECONDS,
+                        info.statusUpdateTs ? int32(WorldTimer::getMSTimeDiff(info.statusUpdateTs, now) / IN_MILLISECONDS) : -1,
+                        info.abandonStartT == info.startT ? 1u : 0u, (uint32)ai->GetState());
+                    std::string nonCombat = ai->GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT);
+                    std::string combat = ai->GetLastExecutedActionName(BotState::BOT_STATE_COMBAT);
+                    detail += pending;
+                    detail += " last_nc=\"" + nonCombat + "\" last_c=\"" + combat + "\"";
+                }
+                LogTravelEvent("stuck_abandoned", WorldPosition(bot), dest, detail.c_str());
             }
+            if (!ai->rpgInfo.abandonMoveFar)
+                ai->rpgInfo.abandonFlagTs = now;
             ai->rpgInfo.abandonMoveFar = true;
             ai->rpgInfo.abandonStartT  = ai->rpgInfo.startT;
             return false;
