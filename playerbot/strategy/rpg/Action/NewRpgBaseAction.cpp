@@ -29,12 +29,37 @@ static WorldObject* GetWorldObjectByGuid(PlayerbotAI* ai, Player* bot, ObjectGui
     return bot->GetMap()->GetGameObject(guid);
 }
 
+// Status name as written in the [New RPG status] and [New RPG travel] log lines.
+static char const* StatusName(NewRpgStatus status)
+{
+    static char const* const names[] = { "idle", "go_grind", "go_camp", "wander_random",
+        "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "none" };
+    return names[status <= RPG_STATUS_END ? status : RPG_STATUS_END];
+}
+
 // ─── Movement helpers ────────────────────────────────────────────────────────
 
 bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 {
     if (dest == WorldPosition())
         return false;
+
+    // A target on another map cannot be walked to, and stuck recovery would teleport the bot
+    // across the sea to it. A far teleport from outside the new RPG (random teleport, summon,
+    // corpse run) leaves the status aimed at the map the bot left, so the status update drops
+    // it instead (lbrick/cmangos-dev#67).
+    if (dest.getMapId() != bot->GetMapId())
+    {
+        if (!ai->rpgInfo.crossMapMoveFar && sPlayerbotAIConfig.logRpgTravelEvents)
+        {
+            std::string detail = "zone=" + std::to_string(bot->GetZoneId()) +
+                " status=" + StatusName(ai->rpgInfo.GetStatus());
+            LogTravelEvent("cross_map_dropped", WorldPosition(bot), dest, detail.c_str());
+        }
+        ai->rpgInfo.crossMapMoveFar = true;
+        ai->rpgInfo.crossMapStartT  = ai->rpgInfo.startT;
+        return false;
+    }
 
     if (dest != ai->rpgInfo.moveFarPos)
         ai->rpgInfo.SetMoveFarTo(dest);
@@ -1284,10 +1309,8 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
 
     if (sPlayerbotAIConfig.logRpgStatusEvents)
     {
-        static char const* const names[] = { "idle", "go_grind", "go_camp", "wander_random",
-            "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "none" };
         sLog.outString("[New RPG status] bot=%s status=%s zone=%u area=%u resting=%u capital=%u tavern=%u grind_target=%u",
-            bot->GetName(), names[chosen <= RPG_STATUS_END ? chosen : RPG_STATUS_END],
+            bot->GetName(), StatusName(chosen),
             bot->GetZoneId(), bot->GetAreaId(), (uint32)bot->GetRestType(),
             IsInCapitalCity(bot) ? 1u : 0u, IsInTavern(bot) ? 1u : 0u,
             ai->GetUnit(AI_VALUE(ObjectGuid, "grind target")) ? 1u : 0u);
