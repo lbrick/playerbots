@@ -62,6 +62,17 @@ bool MonitorMovementDistance::IsConditionMet(const std::string& monitorStr, Play
     return dist > threshold;
 
 }
+bool MonitorMovementDistanceWithoutRiding::IsConditionMet(const std::string& monitorStr, Player* bot, TestContext& ctx) const
+{
+    if (bot->GetTransport())
+        ctx.wasTransportPassenger = true;
+
+    if (ctx.wasTransportPassenger)
+        return false;
+
+    return MonitorMovementDistance::IsConditionMet(monitorStr, bot, ctx);
+}
+
 bool MonitorNotOnMap::IsConditionMet(const std::string& monitorStr, Player* bot, TestContext& ctx) const
 {
     std::string wantMapName, rightSide, parseMessage;

@@ -659,11 +659,17 @@ void TestRegistry::GenerateTransportTestsImpl(int maxTests)
             else if (IsAllianceDockName(startName) || IsAllianceDockName(endName))
                 factionReq = "require bot is faction=alliance";
 
+            // Before the pass check: a bot that teleported dock to dock reaches the far side
+            // without ever being a passenger (lbrick/cmangos-dev#51).
+            std::ostringstream rideCheck;
+            rideCheck << "monitor distance without riding to " << endName << " < 100 => fail \"Bot reached " << endName << " without riding the transport after <time elapsed>\"";
+
             std::vector<std::string> script = {
                 gmInvisible,
                 needAlive,
                 needCanReachNode,
                 timeout.str(),
+                rideCheck.str(),
                 reachCheck.str()
             };
 

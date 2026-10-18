@@ -20,6 +20,7 @@ void TestRegistry::RegisterMoveTests()
         needAlive,
         "monitor can not reach nodes => fail \"Bot cannot reach travel network at <current position>\"",
         timeout20Min,
+        "monitor distance without riding to theramore < 100 => fail \"Bot reached Theramore without riding the boat after <time elapsed>\"",
         "monitor distance to theramore < 100 => pass \"Bot arrived at Theramore after <time elapsed>\"",
         "require bot is faction=alliance",
         "teleport menethilharbor",

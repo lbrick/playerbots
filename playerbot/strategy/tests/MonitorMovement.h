@@ -9,9 +9,19 @@ namespace ai
     // =====================================================
     class MonitorMovementDistance : public TestMonitor
     {
+    protected:
+        bool IsConditionMet(const std::string& monitorStr, Player* bot, TestContext& ctx) const override;
+    private:
+        std::string GetName() const override { return "distance to"; }
+    };
+
+    // "distance to" that only holds while the bot has never been a transport passenger in this test:
+    // placed before the pass check, it fails a transport test the bot completed by teleporting.
+    class MonitorMovementDistanceWithoutRiding : public MonitorMovementDistance
+    {
     private:
         bool IsConditionMet(const std::string& monitorStr, Player* bot, TestContext& ctx) const override;
-        std::string GetName() const override { return "distance to"; }
+        std::string GetName() const override { return "distance without riding to"; }
     };
 
     class MonitorNotOnMap : public TestMonitor
