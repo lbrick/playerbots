@@ -3,7 +3,10 @@
 
 using namespace ai;
 
-// Relevance 11.0f is greater than grind (10.0f) — status update takes priority.
+// Default actions are queued 200 below their relevance, so this runs only on ticks where no
+// trigger action succeeds; the "new rpg status due" trigger below queues it ahead of the status
+// actions while an abandon or a cross-map drop is pending, and at least every 5 s otherwise, so
+// status timeouts apply (lbrick/cmangos-dev#66).
 NextAction** NewRpgStrategy::GetDefaultNonCombatActions()
 {
     return NextAction::array(0, new NextAction("new rpg status update", 11.0f), NULL);
@@ -11,6 +14,10 @@ NextAction** NewRpgStrategy::GetDefaultNonCombatActions()
 
 void NewRpgStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {
+    triggers.push_back(new TriggerNode(
+        "new rpg status due",
+        NextAction::array(0, new NextAction("new rpg status update", 3.5f), NULL)));
+
     triggers.push_back(new TriggerNode(
         "go grind status",
         NextAction::array(0, new NextAction("new rpg go grind", 3.0f), NULL)));

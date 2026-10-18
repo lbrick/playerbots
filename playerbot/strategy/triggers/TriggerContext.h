@@ -273,6 +273,7 @@ namespace ai
             creators["do quest status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_DO_QUEST); };
             creators["travel flight status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_TRAVEL_FLIGHT); };
             creators["change zone status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_CHANGE_ZONE); };
+            creators["new rpg status due"] = [](PlayerbotAI* ai) { return new NewRpgStatusDueTrigger(ai); };
             creators["rpg"] = [](PlayerbotAI* ai) { return new RpgTrigger(ai); };
             creators["rpg wander"] = [](PlayerbotAI* ai) { return new RpgWanderTrigger(ai); };
             creators["rpg taxi"] = [](PlayerbotAI* ai) { return new RpgTaxiTrigger(ai); };

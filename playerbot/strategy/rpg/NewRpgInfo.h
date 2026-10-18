@@ -103,8 +103,8 @@ struct NewRpgInfo
     WorldPosition stuckTeleportTo;
     uint32 stuckTeleportTs{0};
     bool stuckTeleportOk{false};
-    // Evidence for lbrick/cmangos-dev#66 (AiPlayerbot.LogRpgTravelEvents): when the pending abandon
-    // flag was first set, and when the status update last ran.
+    // When the pending abandon flag was first set (evidence for lbrick/cmangos-dev#66), and when the
+    // status update last ran ("new rpg status due" queues it again after 5 s).
     uint32 abandonFlagTs{0};
     uint32 statusUpdateTs{0};
     // Set when the bot is stuck again on a position it already stuck-teleported to; the status
