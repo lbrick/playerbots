@@ -3642,6 +3642,25 @@ void RandomPlayerbotMgr::HandleCommand(uint32 type, const std::string& text, Pla
 
 void RandomPlayerbotMgr::OnPlayerLogout(Player* player)
 {
+    // The bot AI casts after the map's spell update, so an instant item spell stays current in
+    // the finished state until the next map update, and a travelling one stays current in flight.
+    // The logout's interrupt skips both, the spell outlives Player::~Player's item deletes, and
+    // Spell::~Spell then writes into a freed item. Release the item first (lbrick/cmangos-dev#70).
+    if (player->GetPlayerbotAI())
+    {
+        for (uint32 i = 0; i < CURRENT_MAX_SPELL; ++i)
+        {
+            Spell* spell = player->GetCurrentSpell(CurrentSpellTypes(i));
+            if (spell && spell->GetCastItem() && !spell->CanBeInterrupted())
+            {
+                if (!spell->m_IsTriggeredSpell)
+                    spell->GetCastItem()->SetUsedInSpell(false);
+
+                spell->ClearCastItem();
+            }
+        }
+    }
+
     bool hadPlayerBot = GetPlayerBot(player->GetGUIDLow());
 
     DisablePlayerBot(player->GetGUIDLow());
