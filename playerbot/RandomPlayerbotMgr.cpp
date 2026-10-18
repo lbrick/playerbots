@@ -2478,6 +2478,15 @@ void RandomPlayerbotMgr::Revive(Player* player)
     }
 }
 
+// Travel-log line for a random teleport, which runs outside the bot's action engine, so the far
+// teleport it causes can be told apart from an action-driven one (lbrick/cmangos-dev#67).
+static void LogRandomTeleport(Player* bot, uint32 mapId, float x, float y, float z, bool hearth)
+{
+    sLog.outString("[New RPG travel] bot=%s event=random_teleport from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f hearth=%u",
+        bot->GetName(), bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(),
+        mapId, x, y, z, hearth ? 1u : 0u);
+}
+
 void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>& locs, bool hearth, bool activeOnly)
 {
     if (bot->IsBeingTeleported())
@@ -2683,6 +2692,9 @@ void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>&
             if (hearth)
                 bot->SetHomebindToLocation(loc, area->ID);
 
+            if (sPlayerbotAIConfig.logRpgTravelEvents)
+                LogRandomTeleport(bot, loc.mapid, x, y, z, hearth);
+
             bot->GetMotionMaster()->Clear();
             bot->TeleportTo(loc.mapid, x, y, z, 0);
             bot->SendHeartBeat();
@@ -2703,6 +2715,9 @@ void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>&
                         member->GetMotionMaster()->MovementExpired();
                     if (hearth)
                         member->SetHomebindToLocation(loc, area->ID);
+
+                    if (sPlayerbotAIConfig.logRpgTravelEvents)
+                        LogRandomTeleport(member, loc.mapid, x, y, z, hearth);
 
                     member->GetMotionMaster()->Clear();
                     member->TeleportTo(loc.mapid, x, y, z, 0);

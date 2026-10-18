@@ -1549,6 +1549,20 @@ void PlayerbotAI::HandleTeleportAck()
                 }
             }
         }
+        // Names what moved the bot to another map, so the source of a new RPG move target left on
+        // the old map shows in the travel log (lbrick/cmangos-dev#67). The last executed actions
+        // name an action-driven teleport; random teleports log their own random_teleport line.
+        if (sPlayerbotAIConfig.logRpgTravelEvents)
+        {
+            WorldPosition const& target = rpgInfo.moveFarPos;
+            sLog.outString("[New RPG travel] bot=%s event=far_teleport from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f rpg_status=%d target_map=%d last_nc=\"%s\" last_c=\"%s\"",
+                bot->GetName(), bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(),
+                loc.mapid, loc.coord_x, loc.coord_y, loc.coord_z, (int)rpgInfo.GetStatus(),
+                target == WorldPosition() ? -1 : (int)target.getMapId(),
+                GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT).c_str(),
+                GetLastExecutedActionName(BotState::BOT_STATE_COMBAT).c_str());
+        }
+
         // Clear motion master before world port to prevent stale spline state after map change.
         bot->GetMotionMaster()->Clear(false);
 
