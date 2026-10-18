@@ -64,6 +64,7 @@ void NewRpgInfo::ChangeToChangeZone(WorldPosition dest)
 {
     startT = WorldTimer::getMSTime();
     data = ChangeZone{dest};
+    std::get<ChangeZone>(data).progressT = startT;
 }
 
 void NewRpgInfo::ChangeToIdle()

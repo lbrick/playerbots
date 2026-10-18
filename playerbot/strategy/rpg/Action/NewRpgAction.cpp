@@ -128,9 +128,19 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             if (bot->GetTransport())
                 break;
 
-            if (info.HasStatusPersisted(30 * 60 * 1000))
+            // The limit counts from the last completed waypoint or transport leg, so a long trip
+            // that keeps moving is not cut short (lbrick/cmangos-dev#71).
+            auto& data = std::get<NewRpgInfo::ChangeZone>(info.data);
+            uint32 now = WorldTimer::getMSTime();
+            if (WorldTimer::getMSTimeDiff(data.progressT, now) > 30 * 60 * 1000)
             {
                 NEWRPG_LOG("[New RPG] %s CHANGE_ZONE timed out, returning to idle", bot->GetName());
+                if (sPlayerbotAIConfig.logRpgTravelEvents)
+                {
+                    std::string detail = "trip_min=" + std::to_string(WorldTimer::getMSTimeDiff(info.startT, now) / 60000) +
+                        " waypoints_left=" + std::to_string(data.waypoints.size());
+                    LogTravelEvent("change_zone_timeout", WorldPosition(bot), data.dest, detail.c_str());
+                }
                 info.ChangeToIdle();
                 return true;
             }
@@ -779,6 +789,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 NEWRPG_LOG("[New RPG] %s transport teleport to (%.1f %.1f %.1f map=%u)",
                               bot->GetName(), wp.getX(), wp.getY(), wp.getZ(), wp.getMapId());
             LogTravelEvent("teleported", WorldPosition(bot), wp);
+            dataPtr->progressT = WorldTimer::getMSTime();
             dataPtr->waypoints.erase(dataPtr->waypoints.begin());
             ai->rpgInfo.SetMoveFarTo(WorldPosition());
             return bot->TeleportTo(wp.getMapId(), wp.getX(), wp.getY(), wp.getZ(), bot->GetOrientation());
@@ -786,6 +797,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 
         if (WorldPosition(bot).distance(wp) < 30.0f)
         {
+            dataPtr->progressT = WorldTimer::getMSTime();
             dataPtr->waypoints.erase(dataPtr->waypoints.begin());
             return true;
         }
