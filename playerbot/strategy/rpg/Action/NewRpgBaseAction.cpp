@@ -1308,6 +1308,15 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
 
     if (available.empty() || probSum == 0)
     {
+        // Logged too, so every status pick after an abandon shows in the log (lbrick/cmangos-dev#66).
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+        {
+            sLog.outString("[New RPG status] bot=%s status=%s zone=%u area=%u resting=%u capital=%u tavern=%u grind_target=%u fallback=1",
+                bot->GetName(), StatusName(RPG_REST),
+                bot->GetZoneId(), bot->GetAreaId(), (uint32)bot->GetRestType(),
+                IsInCapitalCity(bot) ? 1u : 0u, IsInTavern(bot) ? 1u : 0u,
+                ai->GetUnit(AI_VALUE(ObjectGuid, "grind target")) ? 1u : 0u);
+        }
         ai->rpgInfo.ChangeToRest();
         bot->SetStandState(UNIT_STAND_STATE_SIT);
         return true;
