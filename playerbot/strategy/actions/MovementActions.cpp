@@ -317,6 +317,11 @@ bool MovementAction::MoveOnTransport(PlayerbotAI* ai, GenericTransport* transpor
 
     if (doTeleport)
     {
+        // A bot placed on the deck stays a passenger until MoveOffTransport. Without the flag,
+        // PlayerbotAI::UpdateAI drops it on the next tick whenever the vmap test cannot see the
+        // deck under it: an elevator at its dock, or a point far from a ship's origin
+        // (lbrick/cmangos-dev#51).
+        ai->SetMoveToTransport(true);
         bot->GetMap()->PlayerRelocation(bot, transPos.getX(), transPos.getY(), transPos.getZ(), bot->GetOrientation());
         transport->AddPassenger(bot, true);
         bot->SendHeartBeat();
@@ -392,6 +397,7 @@ bool MovementAction::MoveOffTransport(PlayerbotAI* ai, WorldPosition exitPos, bo
     GenericTransport* transport = bot->GetTransport();
 
     transport->RemovePassenger(bot);
+    ai->SetMoveToTransport(false);
 
     if (doTeleport)
     {

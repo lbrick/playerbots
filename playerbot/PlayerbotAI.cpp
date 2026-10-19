@@ -589,6 +589,8 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
             MANGOS_ASSERT(botPos.fDist(bot) < 500.0f);
         }
     }
+    else if (!bot->GetTransport() && !bot->IsBeingTeleported())
+        isMovingToTransport = false;
     else if (!HasRealPlayerMaster() && !bot->IsBeingTeleported() && bot->GetTransport() && bot->GetMapId() == bot->GetTransport()->GetMapId() && !WorldPosition(bot).isOnTransport(bot->GetTransport()) && !isMovingToTransport)
     {
         if (HasStrategy("debug move", BotState::BOT_STATE_NON_COMBAT))
