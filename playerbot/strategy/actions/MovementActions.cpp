@@ -459,10 +459,11 @@ bool MovementAction::UseTransport(PlayerbotAI* ai, uint32 entry, WorldPosition d
     // Elevators are plain game objects. With bot optimizations on, Map::Update only updates
     // objects near real players, so an elevator with only bots around never leaves its spawn
     // position and never carries its passengers. Its position is a function of map time, so
-    // updating it here is idempotent (lbrick/cmangos-dev#51).
-    auto animate = [](GenericTransport* trans)
+    // updating it here is idempotent. Only on the bot's own map, which this map update thread owns
+    // (lbrick/cmangos-dev#51).
+    auto animate = [bot](GenericTransport* trans)
     {
-        if (trans->GetGoType() == GAMEOBJECT_TYPE_TRANSPORT)
+        if (trans->GetGoType() == GAMEOBJECT_TYPE_TRANSPORT && trans->GetMap() == bot->GetMap())
             trans->Update(0);
     };
 
