@@ -667,6 +667,7 @@ void PlayerbotAI::LogChangeZoneSample()
         czSampleT = now;
         czSamplePos = pos;
         czInternalRuns = czMinimalRuns = 0;
+        rpgInfo.moveFarCalls = 0;
         return;
     }
 
@@ -680,16 +681,19 @@ void PlayerbotAI::LogChangeZoneSample()
     float moved = czSamplePos.getMapId() == pos.getMapId() ? pos.fDist(czSamplePos) : -1.0f;
     MotionMaster* mm = bot->GetMotionMaster();
 
-    sLog.outString("[New RPG sample] bot=%s pos=%u:%.1f,%.1f,%.1f next=%u:%.1f,%.1f,%.1f dist_next=%.0f moved=%.0f since_s=%u internal=%u minimal=%u combat=%u moving=%u mgen=%u dead=%u taxi=%u leg=%u waypoints_left=%u",
+    sLog.outString("[New RPG sample] bot=%s pos=%u:%.1f,%.1f,%.1f next=%u:%.1f,%.1f,%.1f dist_next=%.0f moved=%.0f since_s=%u internal=%u minimal=%u combat=%u moving=%u mgen=%u dead=%u taxi=%u leg=%u waypoints_left=%u movefar_calls=%u movefar=%s:%u last_nc=\"%s\"",
         bot->GetName(), pos.getMapId(), pos.getX(), pos.getY(), pos.getZ(),
         next.getMapId(), next.getX(), next.getY(), next.getZ(), distNext, moved, since / IN_MILLISECONDS,
         czInternalRuns, czMinimalRuns, sServerFacade.IsInCombat(bot) ? 1u : 0u, bot->IsStopped() ? 0u : 1u,
         mm->empty() ? 0u : uint32(mm->GetCurrentMovementGeneratorType()), sServerFacade.UnitIsDead(bot) ? 1u : 0u,
-        bot->IsTaxiFlying() ? 1u : 0u, leg ? 1u : 0u, uint32(cz->waypoints.size()));
+        bot->IsTaxiFlying() ? 1u : 0u, leg ? 1u : 0u, uint32(cz->waypoints.size()),
+        rpgInfo.moveFarCalls, rpgInfo.moveFarStep, rpgInfo.moveFarResult ? 1u : 0u,
+        GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT).c_str());
 
     czSampleT = now;
     czSamplePos = pos;
     czInternalRuns = czMinimalRuns = 0;
+    rpgInfo.moveFarCalls = 0;
 }
 
 bool PlayerbotAI::UpdateAIReaction(uint32 elapsed, bool minimal, bool isStunned)

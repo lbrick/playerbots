@@ -41,8 +41,17 @@ static char const* StatusName(NewRpgStatus status)
 
 bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 {
+    // Records the branch taken for the change-zone sample line (lbrick/cmangos-dev#74).
+    auto step = [this](const char* name, bool result)
+    {
+        ai->rpgInfo.moveFarStep = name;
+        ai->rpgInfo.moveFarResult = result;
+        return result;
+    };
+    ++ai->rpgInfo.moveFarCalls;
+
     if (dest == WorldPosition())
-        return false;
+        return step("no_dest", false);
 
     // A target on another map cannot be walked to, and stuck recovery would teleport the bot
     // across the sea to it. A far teleport from outside the new RPG (random teleport, summon,
@@ -58,7 +67,7 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         }
         ai->rpgInfo.crossMapMoveFar = true;
         ai->rpgInfo.crossMapStartT  = ai->rpgInfo.startT;
-        return false;
+        return step("cross_map", false);
     }
 
     if (dest != ai->rpgInfo.moveFarPos)
@@ -73,7 +82,7 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             WorldPosition cur(bot);
             float remaining = cur.distance(lastMove.lastMoveShort);
             if (remaining > 10.0f)
-                return true;
+                return step("wait_committed", true);
         }
     }
 
@@ -82,14 +91,14 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 
     // Already at destination — no movement needed, let caller transition state.
     if (disToDest < 10.0f)
-        return false;
+        return step("at_dest", false);
 
     // Short-distance: skip PathFinder and stuck detection to avoid teleport-on-tiny-gap.
     // Just issue a direct MoveTo; caller will fall through to MoveRandomNear if needed.
     if (disToDest < 20.0f)
     {
         MoveTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), false, false, false, true);
-        return false;
+        return step("short", false);
     }
 
     if (disToDest + 5.0f < ai->rpgInfo.nearestMoveFarDis)
@@ -133,7 +142,7 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
                 ai->rpgInfo.abandonFlagTs = now;
             ai->rpgInfo.abandonMoveFar = true;
             ai->rpgInfo.abandonStartT  = ai->rpgInfo.startT;
-            return false;
+            return step("abandoned", false);
         }
 
         // A real player within sight would watch the bot vanish: skip the teleport this interval
@@ -150,13 +159,13 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             }
         }
         else
-            return StuckTeleport(dest);
+            return step("stuck_teleport", StuckTeleport(dest));
     }
 
     // Close enough: use normal MoveTo.
     if (disToDest < pathFinderDis)
     {
-        return MoveTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), false, false, false, true);
+        return step("near", MoveTo(dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(), false, false, false, true));
     }
 
     const uint32 typeOk = PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_SHORT;
@@ -173,7 +182,7 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             WorldPosition endWp(bot->GetMapId(), endPos.x, endPos.y, endPos.z);
             float endDistToDest = endWp.distance(dest);
             if (endDistToDest + 5.0f < disToDest)
-                return MoveTo(bot->GetMapId(), endPos.x, endPos.y, endPos.z, false, false, false, true);
+                return step("path", MoveTo(bot->GetMapId(), endPos.x, endPos.y, endPos.z, false, false, false, true));
         }
     }
 
@@ -211,9 +220,9 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         }
     }
     if (found)
-        return MoveTo(bot->GetMapId(), rx, ry, rz, false, false, false, true);
+        return step("fallback", MoveTo(bot->GetMapId(), rx, ry, rz, false, false, false, true));
 
-    return false;
+    return step("no_path", false);
 }
 
 // Stuck recovery: marks dest bad, drops it from CHANGE_ZONE waypoints and teleports the bot to it.
