@@ -1112,6 +1112,17 @@ bool TravelPath::UpcommingSpecialMovement(WorldPosition startPos, float maxDist,
         }
     }
         
+    // A walk node linked straight to the transport's stop leaves no entry 0 approach points, so
+    // startP stays the walk point before the ride and the branch above never runs: the bot waited
+    // at the bottom of an Undercity elevator for good. Board once it is at the stop
+    // (lbrick/cmangos-dev#51).
+    if (sPlayerbotAIConfig.transportTeleportType < 2 && !onTransport && startP->type != PathNodeType::NODE_TRANSPORT && nextP->type == PathNodeType::NODE_TRANSPORT && nextP->entry &&
+        (startPos.distance(nextP->point) < INTERACTION_DISTANCE * 2 || startPos.distance(startP->point) < INTERACTION_DISTANCE))
+    {
+        cutTo(*startP, false); //startP = walk point at the stop, nextP = where the transport stops.
+        return true;
+    }
+
     //Teleport to end of transport.
     if (sPlayerbotAIConfig.transportTeleportType == 2 && nextP->type == PathNodeType::NODE_TRANSPORT)
     {
