@@ -2387,6 +2387,19 @@ struct RandomTeleportReason
     ~RandomTeleportReason() { s_randomTeleportReason = prev; }
 };
 
+// A scheduled random teleport would end a change-zone trip, so it is skipped while one runs and
+// the caller reschedules it (lbrick/cmangos-dev#74).
+static bool SkipTeleportOnTrip(Player* bot, const char* reason)
+{
+    PlayerbotAI* ai = bot->GetPlayerbotAI();
+    if (!ai || ai->rpgInfo.GetStatus() != RPG_CHANGE_ZONE)
+        return false;
+
+    if (sPlayerbotAIConfig.logRpgTravelEvents)
+        sLog.outString("[New RPG travel] bot=%s event=random_teleport_skipped reason=%s", bot->GetName(), reason);
+    return true;
+}
+
 bool RandomPlayerbotMgr::ProcessBot(Player* player)
 {
     if (!player || !player->IsInWorld() || player->IsBeingTeleported() || player->GetSession()->isLogingOut())
@@ -2441,6 +2454,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* player)
             if (sPlayerbotAIConfig.enableRandomTeleports)
             {
                 sLog.outDetail("Changing strategy for bot #%d %s:%d <%s>", bot, player->GetTeam() == ALLIANCE ? "A" : "H", player->GetLevel(), player->GetName());
+                if (!SkipTeleportOnTrip(player, "change_strategy"))
                 {
                     RandomTeleportReason reason("change_strategy");
                     ChangeStrategy(player);
@@ -2460,6 +2474,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* player)
             if (sPlayerbotAIConfig.enableRandomTeleports)
             {
                 sLog.outDetail("Bot #%d %s:%d <%s>: sent to grind", bot, player->GetTeam() == ALLIANCE ? "A" : "H", player->GetLevel(), player->GetName());
+                if (!SkipTeleportOnTrip(player, "grind"))
                 {
                     RandomTeleportReason reason("grind");
                     RandomTeleportForLevel(player, true);
