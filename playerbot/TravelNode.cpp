@@ -829,12 +829,20 @@ void TravelPath::makeShortCut(WorldPosition startPos, float maxDist, Unit* bot)
     std::vector<PathNodePoint> newPath;
     WorldPosition firstNode;
 
+    // In modes 0 and 1 nothing past a ride is a shortcut target. The navmesh runs up some elevator
+    // shafts, so a point at the top of an Undercity elevator passed as a shortcut and the bot
+    // walked up the shaft instead of riding (lbrick/cmangos-dev#51).
+    bool pastRide = false;
+
     for (auto& p : fullPath) //cycle over the full path
     {
         //if (p.point.getMapId() != startPos.getMapId())
         //    continue;
 
-        if (p.point.getMapId() == startPos.getMapId() && p.isWalkable())
+        if (sPlayerbotAIConfig.transportTeleportType < 2 && p.type == PathNodeType::NODE_TRANSPORT && p.entry)
+            pastRide = true;
+
+        if (!pastRide && p.point.getMapId() == startPos.getMapId() && p.isWalkable())
         {
             float curDist = p.point.sqDistance(startPos);
 
