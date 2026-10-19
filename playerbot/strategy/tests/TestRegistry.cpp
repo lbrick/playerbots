@@ -652,7 +652,7 @@ void TestRegistry::GenerateTransportTestsImpl(int maxTests)
             // that wanders a few yards at the bottom (lbrick/cmangos-dev#51).
             uint32 reachDist = 100;
             if (startDockPos.getMapId() == endDockPos.getMapId())
-                reachDist = std::min(reachDist, (uint32)(startDockPos.fDist(endDockPos) / 2.0f));
+                reachDist = std::min(reachDist, (uint32)(startDockPos.distance(endDockPos) / 2.0f));
 
             std::ostringstream reachCheck;
             reachCheck << "monitor distance to " << endName << " < " << reachDist << " => pass \"Bot arrived at " << endName << " after <time elapsed>\"";
