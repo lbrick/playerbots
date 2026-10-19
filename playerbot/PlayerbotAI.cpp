@@ -668,6 +668,7 @@ void PlayerbotAI::LogChangeZoneSample()
         czSamplePos = pos;
         czInternalRuns = czMinimalRuns = 0;
         rpgInfo.moveFarCalls = 0;
+        czActions.clear();
         return;
     }
 
@@ -690,10 +691,37 @@ void PlayerbotAI::LogChangeZoneSample()
         rpgInfo.moveFarCalls, rpgInfo.moveFarStep, rpgInfo.moveFarResult ? 1u : 0u,
         GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT).c_str());
 
+    // The five actions tried most since the last sample, as name:executed/tried/delay_s, where
+    // delay_s is the AI delay the executed runs set in total.
+    std::vector<std::pair<std::string, SampledAction>> acts(czActions.begin(), czActions.end());
+    std::sort(acts.begin(), acts.end(), [](auto const& a, auto const& b) { return a.second.tried > b.second.tried; });
+    std::string actLine;
+    for (size_t i = 0; i < acts.size() && i < 5; ++i)
+    {
+        if (i)
+            actLine += ",";
+        actLine += acts[i].first + ":" + std::to_string(acts[i].second.executed) + "/" + std::to_string(acts[i].second.tried) +
+            "/" + std::to_string(acts[i].second.durationMs / IN_MILLISECONDS);
+    }
+    sLog.outString("[New RPG sample actions] bot=%s acts=\"%s\"", bot->GetName(), actLine.c_str());
+
     czSampleT = now;
     czSamplePos = pos;
     czInternalRuns = czMinimalRuns = 0;
     rpgInfo.moveFarCalls = 0;
+    czActions.clear();
+}
+
+void PlayerbotAI::CountSampledAction(const std::string& name, bool executed, uint32 durationMs)
+{
+    if (!czSampleT)
+        return;
+
+    SampledAction& a = czActions[name];
+    ++a.tried;
+    if (executed)
+        ++a.executed;
+    a.durationMs += durationMs;
 }
 
 bool PlayerbotAI::UpdateAIReaction(uint32 elapsed, bool minimal, bool isStunned)

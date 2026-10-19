@@ -783,6 +783,8 @@ bool Engine::ListenAndExecute(Action* action, Event& event)
             ai->SetActionDuration(action);
             lastExecutedAction = action;
         }
+        if (sPlayerbotAIConfig.changeZoneSampleSeconds)
+            ai->CountSampledAction(action->getName(), actionExecuted, actionExecuted ? action->GetDuration() : 0);
     }
 
     std::string lastActionName = prevExecutedAction ? prevExecutedAction->getName() : "";
