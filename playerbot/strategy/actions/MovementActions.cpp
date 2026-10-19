@@ -839,8 +839,8 @@ bool MovementAction::HandleSpecialMovement(TravelPath& path)
         return 0;
     };
 
-    //We are getting 'on' transport.
-    if (nextPoint.type == PathNodeType::NODE_TRANSPORT)
+    //We are getting 'on' transport. In modes 0 and 1 only when there is a ride to board.
+    if (nextPoint.type == PathNodeType::NODE_TRANSPORT && (rideEntry(1) || sPlayerbotAIConfig.transportTeleportType == 2))
     {
         uint32 entry = rideEntry(1);
         bool usedTransport = UseTransport(ai, entry, nextPoint.point, WorldPosition(), sPlayerbotAIConfig.transportTeleportType > 0);

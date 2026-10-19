@@ -1075,8 +1075,22 @@ bool TravelPath::UpcommingSpecialMovement(WorldPosition startPos, float maxDist,
         return true;
     }
 
+    // In modes 0 and 1 a transport point is a boarding point only when a ride entry follows it in
+    // the same run. The entry 0 points after a ride are the walk from the far stop to the dock;
+    // treated as boarding, they make UseTransport take the nearest transport of any kind, an
+    // Undercity elevator door (lbrick/cmangos-dev#51).
+    bool rideAhead = false;
+    for (auto p = startP; p != fullPath.end() && p->type == PathNodeType::NODE_TRANSPORT; p++)
+    {
+        if (p->entry)
+        {
+            rideAhead = true;
+            break;
+        }
+    }
+
     //Walk on / teleport to transport.
-    if (sPlayerbotAIConfig.transportTeleportType < 2 && startP->type == PathNodeType::NODE_TRANSPORT)
+    if (sPlayerbotAIConfig.transportTeleportType < 2 && startP->type == PathNodeType::NODE_TRANSPORT && (rideAhead || onTransport))
     {
         uint32 entry = nextP->entry;
 
