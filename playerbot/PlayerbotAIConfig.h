@@ -232,6 +232,7 @@ public:
     bool logRpgQuestEvents;
     bool logRpgTravelEvents;
     bool logRpgStatusEvents;
+    uint32 changeZoneSampleSeconds;
     std::unordered_map<ai::NewRpgStatus, uint32> RpgStatusProbWeight;
     bool randomBotShowHelmet;
     bool randomBotShowCloak;

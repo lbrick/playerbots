@@ -279,6 +279,9 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     if (!bot->IsInWorld() || bot->IsBeingTeleported())
         return;
 
+    if (sPlayerbotAIConfig.changeZoneSampleSeconds)
+        LogChangeZoneSample();
+
     if (!pendingItemCooldowns.empty())
         ApplyPendingItemCooldowns();
 
@@ -644,6 +647,49 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 
         YieldAIInternalThread(min, bot->GetGUIDLow());
     }
+}
+
+// One line per ChangeZoneSampleSeconds for a bot on a change-zone trip, to find where slow
+// trips spend their time (lbrick/cmangos-dev#74).
+void PlayerbotAI::LogChangeZoneSample()
+{
+    auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&rpgInfo.data);
+    if (!cz)
+    {
+        czSampleT = 0;
+        return;
+    }
+
+    uint32 now = WorldTimer::getMSTime();
+    WorldPosition pos(bot);
+    if (!czSampleT)
+    {
+        czSampleT = now;
+        czSamplePos = pos;
+        czInternalRuns = czMinimalRuns = 0;
+        return;
+    }
+
+    uint32 since = WorldTimer::getMSTimeDiff(czSampleT, now);
+    if (since < sPlayerbotAIConfig.changeZoneSampleSeconds * IN_MILLISECONDS)
+        return;
+
+    WorldPosition next = cz->waypoints.empty() ? cz->dest : cz->waypoints.front().pos;
+    bool leg = !cz->waypoints.empty() && cz->waypoints.front().teleport;
+    float distNext = next.getMapId() == pos.getMapId() ? pos.distance(next) : -1.0f;
+    float moved = czSamplePos.getMapId() == pos.getMapId() ? pos.fDist(czSamplePos) : -1.0f;
+    MotionMaster* mm = bot->GetMotionMaster();
+
+    sLog.outString("[New RPG sample] bot=%s pos=%u:%.1f,%.1f,%.1f next=%u:%.1f,%.1f,%.1f dist_next=%.0f moved=%.0f since_s=%u internal=%u minimal=%u combat=%u moving=%u mgen=%u dead=%u taxi=%u leg=%u waypoints_left=%u",
+        bot->GetName(), pos.getMapId(), pos.getX(), pos.getY(), pos.getZ(),
+        next.getMapId(), next.getX(), next.getY(), next.getZ(), distNext, moved, since / IN_MILLISECONDS,
+        czInternalRuns, czMinimalRuns, sServerFacade.IsInCombat(bot) ? 1u : 0u, bot->IsStopped() ? 0u : 1u,
+        mm->empty() ? 0u : uint32(mm->GetCurrentMovementGeneratorType()), sServerFacade.UnitIsDead(bot) ? 1u : 0u,
+        bot->IsTaxiFlying() ? 1u : 0u, leg ? 1u : 0u, uint32(cz->waypoints.size()));
+
+    czSampleT = now;
+    czSamplePos = pos;
+    czInternalRuns = czMinimalRuns = 0;
 }
 
 bool PlayerbotAI::UpdateAIReaction(uint32 elapsed, bool minimal, bool isStunned)
@@ -2415,6 +2461,10 @@ void PlayerbotAI::DoNextAction(bool min)
     }
 
     bool minimal = !AllowActivity();
+
+    ++czInternalRuns;
+    if (minimal || min)
+        ++czMinimalRuns;
 
     currentEngine->DoNextAction(NULL, 0, (minimal || min), bot->IsTaxiFlying());
 

@@ -449,6 +449,7 @@ public:
     void ApplyPendingItemCooldowns();
     void ChangeEngine(BotState type);
     void DoNextAction(bool minimal = false);
+    void LogChangeZoneSample();
     bool CanDoSpecificAction(const std::string& name, bool isUseful = true, bool isPossible = true);
     virtual bool DoSpecificAction(const std::string& name, Event event = Event(), bool silent = false);
     void ChangeStrategy(const std::string& name, BotState type);
@@ -826,6 +827,11 @@ protected:
     uint32 faceTargetUpdateDelay;
     bool isPlayerFriend = false;
     bool isMovingToTransport = false;
+    // ChangeZoneSampleSeconds diagnostic (lbrick/cmangos-dev#74): state since the last sample.
+    uint32 czSampleT = 0;
+    WorldPosition czSamplePos;
+    uint32 czInternalRuns = 0;
+    uint32 czMinimalRuns = 0;
     bool shouldLogOut = false;
     bool m_recordMessages = false;
     bool m_recordIncommingMessages = false;

@@ -216,6 +216,11 @@ AiPlayerbot.LogRpgTravelEvents = 0
 # zone and whether it is resting. Off by default: with many bots it adds many lines.
 AiPlayerbot.LogRpgStatusEvents = 0
 
+# Every N seconds, log a sample line for each bot on a new RPG change-zone trip to the server
+# log: position, distance to the next waypoint, distance moved, combat and movement state, and
+# how many AI updates ran and how many of those were minimal. 0 (default) turns it off.
+AiPlayerbot.ChangeZoneSampleSeconds = 0
+
 # Show helmet and cloak on randombots (reset required)
 AiPlayerbot.RandomBotShowHelmet = 1
 AiPlayerbot.RandomBotShowCloak = 1
