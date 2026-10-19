@@ -647,8 +647,15 @@ void TestRegistry::GenerateTransportTestsImpl(int maxTests)
             while (HasTest(testName))
                 testName = "movement_transport_" + transportName + "_" + startName + "_" + endName + "_" + std::to_string(dedupe++);
 
+            // Arrival radius: 100 yd, but under half the dock-to-dock distance. The Thunder Bluff
+            // elevator docks are 111 yd apart (83 yd vertical), so a 100 yd radius passes a bot
+            // that wanders a few yards at the bottom (lbrick/cmangos-dev#51).
+            uint32 reachDist = 100;
+            if (startDockPos.getMapId() == endDockPos.getMapId())
+                reachDist = std::min(reachDist, (uint32)(startDockPos.fDist(endDockPos) / 2.0f));
+
             std::ostringstream reachCheck;
-            reachCheck << "monitor distance to " << endName << " < 100 => pass \"Bot arrived at " << endName << " after <time elapsed>\"";
+            reachCheck << "monitor distance to " << endName << " < " << reachDist << " => pass \"Bot arrived at " << endName << " after <time elapsed>\"";
 
             std::ostringstream timeout;
             timeout << "monitor time > " << timeoutSecs << " => fail \"Timeout: bot did not reach the other side after <time elapsed> (traveled <distance traveled> / wanted <distance wanted>)\"";
@@ -662,7 +669,7 @@ void TestRegistry::GenerateTransportTestsImpl(int maxTests)
             // Before the pass check: a bot that teleported dock to dock reaches the far side
             // without ever being a passenger (lbrick/cmangos-dev#51).
             std::ostringstream rideCheck;
-            rideCheck << "monitor distance without riding to " << endName << " < 100 => fail \"Bot reached " << endName << " without riding the transport after <time elapsed>\"";
+            rideCheck << "monitor distance without riding to " << endName << " < " << reachDist << " => fail \"Bot reached " << endName << " without riding the transport after <time elapsed>\"";
 
             std::vector<std::string> script = {
                 gmInvisible,
