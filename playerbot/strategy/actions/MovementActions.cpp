@@ -782,15 +782,29 @@ bool MovementAction::HandleSpecialMovement(TravelPath& path)
             return bot->TeleportTo(nextPoint.point.getMapId(), nextPoint.point.getX(), nextPoint.point.getY(), nextPoint.point.getZ(), nextPoint.point.getO(), 0) ? true : false;
     }
 
+    // The dock-to-stop link carries no object, so the transport points that lead up to the ride
+    // have entry 0. UseTransport with entry 0 takes the nearest transport of any kind, so take
+    // the entry from the first ride point further along (lbrick/cmangos-dev#51).
+    auto rideEntry = [&path](size_t index) -> uint32
+    {
+        std::vector<PathNodePoint>& points = path.getPath();
+        for (size_t i = index; i < points.size() && points[i].type == PathNodeType::NODE_TRANSPORT; ++i)
+            if (points[i].entry)
+                return points[i].entry;
+
+        return 0;
+    };
+
     //We are getting 'on' transport.
     if (nextPoint.type == PathNodeType::NODE_TRANSPORT)
     {
-        bool usedTransport = UseTransport(ai, nextPoint.entry, nextPoint.point, WorldPosition(), sPlayerbotAIConfig.transportTeleportType > 0);
+        uint32 entry = rideEntry(1);
+        bool usedTransport = UseTransport(ai, entry, nextPoint.point, WorldPosition(), sPlayerbotAIConfig.transportTeleportType > 0);
 
         uint32 lastTransportEntry = 0;
 
         if (usedTransport)
-            AI_VALUE(LastMovement&, "last movement").lastTransportEntry = nextPoint.entry;
+            AI_VALUE(LastMovement&, "last movement").lastTransportEntry = entry;
 
         WaitForReach(1000.0f);
         return true;
@@ -803,7 +817,7 @@ bool MovementAction::HandleSpecialMovement(TravelPath& path)
     
     if (currentPoint.type == PathNodeType::NODE_TRANSPORT)
     {
-        bool usedTransport = UseTransport(ai, currentPoint.entry, currentPoint.point, nextPoint.point, sPlayerbotAIConfig.transportTeleportType > 0);
+        bool usedTransport = UseTransport(ai, rideEntry(0), currentPoint.point, nextPoint.point, sPlayerbotAIConfig.transportTeleportType > 0);
 
         uint32 lastTransportEntry = 0;
 
