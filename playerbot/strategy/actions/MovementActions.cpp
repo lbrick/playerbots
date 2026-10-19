@@ -848,7 +848,13 @@ bool MovementAction::HandleSpecialMovement(TravelPath& path)
         uint32 lastTransportEntry = 0;
 
         if (usedTransport)
-            AI_VALUE(LastMovement&, "last movement").lastTransportEntry = entry;
+        {
+            // MoveTo2 returns here without storing the path it built, and WaitForTransport finds
+            // the stop to alight at in the stored path (lbrick/cmangos-dev#51).
+            LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
+            lastMove.setPath(path);
+            lastMove.lastTransportEntry = entry;
+        }
 
         WaitForReach(1000.0f);
         return true;
