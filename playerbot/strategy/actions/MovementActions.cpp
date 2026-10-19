@@ -706,6 +706,10 @@ bool MovementAction::WaitForTransport()
 
     if (ride == points.end() || rideEnd == points.end())
     {
+        // The ride is gone from the stored path (a new destination replaced it), so nothing will
+        // step the bot off. Let PlayerbotAI::UpdateAI's jump-off check handle it again instead of
+        // holding the bot aboard.
+        ai->SetMoveToTransport(false);
         lastMove.lastTransportEntry = 0;
         return false;
     }
