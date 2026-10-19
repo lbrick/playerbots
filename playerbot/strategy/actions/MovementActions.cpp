@@ -322,6 +322,11 @@ bool MovementAction::MoveOnTransport(PlayerbotAI* ai, GenericTransport* transpor
         // deck under it: an elevator at its dock, or a point far from a ship's origin
         // (lbrick/cmangos-dev#51).
         ai->SetMoveToTransport(true);
+        // Stop first: Unit::UpdateSplinePosition reads a passenger's spline as transport-local and
+        // writes it into the transport offset, so a walk still running in world coordinates would
+        // put the bot at its world position plus the transport's (lbrick/cmangos-dev#51).
+        bot->GetMotionMaster()->Clear();
+        ai->StopMoving();
         bot->GetMap()->PlayerRelocation(bot, transPos.getX(), transPos.getY(), transPos.getZ(), bot->GetOrientation());
         transport->AddPassenger(bot, true);
         bot->SendHeartBeat();
