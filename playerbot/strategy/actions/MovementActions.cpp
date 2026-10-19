@@ -872,22 +872,27 @@ bool MovementAction::HandleSpecialMovement(TravelPath& path)
     
     if (currentPoint.type == PathNodeType::NODE_TRANSPORT)
     {
-        bool usedTransport = UseTransport(ai, rideEntry(0), currentPoint.point, nextPoint.point, sPlayerbotAIConfig.transportTeleportType > 0);
+        uint32 entry = rideEntry(0);
+        bool usedTransport = UseTransport(ai, entry, currentPoint.point, nextPoint.point, sPlayerbotAIConfig.transportTeleportType > 0);
 
         uint32 lastTransportEntry = 0;
 
         if (!usedTransport)
         {
             if (bot->GetTransport())
-                lastTransportEntry = nextPoint.entry;
+                lastTransportEntry = entry;
         }
         else
         {
             if (!bot->GetTransport())
                 return bot->TeleportTo(nextPoint.point.getMapId(), nextPoint.point.getX(), nextPoint.point.getY(), nextPoint.point.getZ(), nextPoint.point.getO(), 0);
 
-            lastTransportEntry = nextPoint.entry;
+            lastTransportEntry = entry;
         }
+
+        // Same as boarding above: WaitForTransport finds the stop to alight at in the stored path.
+        if (lastTransportEntry)
+            AI_VALUE(LastMovement&, "last movement").setPath(path);
 
         if (lastTransportEntry)
             AI_VALUE(LastMovement&, "last movement").lastTransportEntry = lastTransportEntry;
