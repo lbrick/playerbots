@@ -317,6 +317,16 @@ bool MovementAction::MoveOnTransport(PlayerbotAI* ai, GenericTransport* transpor
 
     if (doTeleport)
     {
+        // A bot placed on the deck stays a passenger until MoveOffTransport. Without the flag,
+        // PlayerbotAI::UpdateAI drops it on the next tick whenever the vmap test cannot see the
+        // deck under it: an elevator at its dock, or a point far from a ship's origin
+        // (lbrick/cmangos-dev#51).
+        ai->SetMoveToTransport(true);
+        // Stop first: Unit::UpdateSplinePosition reads a passenger's spline as transport-local and
+        // writes it into the transport offset, so a walk still running in world coordinates would
+        // put the bot at its world position plus the transport's (lbrick/cmangos-dev#51).
+        bot->GetMotionMaster()->Clear();
+        ai->StopMoving();
         bot->GetMap()->PlayerRelocation(bot, transPos.getX(), transPos.getY(), transPos.getZ(), bot->GetOrientation());
         transport->AddPassenger(bot, true);
         bot->SendHeartBeat();
@@ -392,6 +402,7 @@ bool MovementAction::MoveOffTransport(PlayerbotAI* ai, WorldPosition exitPos, bo
     GenericTransport* transport = bot->GetTransport();
 
     transport->RemovePassenger(bot);
+    ai->SetMoveToTransport(false);
 
     if (doTeleport)
     {
@@ -445,10 +456,23 @@ bool MovementAction::UseTransport(PlayerbotAI* ai, uint32 entry, WorldPosition d
         return dockPosition.sqDistance2d(WorldPosition(trans));
     };
 
+    // Elevators are plain game objects. With bot optimizations on, Map::Update only updates
+    // objects near real players, so an elevator with only bots around never leaves its spawn
+    // position and never carries its passengers. Its position is a function of map time, so
+    // updating it here is idempotent. Only on the bot's own map, which this map update thread owns
+    // (lbrick/cmangos-dev#51).
+    auto animate = [bot](GenericTransport* trans)
+    {
+        if (trans->GetGoType() == GAMEOBJECT_TYPE_TRANSPORT && trans->GetMap() == bot->GetMap())
+            trans->Update(0);
+    };
+
     GenericTransport* transport = bot->GetTransport();
 
     if (transport)
     {
+        animate(transport);
+
         GameObjectInfo const* data = sGOStorage.LookupEntry<GameObjectInfo>(transport->GetEntry());
         std::string transportName = transport->GetName();
         if (transportName.empty())
@@ -475,6 +499,7 @@ bool MovementAction::UseTransport(PlayerbotAI* ai, uint32 entry, WorldPosition d
 
     for (auto& trans : dockPosition.getTransports(entry))
     {
+        animate(trans);
         float distance = dockDistanceSq(trans);
 
         if (minDist && distance > minDist)
@@ -659,25 +684,49 @@ bool MovementAction::WaitForTransport()
 
     GenericTransport* transport = bot->GetTransport();
 
-    if (!transport || transport->GetEntry() != lastMove.lastTransportEntry || lastMove.lastPath.getPath().front().type != PathNodeType::NODE_TRANSPORT || lastMove.lastPath.getPath().front().entry != lastMove.lastTransportEntry)
+    if (!transport || transport->GetEntry() != lastMove.lastTransportEntry)
     {
         lastMove.lastTransportEntry = 0;
         return false;
     }
 
-    TravelPath path = lastMove.lastPath;
+    // Find the ride in the stored path: the run of points carrying this entry, then the entry 0
+    // points of the stop-to-dock link. Its first point is the stop where the transport docks, its
+    // last the far dock. Boarding does not cut the stored path, so the ride is not at its front
+    // (lbrick/cmangos-dev#51).
+    std::vector<PathNodePoint>& points = lastMove.lastPath.getPath();
+    auto ride = std::find_if(points.begin(), points.end(), [entry = lastMove.lastTransportEntry](PathNodePoint const& p)
+    {
+        return p.type == PathNodeType::NODE_TRANSPORT && p.entry == entry;
+    });
 
-    if(!path.UpcommingSpecialMovement(bot, 0.0f, bot->GetTransport()))
+    auto rideEnd = ride;
+    while (rideEnd != points.end() && rideEnd->type == PathNodeType::NODE_TRANSPORT && rideEnd->entry == lastMove.lastTransportEntry)
+        ++rideEnd;
+
+    if (ride == points.end() || rideEnd == points.end())
+    {
+        // The ride is gone from the stored path (a new destination replaced it), so nothing will
+        // step the bot off. Let PlayerbotAI::UpdateAI's jump-off check handle it again instead of
+        // holding the bot aboard.
+        ai->SetMoveToTransport(false);
+        lastMove.lastTransportEntry = 0;
         return false;
+    }
 
-    PathNodePoint dockPoint = path.getPath().front();
-    PathNodePoint telePoint = *std::next(path.getPath().begin());
-        
-    if (!UseTransport(ai, dockPoint.entry, dockPoint.point, telePoint.point, sPlayerbotAIConfig.transportTeleportType > 0))
+    auto exit = rideEnd;
+    while (std::next(exit) != points.end() && exit->type == PathNodeType::NODE_TRANSPORT && !exit->entry && std::next(exit)->type == PathNodeType::NODE_TRANSPORT && !std::next(exit)->entry)
+        ++exit;
+
+    WorldPosition alightStop = rideEnd->type == PathNodeType::NODE_TRANSPORT ? rideEnd->point : std::prev(rideEnd)->point;
+    PathNodePoint exitPoint = *exit;
+
+    if (!UseTransport(ai, lastMove.lastTransportEntry, alightStop, exitPoint.point, sPlayerbotAIConfig.transportTeleportType > 0))
         return true;
 
+    lastMove.lastPath.cutTo(exitPoint, false);
     lastMove.lastTransportEntry = 0;
-    return false;
+    return true;
 }
 
 TravelPath MovementAction::ResolveMovePath(const WorldPosition& startPosition, const WorldPosition& endPosition, Unit* mover, LastMovement& lastMove)    
@@ -782,15 +831,35 @@ bool MovementAction::HandleSpecialMovement(TravelPath& path)
             return bot->TeleportTo(nextPoint.point.getMapId(), nextPoint.point.getX(), nextPoint.point.getY(), nextPoint.point.getZ(), nextPoint.point.getO(), 0) ? true : false;
     }
 
-    //We are getting 'on' transport.
-    if (nextPoint.type == PathNodeType::NODE_TRANSPORT)
+    // The dock-to-stop link carries no object, so the transport points that lead up to the ride
+    // have entry 0. UseTransport with entry 0 takes the nearest transport of any kind, so take
+    // the entry from the first ride point further along (lbrick/cmangos-dev#51).
+    auto rideEntry = [&path](size_t index) -> uint32
     {
-        bool usedTransport = UseTransport(ai, nextPoint.entry, nextPoint.point, WorldPosition(), sPlayerbotAIConfig.transportTeleportType > 0);
+        std::vector<PathNodePoint>& points = path.getPath();
+        for (size_t i = index; i < points.size() && points[i].type == PathNodeType::NODE_TRANSPORT; ++i)
+            if (points[i].entry)
+                return points[i].entry;
+
+        return 0;
+    };
+
+    //We are getting 'on' transport. In modes 0 and 1 only when there is a ride to board.
+    if (nextPoint.type == PathNodeType::NODE_TRANSPORT && (rideEntry(1) || sPlayerbotAIConfig.transportTeleportType == 2))
+    {
+        uint32 entry = rideEntry(1);
+        bool usedTransport = UseTransport(ai, entry, nextPoint.point, WorldPosition(), sPlayerbotAIConfig.transportTeleportType > 0);
 
         uint32 lastTransportEntry = 0;
 
         if (usedTransport)
-            AI_VALUE(LastMovement&, "last movement").lastTransportEntry = nextPoint.entry;
+        {
+            // MoveTo2 returns here without storing the path it built, and WaitForTransport finds
+            // the stop to alight at in the stored path (lbrick/cmangos-dev#51).
+            LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
+            lastMove.setPath(path);
+            lastMove.lastTransportEntry = entry;
+        }
 
         WaitForReach(1000.0f);
         return true;
@@ -803,22 +872,27 @@ bool MovementAction::HandleSpecialMovement(TravelPath& path)
     
     if (currentPoint.type == PathNodeType::NODE_TRANSPORT)
     {
-        bool usedTransport = UseTransport(ai, currentPoint.entry, currentPoint.point, nextPoint.point, sPlayerbotAIConfig.transportTeleportType > 0);
+        uint32 entry = rideEntry(0);
+        bool usedTransport = UseTransport(ai, entry, currentPoint.point, nextPoint.point, sPlayerbotAIConfig.transportTeleportType > 0);
 
         uint32 lastTransportEntry = 0;
 
         if (!usedTransport)
         {
             if (bot->GetTransport())
-                lastTransportEntry = nextPoint.entry;
+                lastTransportEntry = entry;
         }
         else
         {
             if (!bot->GetTransport())
                 return bot->TeleportTo(nextPoint.point.getMapId(), nextPoint.point.getX(), nextPoint.point.getY(), nextPoint.point.getZ(), nextPoint.point.getO(), 0);
 
-            lastTransportEntry = nextPoint.entry;
+            lastTransportEntry = entry;
         }
+
+        // Same as boarding above: WaitForTransport finds the stop to alight at in the stored path.
+        if (lastTransportEntry)
+            AI_VALUE(LastMovement&, "last movement").setPath(path);
 
         if (lastTransportEntry)
             AI_VALUE(LastMovement&, "last movement").lastTransportEntry = lastTransportEntry;

@@ -82,6 +82,12 @@ struct NewRpgInfo
             WorldPosition pos;
             bool teleport{false};  // true = TeleportTo (transport dock-to-dock), false = MoveFarTo
             WorldPosition from{};  // teleport only: the source dock the bot must reach first
+            // Transport legs only (lbrick/cmangos-dev#51): the transport GO entry and the transport's
+            // stop positions at the source and destination docks. 0 = no transport (a portal).
+            uint32 transportEntry{0};
+            WorldPosition boardStop{};
+            WorldPosition alightStop{};
+            uint32 waitStartT{0};  // when the bot started waiting at the source dock; 0 = not yet
         };
         std::vector<Waypoint> waypoints{};   // TravelNode multi-hop path; empty = direct
         bool waypointsBuilt{false};          // true after first TravelNode build — no rebuild

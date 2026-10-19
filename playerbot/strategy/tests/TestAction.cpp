@@ -89,6 +89,7 @@ void TestAction::RegisterMonitors()
     monitors.push_back(std::make_unique<MonitorStateTime>());
     monitors.push_back(std::make_unique<MonitorCombatHp>());
     monitors.push_back(std::make_unique<MonitorMovementDistance>());
+    monitors.push_back(std::make_unique<MonitorMovementDistanceWithoutRiding>());
     monitors.push_back(std::make_unique<MonitorNotOnMap>());
     monitors.push_back(std::make_unique<MonitorMovementUnderground>());
     monitors.push_back(std::make_unique<MonitorMovementCanNotReachNodes>());

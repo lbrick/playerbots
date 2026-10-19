@@ -20,10 +20,31 @@ void TestRegistry::RegisterMoveTests()
         needAlive,
         "monitor can not reach nodes => fail \"Bot cannot reach travel network at <current position>\"",
         timeout20Min,
+        "monitor distance without riding to theramore < 100 => fail \"Bot reached Theramore without riding the boat after <time elapsed>\"",
         "monitor distance to theramore < 100 => pass \"Bot arrived at Theramore after <time elapsed>\"",
         "require bot is faction=alliance",
         "teleport menethilharbor",
         "set destination theramore",
+        "observe",
+        gmVisible
+    });
+
+    // Transport ride: Undercity -> Brill, which leaves the city by elevator. Hand-written because
+    // the generated transport suite emits no test for the Undercity elevators. The destination is
+    // Brill, not the top of the shaft: for a point straight above the shaft the travel planner
+    // ends its node route at the bottom and the last navmesh leg floats the bot up the shaft
+    // (lbrick/cmangos-dev#51).
+    RegisterNamedLocation("undercity_elevator_bottom", GuidPosition(ObjectGuid(), WorldPosition(0, 1634.9f, 260.8f, -43.0f)));
+    RegisterTest("movement_transport_elevator_undercity", {
+        gmInvisible,
+        needAlive,
+        "monitor can not reach nodes => fail \"Bot cannot reach travel network at <current position>\"",
+        timeout10Min,
+        "monitor distance without riding to brill < 50 => fail \"Bot reached Brill without riding an elevator after <time elapsed>\"",
+        "monitor distance to brill < 50 => pass \"Bot rode out of Undercity and reached Brill after <time elapsed>\"",
+        "require bot is faction=horde",
+        "teleport undercity_elevator_bottom",
+        "set destination brill",
         "observe",
         gmVisible
     });

@@ -124,6 +124,10 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         }
         case RPG_CHANGE_ZONE:
         {
+            // Never end the trip on a transport: the bot would be left riding it (lbrick/cmangos-dev#51).
+            if (bot->GetTransport())
+                break;
+
             if (info.HasStatusPersisted(30 * 60 * 1000))
             {
                 NEWRPG_LOG("[New RPG] %s CHANGE_ZONE timed out, returning to idle", bot->GetName());
@@ -630,14 +634,29 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 
                         bool isElevator = (destDock.getZ() < -5.0f);
                         dataPtr->waypoints.push_back({nodePos, false});
+
+                        // The chain is dock -> stop -> ... -> stop -> dock. The stop-to-stop links
+                        // carry the transport GO entry; a portal chain has no stops and no entry.
+                        NewRpgInfo::ChangeZone::Waypoint leg{destDock, true, nodePos};
+                        for (size_t j = i + 1; j + 1 < last; ++j)
+                        {
+                            auto linkIt = nodes[j]->getLinks()->find(nodes[j + 1]);
+                            if (linkIt != nodes[j]->getLinks()->end() && linkIt->second->getPathObject())
+                            {
+                                leg.transportEntry = uint32(linkIt->second->getPathObject());
+                                leg.boardStop = *nodes[i + 1]->getPosition();
+                                leg.alightStop = *nodes[last - 1]->getPosition();
+                                break;
+                            }
+                        }
                         if (isElevator)
                             NEWRPG_LOG("[New RPG] %s elevator route: walking to lift at (%.1f %.1f %.1f map=%u)",
                                           bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
                         else
                             NEWRPG_LOG("[New RPG] %s TravelNode transport source dock (%.1f %.1f %.1f map=%u)",
                                           bot->GetName(), nodePos.getX(), nodePos.getY(), nodePos.getZ(), nodePos.getMapId());
-                        dataPtr->waypoints.push_back({destDock, true, nodePos});
-                        LogTravelEvent("leg_built", nodePos, destDock);
+                        dataPtr->waypoints.push_back(leg);
+                        LogTravelEvent("leg_built", nodePos, destDock, leg.transportEntry ? ("entry=" + std::to_string(leg.transportEntry)).c_str() : "");
                         segmentMapId = destDock.getMapId();
                         if (isElevator)
                             NEWRPG_LOG("[New RPG] %s elevator route: dest platform (%.1f %.1f %.1f map=%u) [teleport]",
@@ -693,6 +712,25 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             // The source dock, not the destination: the destination is across the water or on
             // another map, so a bot measured against it would walk toward it and never teleport.
             WorldPosition sourceDock = front.from != WorldPosition() ? front.from : wp;
+
+            // Under TransportTeleportType 0 or 1 the bot rides the transport as a passenger
+            // (lbrick/cmangos-dev#51); mode 2 keeps the dock-to-dock teleport below.
+            bool ride = sPlayerbotAIConfig.transportTeleportType < 2 && front.transportEntry;
+            bool doTeleport = sPlayerbotAIConfig.transportTeleportType > 0;
+            std::string entryDetail = "entry=" + std::to_string(front.transportEntry);
+
+            if (ride && bot->GetTransport())
+            {
+                // Riding: step off once the transport reaches the destination stop.
+                if (!UseTransport(ai, front.transportEntry, front.alightStop, wp, doTeleport) || bot->GetTransport())
+                    return true;
+
+                LogTravelEvent("transport_disembarked", WorldPosition(bot), wp, entryDetail.c_str());
+                dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+                ai->rpgInfo.SetMoveFarTo(WorldPosition());
+                return true;
+            }
+
             float distToDock = WorldPosition(bot).distance(sourceDock);
             if (distToDock > 20.0f)
                 return MoveFarTo(sourceDock);
@@ -708,6 +746,29 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 dataPtr->waypoints.erase(dataPtr->waypoints.begin());
                 ai->rpgInfo.Reset();
                 return false;
+            }
+
+            if (ride)
+            {
+                // At the dock: wait for the transport and board it. After 10 minutes without
+                // boarding, fall back to the teleport so the bot never strands at a pier.
+                uint32 now = WorldTimer::getMSTime();
+                if (!front.waitStartT)
+                {
+                    front.waitStartT = now;
+                    LogTravelEvent("transport_waiting", WorldPosition(bot), wp, entryDetail.c_str());
+                }
+
+                uint32 waited = WorldTimer::getMSTimeDiff(front.waitStartT, now);
+                if (waited <= 10 * MINUTE * IN_MILLISECONDS)
+                {
+                    if (UseTransport(ai, front.transportEntry, front.boardStop, wp, doTeleport) && bot->GetTransport())
+                        LogTravelEvent("transport_boarded", WorldPosition(bot), wp, entryDetail.c_str());
+                    return true;
+                }
+
+                std::string detail = entryDetail + " waited_s=" + std::to_string(waited / IN_MILLISECONDS);
+                LogTravelEvent("transport_fallback", WorldPosition(bot), wp, detail.c_str());
             }
 
             bool isElevator = (wp.getZ() < -5.0f);

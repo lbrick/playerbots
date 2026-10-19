@@ -94,6 +94,11 @@ namespace ai
         // snapshot keeps the original assertion strength for the whole observe window.
         uint32 groupOnMapExpected = 0;
 
+        // Latched by the "distance without riding to" monitor the first time it sees the bot as a
+        // transport passenger, so a bot that teleported dock to dock can be told from one that rode
+        // (lbrick/cmangos-dev#51).
+        bool wasTransportPassenger = false;
+
         bool debug = false; // enable extra logging for debugging
 
         TestContext() : pc(0), observing(false), testStartTime(0), monitorTime(0), waitTime(0), undergroundCount(0), cannotReachCount(0), focusMobEntry(0), focusMobKilled(false), cleanupPc(0), cleanupPrepared(false), whoResponded(false), result(TestResult::PENDING) {}

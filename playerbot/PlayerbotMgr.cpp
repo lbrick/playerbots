@@ -1953,7 +1953,15 @@ void PlayerbotHolder::CreateBot(Player* master, const std::string param, std::li
     RandomPlayerbotFactory factory(0);
 
     if (cls == 0)
+    {
         cls = factory.GetRandomClass(race);
+
+        // A random class can have no race on the requested team (Paladin for Horde, Shaman for
+        // Alliance in Classic), and GetRandomRace then falls back to the other team's races.
+        // Test bots that require a faction were created on the wrong side (lbrick/cmangos-dev#51).
+        for (uint32 tries = 0; race == 0 && team != TEAM_BOTH_ALLOWED && tries < 20 && !RandomPlayerbotFactory::isRaceForTeam(factory.GetRandomRace(cls, team), team); ++tries)
+            cls = factory.GetRandomClass(race);
+    }
 
     if (race == 0)
     {
