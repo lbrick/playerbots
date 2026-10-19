@@ -798,9 +798,11 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         if (WorldPosition(bot).distance(wp) < 30.0f)
         {
             dataPtr->progressT = WorldTimer::getMSTime();
+            // wp refers to the erased element, so read the next target only after the erase.
             dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+            WorldPosition next = dataPtr->waypoints.empty() ? dest : dataPtr->waypoints.front().pos;
             std::string detail = "waypoints_left=" + std::to_string(dataPtr->waypoints.size());
-            LogTravelEvent("waypoint_reached", WorldPosition(bot), wp, detail.c_str());
+            LogTravelEvent("waypoint_reached", WorldPosition(bot), next, detail.c_str());
             return true;
         }
         if (MoveFarTo(wp))
