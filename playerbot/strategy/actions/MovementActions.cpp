@@ -665,25 +665,45 @@ bool MovementAction::WaitForTransport()
 
     GenericTransport* transport = bot->GetTransport();
 
-    if (!transport || transport->GetEntry() != lastMove.lastTransportEntry || lastMove.lastPath.getPath().front().type != PathNodeType::NODE_TRANSPORT || lastMove.lastPath.getPath().front().entry != lastMove.lastTransportEntry)
+    if (!transport || transport->GetEntry() != lastMove.lastTransportEntry)
     {
         lastMove.lastTransportEntry = 0;
         return false;
     }
 
-    TravelPath path = lastMove.lastPath;
+    // Find the ride in the stored path: the run of points carrying this entry, then the entry 0
+    // points of the stop-to-dock link. Its first point is the stop where the transport docks, its
+    // last the far dock. Boarding does not cut the stored path, so the ride is not at its front
+    // (lbrick/cmangos-dev#51).
+    std::vector<PathNodePoint>& points = lastMove.lastPath.getPath();
+    auto ride = std::find_if(points.begin(), points.end(), [entry = lastMove.lastTransportEntry](PathNodePoint const& p)
+    {
+        return p.type == PathNodeType::NODE_TRANSPORT && p.entry == entry;
+    });
 
-    if(!path.UpcommingSpecialMovement(bot, 0.0f, bot->GetTransport()))
+    auto rideEnd = ride;
+    while (rideEnd != points.end() && rideEnd->type == PathNodeType::NODE_TRANSPORT && rideEnd->entry == lastMove.lastTransportEntry)
+        ++rideEnd;
+
+    if (ride == points.end() || rideEnd == points.end())
+    {
+        lastMove.lastTransportEntry = 0;
         return false;
+    }
 
-    PathNodePoint dockPoint = path.getPath().front();
-    PathNodePoint telePoint = *std::next(path.getPath().begin());
-        
-    if (!UseTransport(ai, dockPoint.entry, dockPoint.point, telePoint.point, sPlayerbotAIConfig.transportTeleportType > 0))
+    auto exit = rideEnd;
+    while (std::next(exit) != points.end() && exit->type == PathNodeType::NODE_TRANSPORT && !exit->entry && std::next(exit)->type == PathNodeType::NODE_TRANSPORT && !std::next(exit)->entry)
+        ++exit;
+
+    WorldPosition alightStop = rideEnd->type == PathNodeType::NODE_TRANSPORT ? rideEnd->point : std::prev(rideEnd)->point;
+    PathNodePoint exitPoint = *exit;
+
+    if (!UseTransport(ai, lastMove.lastTransportEntry, alightStop, exitPoint.point, sPlayerbotAIConfig.transportTeleportType > 0))
         return true;
 
+    lastMove.lastPath.cutTo(exitPoint, false);
     lastMove.lastTransportEntry = 0;
-    return false;
+    return true;
 }
 
 TravelPath MovementAction::ResolveMovePath(const WorldPosition& startPosition, const WorldPosition& endPosition, Unit* mover, LastMovement& lastMove)    
