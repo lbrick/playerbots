@@ -451,10 +451,22 @@ bool MovementAction::UseTransport(PlayerbotAI* ai, uint32 entry, WorldPosition d
         return dockPosition.sqDistance2d(WorldPosition(trans));
     };
 
+    // Elevators are plain game objects. With bot optimizations on, Map::Update only updates
+    // objects near real players, so an elevator with only bots around never leaves its spawn
+    // position and never carries its passengers. Its position is a function of map time, so
+    // updating it here is idempotent (lbrick/cmangos-dev#51).
+    auto animate = [](GenericTransport* trans)
+    {
+        if (trans->GetGoType() == GAMEOBJECT_TYPE_TRANSPORT)
+            trans->Update(0);
+    };
+
     GenericTransport* transport = bot->GetTransport();
 
     if (transport)
     {
+        animate(transport);
+
         GameObjectInfo const* data = sGOStorage.LookupEntry<GameObjectInfo>(transport->GetEntry());
         std::string transportName = transport->GetName();
         if (transportName.empty())
@@ -481,6 +493,7 @@ bool MovementAction::UseTransport(PlayerbotAI* ai, uint32 entry, WorldPosition d
 
     for (auto& trans : dockPosition.getTransports(entry))
     {
+        animate(trans);
         float distance = dockDistanceSq(trans);
 
         if (minDist && distance > minDist)
