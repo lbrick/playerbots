@@ -6485,6 +6485,12 @@ ActivePiorityType PlayerbotAI::GetPriorityType()
     if (sPlayerbotAIConfig.IsFreeAltBot(bot) || HasStrategy("travel once", BotState::BOT_STATE_NON_COMBAT))
         return ActivePiorityType::IS_ALWAYS_ACTIVE;
 
+    // Minimal ticks skip the change-zone action (relevance below 100), so a throttled trip stalls
+    // between full ticks. The progress timeout bounds how long a trip stays active
+    // (lbrick/cmangos-dev#74).
+    if (rpgInfo.GetStatus() == RPG_CHANGE_ZONE)
+        return ActivePiorityType::IS_ALWAYS_ACTIVE;
+
     if (bot->InBattleGroundQueue())
         return ActivePiorityType::IN_BG_QUEUE;
 
