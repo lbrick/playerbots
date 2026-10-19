@@ -799,6 +799,8 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         {
             dataPtr->progressT = WorldTimer::getMSTime();
             dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+            std::string detail = "waypoints_left=" + std::to_string(dataPtr->waypoints.size());
+            LogTravelEvent("waypoint_reached", WorldPosition(bot), wp, detail.c_str());
             return true;
         }
         if (MoveFarTo(wp))
