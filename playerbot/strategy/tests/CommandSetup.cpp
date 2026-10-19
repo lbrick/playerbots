@@ -251,6 +251,12 @@ TestResult CommandSetupSetDestination::Execute(const std::string& params, Player
 
         if (!nonForced && !ai->HasStrategy("travel", BotState::BOT_STATE_NON_COMBAT))
             ai->ChangeStrategy("+travel once", BotState::BOT_STATE_NON_COMBAT);
+
+        // A forced destination is the whole test. New RPG keeps choosing its own wander and quest
+        // targets, so the bot alternated between the two and never boarded an elevator
+        // (lbrick/cmangos-dev#51).
+        if (!nonForced && ai->HasStrategy("new rpg", BotState::BOT_STATE_NON_COMBAT))
+            ai->ChangeStrategy("-new rpg", BotState::BOT_STATE_NON_COMBAT);
     }
     else
     {
