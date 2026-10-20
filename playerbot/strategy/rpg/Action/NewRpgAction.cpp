@@ -572,6 +572,24 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 TravelNode* nextNode = (i + 1 < nodes.size()) ? nodes[i + 1] : nullptr;
                 bool isTransportLeg = nextNode && isTransportLink(node, nextNode);
 
+                // Links the waypoints walk across although they are not walks: flight paths,
+                // teleport spells such as the hearthstone, and map changes (lbrick/cmangos-dev#76).
+                if (nextNode && !isTransportLeg && sPlayerbotAIConfig.logRpgTravelEvents)
+                {
+                    auto linkIt = node->getLinks()->find(nextNode);
+                    bool hasLink = linkIt != node->getLinks()->end();
+                    uint32 type = hasLink ? uint32(linkIt->second->getPathType()) : 0;
+                    WorldPosition nextPos = *nextNode->getPosition();
+                    if (type != uint32(TravelNodePathType::walk) || nextPos.getMapId() != nodePos.getMapId())
+                    {
+                        std::string detail = "type=" + std::to_string(type) +
+                            " object=" + std::to_string(hasLink ? linkIt->second->getPathObject() : 0) +
+                            " segment_map=" + std::to_string(segmentMapId) + " index=" + std::to_string(i) +
+                            " nodes=" + std::to_string(nodes.size());
+                        LogTravelEvent("route_link", nodePos, nextPos, detail.c_str());
+                    }
+                }
+
                 if (!isTransportLeg)
                 {
                     // Normal node: normalize mapId to the segment's map, then coordinate sanity +
