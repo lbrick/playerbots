@@ -121,6 +121,11 @@ struct NewRpgInfo
     // Set when the move target is on another map than the bot (lbrick/cmangos-dev#67); the status
     // update drops the current status if it is still the one that started at crossMapStartT.
     bool crossMapMoveFar{false};
+    // ChangeZoneSampleSeconds diagnostic (lbrick/cmangos-dev#74): MoveFarTo calls since the last
+    // sample, and the branch and result of the latest one.
+    uint32 moveFarCalls{0};
+    const char* moveFarStep{"none"};
+    bool moveFarResult{false};
     uint32 crossMapStartT{0};
     // END MOVE_FAR
 

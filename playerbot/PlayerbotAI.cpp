@@ -279,6 +279,9 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     if (!bot->IsInWorld() || bot->IsBeingTeleported())
         return;
 
+    if (sPlayerbotAIConfig.changeZoneSampleSeconds)
+        LogChangeZoneSample();
+
     if (!pendingItemCooldowns.empty())
         ApplyPendingItemCooldowns();
 
@@ -644,6 +647,81 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 
         YieldAIInternalThread(min, bot->GetGUIDLow());
     }
+}
+
+// One line per ChangeZoneSampleSeconds for a bot on a change-zone trip, to find where slow
+// trips spend their time (lbrick/cmangos-dev#74).
+void PlayerbotAI::LogChangeZoneSample()
+{
+    auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&rpgInfo.data);
+    if (!cz)
+    {
+        czSampleT = 0;
+        return;
+    }
+
+    uint32 now = WorldTimer::getMSTime();
+    WorldPosition pos(bot);
+    if (!czSampleT)
+    {
+        czSampleT = now;
+        czSamplePos = pos;
+        czInternalRuns = czMinimalRuns = 0;
+        rpgInfo.moveFarCalls = 0;
+        czActions.clear();
+        return;
+    }
+
+    uint32 since = WorldTimer::getMSTimeDiff(czSampleT, now);
+    if (since < sPlayerbotAIConfig.changeZoneSampleSeconds * IN_MILLISECONDS)
+        return;
+
+    WorldPosition next = cz->waypoints.empty() ? cz->dest : cz->waypoints.front().pos;
+    bool leg = !cz->waypoints.empty() && cz->waypoints.front().teleport;
+    float distNext = next.getMapId() == pos.getMapId() ? pos.distance(next) : -1.0f;
+    float moved = czSamplePos.getMapId() == pos.getMapId() ? pos.fDist(czSamplePos) : -1.0f;
+    MotionMaster* mm = bot->GetMotionMaster();
+
+    sLog.outString("[New RPG sample] bot=%s pos=%u:%.1f,%.1f,%.1f next=%u:%.1f,%.1f,%.1f dist_next=%.0f moved=%.0f since_s=%u internal=%u minimal=%u combat=%u moving=%u mgen=%u dead=%u taxi=%u leg=%u waypoints_left=%u movefar_calls=%u movefar=%s:%u last_nc=\"%s\"",
+        bot->GetName(), pos.getMapId(), pos.getX(), pos.getY(), pos.getZ(),
+        next.getMapId(), next.getX(), next.getY(), next.getZ(), distNext, moved, since / IN_MILLISECONDS,
+        czInternalRuns, czMinimalRuns, sServerFacade.IsInCombat(bot) ? 1u : 0u, bot->IsStopped() ? 0u : 1u,
+        mm->empty() ? 0u : uint32(mm->GetCurrentMovementGeneratorType()), sServerFacade.UnitIsDead(bot) ? 1u : 0u,
+        bot->IsTaxiFlying() ? 1u : 0u, leg ? 1u : 0u, uint32(cz->waypoints.size()),
+        rpgInfo.moveFarCalls, rpgInfo.moveFarStep, rpgInfo.moveFarResult ? 1u : 0u,
+        GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT).c_str());
+
+    // The five actions tried most since the last sample, as name:executed/tried/delay_s, where
+    // delay_s is the AI delay the executed runs set in total.
+    std::vector<std::pair<std::string, SampledAction>> acts(czActions.begin(), czActions.end());
+    std::sort(acts.begin(), acts.end(), [](auto const& a, auto const& b) { return a.second.tried > b.second.tried; });
+    std::string actLine;
+    for (size_t i = 0; i < acts.size() && i < 5; ++i)
+    {
+        if (i)
+            actLine += ",";
+        actLine += acts[i].first + ":" + std::to_string(acts[i].second.executed) + "/" + std::to_string(acts[i].second.tried) +
+            "/" + std::to_string(acts[i].second.durationMs / IN_MILLISECONDS);
+    }
+    sLog.outString("[New RPG sample actions] bot=%s acts=\"%s\"", bot->GetName(), actLine.c_str());
+
+    czSampleT = now;
+    czSamplePos = pos;
+    czInternalRuns = czMinimalRuns = 0;
+    rpgInfo.moveFarCalls = 0;
+    czActions.clear();
+}
+
+void PlayerbotAI::CountSampledAction(const std::string& name, bool executed, uint32 durationMs)
+{
+    if (!czSampleT)
+        return;
+
+    SampledAction& a = czActions[name];
+    ++a.tried;
+    if (executed)
+        ++a.executed;
+    a.durationMs += durationMs;
 }
 
 bool PlayerbotAI::UpdateAIReaction(uint32 elapsed, bool minimal, bool isStunned)
@@ -2415,6 +2493,10 @@ void PlayerbotAI::DoNextAction(bool min)
     }
 
     bool minimal = !AllowActivity();
+
+    ++czInternalRuns;
+    if (minimal || min)
+        ++czMinimalRuns;
 
     currentEngine->DoNextAction(NULL, 0, (minimal || min), bot->IsTaxiFlying());
 
@@ -6401,6 +6483,12 @@ ActivePiorityType PlayerbotAI::GetPriorityType()
         return ActivePiorityType::NEARBY_PLAYER;
 
     if (sPlayerbotAIConfig.IsFreeAltBot(bot) || HasStrategy("travel once", BotState::BOT_STATE_NON_COMBAT))
+        return ActivePiorityType::IS_ALWAYS_ACTIVE;
+
+    // Minimal ticks skip the change-zone action (relevance below 100), so a throttled trip stalls
+    // between full ticks. The progress timeout bounds how long a trip stays active
+    // (lbrick/cmangos-dev#74).
+    if (rpgInfo.GetStatus() == RPG_CHANGE_ZONE)
         return ActivePiorityType::IS_ALWAYS_ACTIVE;
 
     if (bot->InBattleGroundQueue())

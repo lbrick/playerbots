@@ -2376,6 +2376,30 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
     return false;
 }
 
+// Why the current random teleport runs, for the random_teleport travel line. Callers set it
+// with RandomTeleportReason around the teleport (lbrick/cmangos-dev#74).
+static const char* s_randomTeleportReason = "other";
+
+struct RandomTeleportReason
+{
+    const char* prev;
+    explicit RandomTeleportReason(const char* reason) : prev(s_randomTeleportReason) { s_randomTeleportReason = reason; }
+    ~RandomTeleportReason() { s_randomTeleportReason = prev; }
+};
+
+// A scheduled random teleport would end a change-zone trip, so it is skipped while one runs and
+// the caller reschedules it (lbrick/cmangos-dev#74).
+static bool SkipTeleportOnTrip(Player* bot, const char* reason)
+{
+    PlayerbotAI* ai = bot->GetPlayerbotAI();
+    if (!ai || ai->rpgInfo.GetStatus() != RPG_CHANGE_ZONE)
+        return false;
+
+    if (sPlayerbotAIConfig.logRpgTravelEvents)
+        sLog.outString("[New RPG travel] bot=%s event=random_teleport_skipped reason=%s", bot->GetName(), reason);
+    return true;
+}
+
 bool RandomPlayerbotMgr::ProcessBot(Player* player)
 {
     if (!player || !player->IsInWorld() || player->IsBeingTeleported() || player->GetSession()->isLogingOut())
@@ -2430,7 +2454,11 @@ bool RandomPlayerbotMgr::ProcessBot(Player* player)
             if (sPlayerbotAIConfig.enableRandomTeleports)
             {
                 sLog.outDetail("Changing strategy for bot #%d %s:%d <%s>", bot, player->GetTeam() == ALLIANCE ? "A" : "H", player->GetLevel(), player->GetName());
-                ChangeStrategy(player);
+                if (!SkipTeleportOnTrip(player, "change_strategy"))
+                {
+                    RandomTeleportReason reason("change_strategy");
+                    ChangeStrategy(player);
+                }
                 ScheduleChangeStrategy(bot);
             }
             else
@@ -2446,7 +2474,11 @@ bool RandomPlayerbotMgr::ProcessBot(Player* player)
             if (sPlayerbotAIConfig.enableRandomTeleports)
             {
                 sLog.outDetail("Bot #%d %s:%d <%s>: sent to grind", bot, player->GetTeam() == ALLIANCE ? "A" : "H", player->GetLevel(), player->GetName());
-                RandomTeleportForLevel(player, true);
+                if (!SkipTeleportOnTrip(player, "grind"))
+                {
+                    RandomTeleportReason reason("grind");
+                    RandomTeleportForLevel(player, true);
+                }
                 ScheduleTeleport(bot);
             }
             else
@@ -2468,6 +2500,7 @@ void RandomPlayerbotMgr::Revive(Player* player)
     SetEventValue(bot, "dead", 0, 0);
     SetEventValue(bot, "revive", 0, 0);
 
+    RandomTeleportReason reason("revive");
     if (sServerFacade.GetDeathState(player) == CORPSE)
     {
         RandomTeleport(player);
@@ -2482,9 +2515,9 @@ void RandomPlayerbotMgr::Revive(Player* player)
 // teleport it causes can be told apart from an action-driven one (lbrick/cmangos-dev#67).
 static void LogRandomTeleport(Player* bot, uint32 mapId, float x, float y, float z, bool hearth)
 {
-    sLog.outString("[New RPG travel] bot=%s event=random_teleport from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f hearth=%u",
+    sLog.outString("[New RPG travel] bot=%s event=random_teleport from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f hearth=%u reason=%s",
         bot->GetName(), bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(),
-        mapId, x, y, z, hearth ? 1u : 0u);
+        mapId, x, y, z, hearth ? 1u : 0u, s_randomTeleportReason);
 }
 
 // A random teleport moves the bot off its change-zone route, so the trip ends here instead of
@@ -2496,7 +2529,7 @@ static void EndChangeZoneTrip(Player* bot)
         return;
 
     if (sPlayerbotAIConfig.logRpgTravelEvents)
-        sLog.outString("[New RPG travel] bot=%s event=change_zone_ended reason=random_teleport", bot->GetName());
+        sLog.outString("[New RPG travel] bot=%s event=change_zone_ended reason=random_teleport teleport_reason=%s", bot->GetName(), s_randomTeleportReason);
 
     ai->rpgInfo.ChangeToIdle();
 }
@@ -3096,6 +3129,7 @@ void RandomPlayerbotMgr::InstaRandomize(Player* bot)
 {
     sRandomPlayerbotMgr.Randomize(bot);
 
+    RandomTeleportReason reason("randomize");
     if(bot->GetLevel() > sWorld.getConfig(CONFIG_UINT32_START_PLAYER_LEVEL))
         sRandomPlayerbotMgr.RandomTeleportForLevel(bot, false);
 }

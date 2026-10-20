@@ -449,6 +449,9 @@ public:
     void ApplyPendingItemCooldowns();
     void ChangeEngine(BotState type);
     void DoNextAction(bool minimal = false);
+    void LogChangeZoneSample();
+    // Counts an engine action for the change-zone sample line (lbrick/cmangos-dev#74).
+    void CountSampledAction(const std::string& name, bool executed, uint32 durationMs);
     bool CanDoSpecificAction(const std::string& name, bool isUseful = true, bool isPossible = true);
     virtual bool DoSpecificAction(const std::string& name, Event event = Event(), bool silent = false);
     void ChangeStrategy(const std::string& name, BotState type);
@@ -826,6 +829,13 @@ protected:
     uint32 faceTargetUpdateDelay;
     bool isPlayerFriend = false;
     bool isMovingToTransport = false;
+    // ChangeZoneSampleSeconds diagnostic (lbrick/cmangos-dev#74): state since the last sample.
+    uint32 czSampleT = 0;
+    WorldPosition czSamplePos;
+    uint32 czInternalRuns = 0;
+    uint32 czMinimalRuns = 0;
+    struct SampledAction { uint32 tried = 0; uint32 executed = 0; uint32 durationMs = 0; };
+    std::map<std::string, SampledAction> czActions;
     bool shouldLogOut = false;
     bool m_recordMessages = false;
     bool m_recordIncommingMessages = false;
