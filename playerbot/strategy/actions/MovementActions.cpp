@@ -3064,8 +3064,11 @@ bool MovementAction::Flee(Unit *target)
         {
             ChaseMovementGenerator* chase = (ChaseMovementGenerator*)mm->GetCurrent();
 
+            // The chase is already set: flee succeeds only while it moves the bot. A bot held
+            // in place must fall through to fighting, or it repeats flee in combat for as long
+            // as the trigger stays true (lbrick/cmangos-dev#75).
             if (chase->GetCurrentTarget() == target && sServerFacade.GetChaseOffset(bot) == distance)
-                return true;
+                return !bot->IsStopped();
         }
 
         mm->MoveChase(target, distance, WorldPosition(bot).getAngleTo(target), true, false, true, false);
