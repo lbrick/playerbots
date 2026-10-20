@@ -3304,7 +3304,10 @@ bool FleeAction::Execute(Event& event)
     if (sPlayerbotAIConfig.logFleeLoops)
         LogFleeLoop(event);
 
-    return Flee(ai->GetUnit(AI_VALUE(ObjectGuid, "current target")));
+    bool fled = Flee(ai->GetUnit(AI_VALUE(ObjectGuid, "current target")));
+    if (fled)
+        ++loopFled;
+    return fled;
 }
 
 // One line per minute in which a bot ran flee 30 or more times and moved less than 5 yards
@@ -3331,8 +3334,9 @@ void FleeAction::LogFleeLoop(Event& event)
                 reachable = chase->IsReachable();
             }
 
-            sLog.outString("[Flee loop] bot=%s class=%u level=%u trigger=%s runs=%u moved=%.1f pos=%u:%.1f,%.1f,%.1f hp=%u mana=%u flee_range=%.1f mgen=%u chase_same=%u reachable=%u combat=%u attackers=%u hostile_refs=%u group=%u target=%s entry=%u target_level=%u target_dist=%.1f target_hp=%u target_mgen=%u target_victim=%s target_combat=%u",
-                bot->GetName(), bot->getClass(), bot->GetLevel(), event.getSource().c_str(), loopCount, moved,
+            sLog.outString("[Flee loop] bot=%s class=%u level=%u trigger=%s runs=%u fled=%u last_c=\"%s\" moved=%.1f pos=%u:%.1f,%.1f,%.1f hp=%u mana=%u flee_range=%.1f mgen=%u chase_same=%u reachable=%u combat=%u attackers=%u hostile_refs=%u group=%u target=%s entry=%u target_level=%u target_dist=%.1f target_hp=%u target_mgen=%u target_victim=%s target_combat=%u",
+                bot->GetName(), bot->getClass(), bot->GetLevel(), event.getSource().c_str(), loopCount, loopFled,
+                ai->GetLastExecutedActionName(BotState::BOT_STATE_COMBAT).c_str(), moved,
                 pos.getMapId(), pos.getX(), pos.getY(), pos.getZ(),
                 uint32(bot->GetHealthPercent()), bot->GetMaxPower(POWER_MANA) ? uint32(bot->GetPowerPercent(POWER_MANA)) : 0u,
                 ai->GetRange("flee"), mgen, chaseSame ? 1u : 0u, reachable ? 1u : 0u,
@@ -3346,6 +3350,7 @@ void FleeAction::LogFleeLoop(Event& event)
 
         loopWindowT = now;
         loopCount = 0;
+        loopFled = 0;
         loopPos = pos;
     }
 

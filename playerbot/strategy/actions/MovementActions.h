@@ -102,6 +102,7 @@ namespace ai
         // Flee runs and start position in the current minute, for LogFleeLoops (lbrick/cmangos-dev#75).
         uint32 loopWindowT = 0;
         uint32 loopCount = 0;
+        uint32 loopFled = 0;
         WorldPosition loopPos;
     };
 
