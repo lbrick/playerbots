@@ -2378,7 +2378,8 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
 
 // Why the current random teleport runs, for the random_teleport travel line. Callers set it
 // with RandomTeleportReason around the teleport (lbrick/cmangos-dev#74).
-static const char* s_randomTeleportReason = "other";
+// thread_local: a random teleport started on another thread must not log this one's reason (#79).
+static thread_local const char* s_randomTeleportReason = "other";
 
 struct RandomTeleportReason
 {
@@ -2389,14 +2390,34 @@ struct RandomTeleportReason
 
 // A scheduled random teleport would end a change-zone trip, so it is skipped while one runs and
 // the caller reschedules it (lbrick/cmangos-dev#74).
+// RandomTeleport moves a leader's whole group, so any bot member on a trip skips it too (#79).
 static bool SkipTeleportOnTrip(Player* bot, const char* reason)
 {
+    Player* onTrip = nullptr;
     PlayerbotAI* ai = bot->GetPlayerbotAI();
-    if (!ai || ai->rpgInfo.GetStatus() != RPG_CHANGE_ZONE)
+    if (ai && ai->rpgInfo.GetStatus() == RPG_CHANGE_ZONE)
+        onTrip = bot;
+    else if (Group* group = bot->GetGroup())
+    {
+        for (GroupReference* gref = group->GetFirstMember(); gref && !onTrip; gref = gref->next())
+        {
+            Player* member = gref->getSource();
+            PlayerbotAI* memberAi = member ? member->GetPlayerbotAI() : nullptr;
+            if (memberAi && memberAi->rpgInfo.GetStatus() == RPG_CHANGE_ZONE)
+                onTrip = member;
+        }
+    }
+
+    if (!onTrip)
         return false;
 
     if (sPlayerbotAIConfig.logRpgTravelEvents)
-        sLog.outString("[New RPG travel] bot=%s event=random_teleport_skipped reason=%s", bot->GetName(), reason);
+    {
+        if (onTrip == bot)
+            sLog.outString("[New RPG travel] bot=%s event=random_teleport_skipped reason=%s", bot->GetName(), reason);
+        else
+            sLog.outString("[New RPG travel] bot=%s event=random_teleport_skipped reason=%s member=%s", bot->GetName(), reason, onTrip->GetName());
+    }
     return true;
 }
 

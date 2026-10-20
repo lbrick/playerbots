@@ -795,9 +795,15 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             dataPtr->progressT = WorldTimer::getMSTime();
             // wp refers into waypoints, so copy the destination dock before the erase.
             WorldPosition destDock = wp;
+            // HandleTeleportAck logs where the bot lands (lbrick/cmangos-dev#79).
+            if (sPlayerbotAIConfig.logRpgTravelEvents)
+                ai->rpgInfo.legTeleportTo = destDock;
             dataPtr->waypoints.erase(dataPtr->waypoints.begin());
             ai->rpgInfo.SetMoveFarTo(WorldPosition());
-            return bot->TeleportTo(destDock.getMapId(), destDock.getX(), destDock.getY(), destDock.getZ(), bot->GetOrientation());
+            bool teleported = bot->TeleportTo(destDock.getMapId(), destDock.getX(), destDock.getY(), destDock.getZ(), bot->GetOrientation());
+            if (!teleported)
+                ai->rpgInfo.legTeleportTo = WorldPosition();
+            return teleported;
         }
 
         if (WorldPosition(bot).distance(wp) < 30.0f)
@@ -810,9 +816,14 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
             LogTravelEvent("waypoint_reached", WorldPosition(bot), next, detail.c_str());
             return true;
         }
-        if (MoveFarTo(wp))
+        // A failed stuck teleport inside MoveFarTo has already erased this waypoint; erase it
+        // here only if it is still at the front, so the trip does not skip the next one (#79).
+        WorldPosition target = wp;
+        if (MoveFarTo(target))
             return true;
-        dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+        if (!dataPtr->waypoints.empty() && dataPtr->waypoints.front().pos.getMapId() == target.getMapId() &&
+            dataPtr->waypoints.front().pos.fDist(target) < 0.1f)
+            dataPtr->waypoints.erase(dataPtr->waypoints.begin());
         return true;
     }
 

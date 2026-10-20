@@ -110,6 +110,9 @@ struct NewRpgInfo
     WorldPosition stuckTeleportTo;
     uint32 stuckTeleportTs{0};
     bool stuckTeleportOk{false};
+    // Target of the last transport-leg teleport, logged with the landing position once the
+    // teleport completes (AiPlayerbot.LogRpgTravelEvents, lbrick/cmangos-dev#79)
+    WorldPosition legTeleportTo;
     // When the pending abandon flag was first set (evidence for lbrick/cmangos-dev#66), and when the
     // status update last ran ("new rpg status due" queues it again after 5 s).
     uint32 abandonFlagTs{0};
