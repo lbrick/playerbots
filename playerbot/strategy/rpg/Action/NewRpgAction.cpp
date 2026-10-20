@@ -736,6 +736,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     return true;
 
                 LogTravelEvent("transport_disembarked", WorldPosition(bot), wp, entryDetail.c_str());
+                dataPtr->progressT = WorldTimer::getMSTime();
                 dataPtr->waypoints.erase(dataPtr->waypoints.begin());
                 ai->rpgInfo.SetMoveFarTo(WorldPosition());
                 return true;
@@ -765,7 +766,9 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 uint32 now = WorldTimer::getMSTime();
                 if (!front.waitStartT)
                 {
+                    // Reaching the dock is progress; the wait and the ride must not use up the limit.
                     front.waitStartT = now;
+                    dataPtr->progressT = now;
                     LogTravelEvent("transport_waiting", WorldPosition(bot), wp, entryDetail.c_str());
                 }
 
