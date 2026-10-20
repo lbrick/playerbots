@@ -92,6 +92,7 @@ struct NewRpgInfo
         std::vector<Waypoint> waypoints{};   // TravelNode multi-hop path; empty = direct
         bool waypointsBuilt{false};          // true after first TravelNode build — no rebuild
         std::vector<WorldPosition> rejectedTransportDocks{};  // BUG-2: cache bad destDock coords to skip on rebuild
+        uint32 progressT{0};  // last completed waypoint or transport leg; the timeout counts from here
     };
     struct Idle
     {

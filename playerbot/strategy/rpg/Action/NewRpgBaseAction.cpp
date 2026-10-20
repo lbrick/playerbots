@@ -245,6 +245,10 @@ bool NewRpgBaseAction::StuckTeleport(WorldPosition const& dest)
     // BOAT-5: use .pos from Waypoint struct
     if (auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&ai->rpgInfo.data))
     {
+        // The teleport moved the bot on, which the waypoint check cannot see, so it restarts the
+        // change_zone time limit (lbrick/cmangos-dev#71).
+        cz->progressT = WorldTimer::getMSTime();
+
         if (!cz->waypoints.empty())
         {
             WorldPosition check = cz->waypoints.front().pos;

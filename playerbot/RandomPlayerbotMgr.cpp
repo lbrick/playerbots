@@ -2487,6 +2487,20 @@ static void LogRandomTeleport(Player* bot, uint32 mapId, float x, float y, float
         mapId, x, y, z, hearth ? 1u : 0u);
 }
 
+// A random teleport moves the bot off its change-zone route, so the trip ends here instead of
+// running into the change_zone timeout (lbrick/cmangos-dev#71).
+static void EndChangeZoneTrip(Player* bot)
+{
+    PlayerbotAI* ai = bot->GetPlayerbotAI();
+    if (!ai || ai->rpgInfo.GetStatus() != RPG_CHANGE_ZONE)
+        return;
+
+    if (sPlayerbotAIConfig.logRpgTravelEvents)
+        sLog.outString("[New RPG travel] bot=%s event=change_zone_ended reason=random_teleport", bot->GetName());
+
+    ai->rpgInfo.ChangeToIdle();
+}
+
 void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>& locs, bool hearth, bool activeOnly)
 {
     if (bot->IsBeingTeleported())
@@ -2694,6 +2708,7 @@ void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>&
 
             if (sPlayerbotAIConfig.logRpgTravelEvents)
                 LogRandomTeleport(bot, loc.mapid, x, y, z, hearth);
+            EndChangeZoneTrip(bot);
 
             bot->GetMotionMaster()->Clear();
             bot->TeleportTo(loc.mapid, x, y, z, 0);
@@ -2718,6 +2733,7 @@ void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>&
 
                     if (sPlayerbotAIConfig.logRpgTravelEvents)
                         LogRandomTeleport(member, loc.mapid, x, y, z, hearth);
+                    EndChangeZoneTrip(member);
 
                     member->GetMotionMaster()->Clear();
                     member->TeleportTo(loc.mapid, x, y, z, 0);
