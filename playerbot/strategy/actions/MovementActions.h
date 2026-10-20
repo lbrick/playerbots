@@ -96,7 +96,13 @@ namespace ai
         virtual bool Execute(Event& event) override;
 
     private:
+        void LogFleeLoop(Event& event);
+
         float distance;
+        // Flee runs and start position in the current minute, for LogFleeLoops (lbrick/cmangos-dev#75).
+        uint32 loopWindowT = 0;
+        uint32 loopCount = 0;
+        WorldPosition loopPos;
     };
 
     class FleeWithPetAction : public MovementAction
