@@ -793,9 +793,11 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                               bot->GetName(), wp.getX(), wp.getY(), wp.getZ(), wp.getMapId());
             LogTravelEvent("teleported", WorldPosition(bot), wp);
             dataPtr->progressT = WorldTimer::getMSTime();
+            // wp refers into waypoints, so copy the destination dock before the erase.
+            WorldPosition destDock = wp;
             dataPtr->waypoints.erase(dataPtr->waypoints.begin());
             ai->rpgInfo.SetMoveFarTo(WorldPosition());
-            return bot->TeleportTo(wp.getMapId(), wp.getX(), wp.getY(), wp.getZ(), bot->GetOrientation());
+            return bot->TeleportTo(destDock.getMapId(), destDock.getX(), destDock.getY(), destDock.getZ(), bot->GetOrientation());
         }
 
         if (WorldPosition(bot).distance(wp) < 30.0f)
