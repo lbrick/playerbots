@@ -522,6 +522,12 @@ bool ChooseRpgTargetAction::Execute(Event& event)
 
     //Save the current rpg target and the ignorelist.
     SET_AI_VALUE(GuidPosition, "rpg target", guidP);
+
+    // One line per legacy pick, with the new RPG status, so a run shows legacy RPG choosing
+    // targets only while new RPG is idle (lbrick/cmangos-dev#47).
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=legacy_rpg_target new_rpg_status=%d entry=%u",
+            bot->GetName(), (int)ai->rpgInfo.GetStatus(), guidP.GetEntry());
     ignoreList.clear();
 
     return true;
@@ -530,6 +536,10 @@ bool ChooseRpgTargetAction::Execute(Event& event)
 bool ChooseRpgTargetAction::isUseful()
 {
     if (!ai->AllowActivity(RPG_ACTIVITY))
+        return false;
+
+    // New RPG owns the bot outside its idle status (lbrick/cmangos-dev#47).
+    if (AI_VALUE(bool, "new rpg macro active"))
         return false;
 
     GuidPosition guidP = AI_VALUE(GuidPosition, "rpg target");
