@@ -939,3 +939,84 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 
     return MoveRandomNear(10.0f);
 }
+
+// ─── NewRpgPostQuestAction ───────────────────────────────────────────────────
+
+bool NewRpgPostQuestAction::Execute(Event& /*event*/)
+{
+    NewRpgInfo::PostQuest& pq = ai->rpgInfo.postQuest;
+    if (pq.kind == NewRpgInfo::PostQuest::NONE)
+        return false;
+
+    uint32 now = WorldTimer::getMSTime();
+    if (WorldTimer::getMSTimeDiff(pq.startT, now) >= postQuestMaxTime)
+        return EndPostQuest("timeout");
+
+    if (pq.routine != NewRpgInfo::PostQuest::PAUSE)
+    {
+        Creature* npc = ai->GetCreature(pq.target);
+        if (!npc || !npc->IsAlive())
+            return EndPostQuest("lost");
+
+        if (!pq.reachT)
+        {
+            if (bot->GetDistance(npc) > INTERACTION_DISTANCE)
+            {
+                if (MoveWorldObjectTo(pq.target))
+                    return true;
+                return EndPostQuest("unreachable");
+            }
+
+            pq.reachT = now;
+            bot->SetSelectionGuid(pq.target);
+            bot->SetFacingToObject(npc);
+            // The legacy RPG sub-actions' own actions, called directly so the routine does not
+            // depend on the legacy "rpg target" value.
+            if (pq.routine == NewRpgInfo::PostQuest::VENDOR)
+                ai->DoSpecificAction("sell", Event("rpg action", "vendor"), true);
+            else
+                ai->DoSpecificAction("trainer", Event("rpg action", pq.target), true);
+            return ForceToWait(npcVisitTime);
+        }
+
+        uint32 stayed = WorldTimer::getMSTimeDiff(pq.reachT, now);
+        if (stayed < npcVisitTime)
+            return ForceToWait(npcVisitTime - stayed);
+        return EndPostQuest("done");
+    }
+
+    if (!pq.reachT)
+    {
+        pq.reachT = now;
+        if (pq.kind == NewRpgInfo::PostQuest::TURN_IN)
+        {
+            static uint32 const emotes[] = { EMOTE_ONESHOT_TALK, EMOTE_ONESHOT_BOW, EMOTE_ONESHOT_WAVE,
+                EMOTE_ONESHOT_CHEER, EMOTE_ONESHOT_LAUGH };
+            bot->HandleEmoteCommand(emotes[urand(0, 4)]);
+        }
+        else if (WorldObject* giver = bot->GetMap()->GetWorldObject(pq.giver))
+            bot->SetFacingToObject(giver);
+        return ForceToWait(pq.pauseMs);
+    }
+
+    uint32 paused = WorldTimer::getMSTimeDiff(pq.reachT, now);
+    if (paused < pq.pauseMs)
+        return ForceToWait(pq.pauseMs - paused);
+
+    // After an accept the bot turns from the quest giver before it leaves.
+    if (pq.kind == NewRpgInfo::PostQuest::ACCEPT)
+        bot->SetFacingTo(bot->GetOrientation() + M_PI_F);
+
+    return EndPostQuest("done");
+}
+
+bool NewRpgPostQuestAction::EndPostQuest(char const* result)
+{
+    NewRpgInfo::PostQuest& pq = ai->rpgInfo.postQuest;
+    if (sPlayerbotAIConfig.logRpgQuestEvents)
+        sLog.outString("[New RPG quest] bot=%s event=post_quest_end kind=%s routine=%s result=%s duration_ms=%u",
+            bot->GetName(), PostQuestKindName(pq.kind), PostQuestRoutineName(pq.routine), result,
+            WorldTimer::getMSTimeDiff(pq.startT, WorldTimer::getMSTime()));
+    pq = NewRpgInfo::PostQuest{};
+    return true;
+}

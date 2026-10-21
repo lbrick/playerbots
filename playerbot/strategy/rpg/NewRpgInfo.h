@@ -106,6 +106,22 @@ struct NewRpgInfo
 
     uint32 startT{0};  // start timestamp of the current status
 
+    // Post-quest routine (lbrick/cmangos-dev#45): a pause, or a vendor or trainer visit, after a
+    // quest accept or turn-in. Held beside the status, so a status change does not cut it short.
+    struct PostQuest
+    {
+        enum Kind : uint8 { NONE = 0, ACCEPT = 1, TURN_IN = 2 };
+        enum Routine : uint8 { PAUSE = 0, VENDOR = 1, TRAINER = 2 };
+        Kind kind{NONE};
+        Routine routine{PAUSE};
+        ObjectGuid giver{};
+        ObjectGuid target{};   // vendor or trainer
+        uint32 startT{0};
+        uint32 pauseMs{0};
+        uint32 reachT{0};      // pause begun, or vendor or trainer reached; 0 = not yet
+    };
+    PostQuest postQuest;
+
     // MOVE_FAR
     float nearestMoveFarDis{FLT_MAX};
     uint32 stuckTs{0};

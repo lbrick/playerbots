@@ -77,4 +77,17 @@ public:
     bool Execute(Event& event) override;
 };
 
+/// Runs the routine StartPostQuest sets after a quest accept or turn-in (lbrick/cmangos-dev#45).
+class NewRpgPostQuestAction : public NewRpgBaseAction
+{
+public:
+    NewRpgPostQuestAction(PlayerbotAI* ai) : NewRpgBaseAction(ai, "new rpg post quest") {}
+    bool Execute(Event& event) override;
+
+protected:
+    bool EndPostQuest(char const* result);
+
+    const uint32 npcVisitTime = 3 * 1000;
+};
+
 } // namespace ai

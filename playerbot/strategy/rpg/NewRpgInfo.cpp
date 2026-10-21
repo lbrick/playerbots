@@ -82,6 +82,7 @@ void NewRpgInfo::Reset()
 {
     data   = Idle{};
     startT = WorldTimer::getMSTime();
+    postQuest = PostQuest{};
 }
 
 void NewRpgInfo::SetMoveFarTo(WorldPosition pos)
