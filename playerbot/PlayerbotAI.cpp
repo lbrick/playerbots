@@ -1650,6 +1650,17 @@ void PlayerbotAI::HandleTeleportAck()
         SetAIInternalUpdateDelay(urand(2000, 5000));
     }
 
+    // Where a change-zone transport leg landed, against where it was sent (lbrick/cmangos-dev#79).
+    if (rpgInfo.legTeleportTo != WorldPosition())
+    {
+        WorldPosition const& to = rpgInfo.legTeleportTo;
+        float dist = bot->GetMapId() == to.getMapId() ? WorldPosition(bot).distance(to) : -1.0f;
+        sLog.outString("[New RPG travel] bot=%s event=teleport_landed from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f to_target=%.1f",
+            bot->GetName(), bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(),
+            to.getMapId(), to.getX(), to.getY(), to.getZ(), dist);
+        rpgInfo.legTeleportTo = WorldPosition();
+    }
+
     if (IsRealPlayer())
         bot->SendHeartBeat();
 
