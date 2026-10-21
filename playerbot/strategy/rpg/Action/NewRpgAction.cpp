@@ -8,6 +8,7 @@
 #include "MotionGenerators/MoveMap.h"
 #include "Server/DBCStructure.h"
 #include "Server/DBCStores.h"
+#include "playerbot/ServerFacade.h"
 
 using namespace ai;
 
@@ -523,7 +524,9 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     }
 
     // 5.2 — mount up when far from dest
-    if (dist > 50.0f)
+    // Not while a teleport-spell leg is next: mounting would interrupt the cast (#76).
+    bool castLegNext = !dataPtr->waypoints.empty() && dataPtr->waypoints.front().spell;
+    if (dist > 50.0f && !castLegNext)
         TryMount();
 
     // Populate TravelNode waypoints once when not near dest (no rebuild — prevents bad node re-entry)
@@ -533,7 +536,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     {
         dataPtr->waypointsBuilt = true;
         std::vector<WorldPosition> startPath, endPath;
-        TravelNodeRoute route = sTravelNodeMap.getRoute(WorldPosition(bot), dest, startPath, endPath, bot);
+        TravelNodeRoute route = sTravelNodeMap.getRoute(WorldPosition(bot), dest, startPath, endPath, bot, !dataPtr->noTeleportSpells);
         std::vector<TravelNode*>& nodes = route.getNodes();
         if (!nodes.empty())
         {
@@ -571,6 +574,46 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                 };
                 TravelNode* nextNode = (i + 1 < nodes.size()) ? nodes[i + 1] : nullptr;
                 bool isTransportLeg = nextNode && isTransportLink(node, nextNode);
+
+                // A teleport-spell link (hearthstone, class teleport) is a leg the bot completes by
+                // casting the spell where it stands. Walked, it relabelled the nodes after it with
+                // the bot's map and dropped the trip at the next cross-map walk (#76).
+                if (nextNode && !isTransportLeg)
+                {
+                    auto linkIt = node->getLinks()->find(nextNode);
+                    if (linkIt != node->getLinks()->end() &&
+                        linkIt->second->getPathType() == TravelNodePathType::teleportSpell &&
+                        linkIt->second->getPathObject())
+                    {
+                        WorldPosition landPos = *nextNode->getPosition();
+                        NewRpgInfo::ChangeZone::Waypoint leg{landPos, true, nodePos};
+                        leg.spell = uint32(linkIt->second->getPathObject());
+                        dataPtr->waypoints.push_back(leg);
+                        std::string detail = "spell=" + std::to_string(leg.spell);
+                        LogTravelEvent("spell_leg_built", nodePos, landPos, detail.c_str());
+                        segmentMapId = landPos.getMapId();
+                        ++i;  // the landing node is the leg's end
+                        continue;
+                    }
+                }
+
+                // Links the waypoints walk across although they are not walks: flight paths,
+                // teleport spells such as the hearthstone, and map changes (lbrick/cmangos-dev#76).
+                if (nextNode && !isTransportLeg && sPlayerbotAIConfig.logRpgTravelEvents)
+                {
+                    auto linkIt = node->getLinks()->find(nextNode);
+                    bool hasLink = linkIt != node->getLinks()->end();
+                    uint32 type = hasLink ? uint32(linkIt->second->getPathType()) : 0;
+                    WorldPosition nextPos = *nextNode->getPosition();
+                    if (type != uint32(TravelNodePathType::walk) || nextPos.getMapId() != nodePos.getMapId())
+                    {
+                        std::string detail = "type=" + std::to_string(type) +
+                            " object=" + std::to_string(hasLink ? linkIt->second->getPathObject() : 0) +
+                            " segment_map=" + std::to_string(segmentMapId) + " index=" + std::to_string(i) +
+                            " nodes=" + std::to_string(nodes.size());
+                        LogTravelEvent("route_link", nodePos, nextPos, detail.c_str());
+                    }
+                }
 
                 if (!isTransportLeg)
                 {
@@ -715,6 +758,62 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     {
         auto& front = dataPtr->waypoints.front();
         WorldPosition& wp = front.pos;
+
+        // Teleport-spell leg: cast the spell where the bot stands, then wait for the teleport.
+        // A spell that cannot be cast, or a cast that does not move the bot, rebuilds the route
+        // without teleport spells (lbrick/cmangos-dev#76).
+        if (front.teleport && front.spell)
+        {
+            uint32 now = WorldTimer::getMSTime();
+            WorldPosition here(bot);
+            std::string detail = "spell=" + std::to_string(front.spell) + " tries=" + std::to_string(front.castTries);
+            if (here.getMapId() == wp.getMapId() && here.distance(wp) < 60.0f)
+            {
+                LogTravelEvent("spell_teleport_arrived", here, wp, detail.c_str());
+                dataPtr->progressT = now;
+                dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+                ai->rpgInfo.SetMoveFarTo(WorldPosition());
+                return true;
+            }
+
+            if (bot->IsBeingTeleported() || bot->IsNonMeleeSpellCasted(true))
+                return true;
+            if (front.castT && WorldTimer::getMSTimeDiff(front.castT, now) < 15 * IN_MILLISECONDS)
+                return true;
+
+            bool cast = false;
+            if (front.castTries < 2)
+            {
+                if (front.spell == 8690)
+                {
+                    if (AI_VALUE2(bool, "action useful", "hearthstone"))
+                        cast = ai->DoSpecificAction("hearthstone", Event("new rpg go change zone"), true);
+                }
+                else if (sServerFacade.IsSpellReady(bot, front.spell) && AI_VALUE2(uint32, "has reagents for", front.spell) > 0)
+                {
+                    if (AI_VALUE2(uint32, "current mount speed", "self target"))
+                        ai->Unmount();
+                    ai->RemoveShapeshift();
+                    cast = ai->DoSpecificAction("cast", Event("rpg action", chat->formatWorldobject(bot) + " " + std::to_string(front.spell)), true);
+                }
+            }
+
+            if (cast)
+            {
+                front.castT = now;
+                ++front.castTries;
+                detail = "spell=" + std::to_string(front.spell) + " tries=" + std::to_string(front.castTries);
+                LogTravelEvent("spell_teleport_cast", here, wp, detail.c_str());
+                return true;
+            }
+
+            LogTravelEvent("spell_teleport_failed", here, wp, detail.c_str());
+            dataPtr->noTeleportSpells = true;
+            dataPtr->waypoints.clear();
+            dataPtr->waypointsBuilt = false;
+            ai->rpgInfo.SetMoveFarTo(WorldPosition());
+            return true;
+        }
 
         // BOAT-4: transport teleport handler — walk to source dock, then TeleportTo dest dock
         if (front.teleport)

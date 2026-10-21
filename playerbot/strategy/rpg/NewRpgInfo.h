@@ -88,11 +88,17 @@ struct NewRpgInfo
             WorldPosition boardStop{};
             WorldPosition alightStop{};
             uint32 waitStartT{0};  // when the bot started waiting at the source dock; 0 = not yet
+            // Teleport-spell legs only (lbrick/cmangos-dev#76): the hearthstone or class teleport
+            // spell the bot casts, when it last cast it, and how many casts it has made.
+            uint32 spell{0};
+            uint32 castT{0};
+            uint32 castTries{0};
         };
         std::vector<Waypoint> waypoints{};   // TravelNode multi-hop path; empty = direct
         bool waypointsBuilt{false};          // true after first TravelNode build — no rebuild
         std::vector<WorldPosition> rejectedTransportDocks{};  // BUG-2: cache bad destDock coords to skip on rebuild
         uint32 progressT{0};  // last completed waypoint or transport leg; the timeout counts from here
+        bool noTeleportSpells{false};  // a teleport-spell leg failed: rebuild without them (#76)
     };
     struct Idle
     {

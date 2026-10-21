@@ -371,10 +371,11 @@ namespace ai
         TravelNode* getRandomNode(WorldPosition pos) { std::vector<TravelNode*> rNodes = getNodes(pos); if (rNodes.empty()) return nullptr; return  rNodes[urand(0, rNodes.size() - 1)]; }
 
         //Finds the best nodePath between two nodes
-        TravelNodeRoute getRoute(TravelNode* start, TravelNode* goal, Unit* unit = nullptr);
+        // teleportSpells = false leaves out the hearthstone and class teleport hops (lbrick/cmangos-dev#76).
+        TravelNodeRoute getRoute(TravelNode* start, TravelNode* goal, Unit* unit = nullptr, bool teleportSpells = true);
 
         //Find the best node between two positions
-        TravelNodeRoute getRoute(WorldPosition startPos, WorldPosition endPos, std::vector<WorldPosition>& startPath, std::vector<WorldPosition>& endPath, Unit* unit = nullptr);
+        TravelNodeRoute getRoute(WorldPosition startPos, WorldPosition endPos, std::vector<WorldPosition>& startPath, std::vector<WorldPosition>& endPath, Unit* unit = nullptr, bool teleportSpells = true);
 
         //Find the full path between those locations
         static TravelPath getFullPath(WorldPosition startPos, WorldPosition endPos, Unit* unit = nullptr);

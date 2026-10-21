@@ -1531,7 +1531,7 @@ TravelNode* TravelNodeMap::getNode(WorldPosition pos, std::vector<WorldPosition>
     return NULL;
 }
 
-TravelNodeRoute TravelNodeMap::getRoute(TravelNode* start, TravelNode* goal, Unit* unit)
+TravelNodeRoute TravelNodeMap::getRoute(TravelNode* start, TravelNode* goal, Unit* unit, bool teleportSpells)
 {
     float unitSpeed = unit ? unit->GetSpeed(MOVE_RUN) : 7.0f;
 
@@ -1589,7 +1589,7 @@ TravelNodeRoute TravelNodeMap::getRoute(TravelNode* start, TravelNode* goal, Uni
                 }
             }
 
-            if (AI_VALUE2(bool, "action useful", "hearthstone") && bot->IsAlive())
+            if (teleportSpells && AI_VALUE2(bool, "action useful", "hearthstone") && bot->IsAlive())
             {
                 TravelNode* homeNode = sTravelNodeMap.getNode(AI_VALUE(WorldPosition, "home bind"), nullptr, 50.0f);
                 if (homeNode)
@@ -1617,6 +1617,9 @@ TravelNodeRoute TravelNodeMap::getRoute(TravelNode* start, TravelNode* goal, Uni
 
         for (auto spellId : teleSpells)
         {
+            if (!teleportSpells)
+                break;
+
             if (!bot->IsAlive())
                 continue;
 
@@ -1751,7 +1754,7 @@ TravelNodeRoute TravelNodeMap::getRoute(TravelNode* start, TravelNode* goal, Uni
     return TravelNodeRoute();
 }
 
-TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition endPos, std::vector<WorldPosition>& startPath, std::vector<WorldPosition>& endPath, Unit* unit)
+TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition endPos, std::vector<WorldPosition>& startPath, std::vector<WorldPosition>& endPath, Unit* unit, bool teleportSpells)
 {
     if (m_nodes.empty())
         return TravelNodeRoute();
@@ -1794,7 +1797,7 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
 
             float maxStartDistance = startNode->isTransport() ? 20.0f : 1.0f;
 
-            TravelNodeRoute route = getRoute(startNode, endNode, unit);
+            TravelNodeRoute route = getRoute(startNode, endNode, unit, teleportSpells);
 
             if (transportEntry)
                 return route;
@@ -1897,7 +1900,9 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
     {
         PlayerbotAI* ai = bot->GetPlayerbotAI();
         AiObjectContext* context = ai->GetAiObjectContext();
-        if (AI_VALUE2(bool, "action useful", "hearthstone"))
+        // The fallback only finds routes through the hearthstone portal, so a caller that
+        // excludes teleport spells skips it (lbrick/cmangos-dev#76).
+        if (teleportSpells && AI_VALUE2(bool, "action useful", "hearthstone"))
         {
             startPath.clear();
             TravelNode* botNode = new TravelNode(startPos, "Bot Pos", false);
