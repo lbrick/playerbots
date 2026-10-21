@@ -5,14 +5,21 @@
 #include <cctype>
 #include <locale>
 
+#ifdef _WIN32
+#define strtok_r strtok_s
+#endif
+
 void split(std::vector<std::string>& dest, const std::string& str, const char* delim)
 {
+    // strtok_r keeps its position in a local; strtok's is shared by every map thread
+    // (lbrick/cmangos-dev#80).
     char* pTempStr = strdup( str.c_str() );
-    char* pWord = strtok(pTempStr, delim);
+    char* save = nullptr;
+    char* pWord = strtok_r(pTempStr, delim, &save);
     while(pWord != NULL)
     {
         dest.push_back(pWord);
-        pWord = strtok(NULL, delim);
+        pWord = strtok_r(NULL, delim, &save);
     }
 
     free(pTempStr);

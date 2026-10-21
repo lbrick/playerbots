@@ -65,8 +65,66 @@ std::string &trim(std::string &s);
 
 std::set<std::string> PlayerbotAI::unsecuredCommands;
 
+// The core's ExtractKeyFromLink parses plain text with strtok, whose position is one
+// process-wide static. Bots on different map threads would share it and read each
+// other's freed strings (lbrick/cmangos-dev#80), so plain text is parsed here: the
+// first space-delimited token, as strtok(head, " ") would return it. Only links and
+// quoted text, which the core parses without strtok, go to the core.
+static bool PlainLinkText(const std::string& str, std::string& token)
+{
+    if (str.empty())
+        return false;
+
+    switch (str[0])
+    {
+        case '[': case '\'': case '"':
+            return false;
+        case '|':
+            if (str.size() < 2 || str[1] != '|')
+                return false;
+            break;
+        default:
+            break;
+    }
+
+    // A raw "||" stands for one '|' in client text.
+    size_t start = str.find_first_not_of(' ', str[0] == '|' ? 1 : 0);
+    if (start == std::string::npos)
+        token.clear();
+    else
+        token = str.substr(start, str.find(' ', start) - start);
+
+    return true;
+}
+
+uint32 PlayerbotChatHandler::extractSpellId(std::string str)
+{
+    std::string token;
+    if (PlainLinkText(str, token))
+    {
+        // Same rules as ExtractUInt32: a number that fits uint32, ended by the token's end
+        // or whitespace (the token splits on spaces only, so a tab can follow the number).
+        if (token.empty())
+            return 0;
+
+        char* end = nullptr;
+        unsigned long id = strtoul(token.c_str(), &end, 10);
+        if (end == token.c_str() || (*end && !isWhiteSpace(*end)) || id > std::numeric_limits<uint32>::max())
+            return 0;
+
+        return uint32(id);
+    }
+
+    char* source = (char*)str.c_str();
+    return ExtractSpellIdFromLink(&source);
+}
+
 uint32 PlayerbotChatHandler::extractQuestId(std::string str)
 {
+    std::string token;
+    if (PlainLinkText(str, token))
+        return token.empty() ? 0 : atol(token.c_str());
+
     char* source = (char*)str.c_str();
     char* cId = ExtractKeyFromLink(&source,"Hquest");
     return cId ? atol(cId) : 0;
