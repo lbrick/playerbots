@@ -216,6 +216,11 @@ AiPlayerbot.LogRpgStatusEvents = 0
 # how many AI updates ran and how many of those were minimal. 0 (default) turns it off.
 AiPlayerbot.ChangeZoneSampleSeconds = 0
 
+# Log a line to the server log each minute a bot runs flee 30 or more times without moving
+# 5 yards: the trigger, the target, the chase state and who keeps the bot in combat. Off by
+# default.
+AiPlayerbot.LogFleeLoops = 0
+
 # Relative probability weights for each RPG state when transitioning from IDLE.
 # Higher values make that state more likely to be chosen.
 AiPlayerbot.RpgStatusProbWeight.WanderRandom = 15

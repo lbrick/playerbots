@@ -523,6 +523,7 @@ bool PlayerbotAIConfig::Initialize()
     logRpgTravelEvents = config.GetBoolDefault("AiPlayerbot.LogRpgTravelEvents", false);
     logRpgStatusEvents = config.GetBoolDefault("AiPlayerbot.LogRpgStatusEvents", false);
     changeZoneSampleSeconds = config.GetIntDefault("AiPlayerbot.ChangeZoneSampleSeconds", 0);
+    logFleeLoops = config.GetBoolDefault("AiPlayerbot.LogFleeLoops", false);
     RpgStatusProbWeight[RPG_WANDER_RANDOM]  = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.WanderRandom", 15);
     RpgStatusProbWeight[RPG_WANDER_NPC]     = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.WanderNpc",    20);
     RpgStatusProbWeight[RPG_GO_GRIND]       = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.GoGrind",       5);

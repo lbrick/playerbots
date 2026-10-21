@@ -221,6 +221,11 @@ AiPlayerbot.LogRpgStatusEvents = 0
 # how many AI updates ran and how many of those were minimal. 0 (default) turns it off.
 AiPlayerbot.ChangeZoneSampleSeconds = 0
 
+# Log a line to the server log each minute a bot runs flee 30 or more times without moving
+# 5 yards: the trigger, the target, the chase state and who keeps the bot in combat. Off by
+# default.
+AiPlayerbot.LogFleeLoops = 0
+
 # Show helmet and cloak on randombots (reset required)
 AiPlayerbot.RandomBotShowHelmet = 1
 AiPlayerbot.RandomBotShowCloak = 1

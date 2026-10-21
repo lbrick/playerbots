@@ -3064,8 +3064,11 @@ bool MovementAction::Flee(Unit *target)
         {
             ChaseMovementGenerator* chase = (ChaseMovementGenerator*)mm->GetCurrent();
 
+            // The chase is already set: flee succeeds only while it moves the bot. A bot held
+            // in place must fall through to fighting, or it repeats flee in combat for as long
+            // as the trigger stays true (lbrick/cmangos-dev#75).
             if (chase->GetCurrentTarget() == target && sServerFacade.GetChaseOffset(bot) == distance)
-                return true;
+                return !bot->IsStopped();
         }
 
         mm->MoveChase(target, distance, WorldPosition(bot).getAngleTo(target), true, false, true, false);
@@ -3298,7 +3301,60 @@ bool MovementAction::GeneratePathAvoidingHazards(std::vector<WorldPosition>& mov
 
 bool FleeAction::Execute(Event& event)
 {
-    return Flee(ai->GetUnit(AI_VALUE(ObjectGuid, "current target")));
+    if (sPlayerbotAIConfig.logFleeLoops)
+        LogFleeLoop(event);
+
+    bool fled = Flee(ai->GetUnit(AI_VALUE(ObjectGuid, "current target")));
+    if (fled)
+        ++loopFled;
+    return fled;
+}
+
+// One line per minute in which a bot ran flee 30 or more times and moved less than 5 yards
+// (lbrick/cmangos-dev#75).
+void FleeAction::LogFleeLoop(Event& event)
+{
+    uint32 now = WorldTimer::getMSTime();
+    WorldPosition pos(bot);
+    if (!loopWindowT || WorldTimer::getMSTimeDiff(loopWindowT, now) >= 60 * IN_MILLISECONDS)
+    {
+        float moved = loopPos.getMapId() == pos.getMapId() ? pos.fDist(loopPos) : -1.0f;
+        if (loopWindowT && loopCount >= 30 && moved >= 0.0f && moved < 5.0f)
+        {
+            Unit* target = ai->GetUnit(AI_VALUE(ObjectGuid, "current target"));
+            Unit* victim = target ? target->GetVictim() : nullptr;
+            MotionMaster* mm = bot->GetMotionMaster();
+            uint32 mgen = mm->empty() ? 0u : uint32(mm->GetCurrentMovementGeneratorType());
+            bool chaseSame = false;
+            bool reachable = true;
+            if (mgen == CHASE_MOTION_TYPE)
+            {
+                ChaseMovementGenerator* chase = (ChaseMovementGenerator*)mm->GetCurrent();
+                chaseSame = target && chase->GetCurrentTarget() == target;
+                reachable = chase->IsReachable();
+            }
+
+            sLog.outString("[Flee loop] bot=%s class=%u level=%u trigger=%s runs=%u fled=%u last_c=\"%s\" moved=%.1f pos=%u:%.1f,%.1f,%.1f hp=%u mana=%u flee_range=%.1f mgen=%u chase_same=%u reachable=%u combat=%u attackers=%u hostile_refs=%u group=%u target=%s entry=%u target_level=%u target_dist=%.1f target_hp=%u target_mgen=%u target_victim=%s target_combat=%u",
+                bot->GetName(), bot->getClass(), bot->GetLevel(), event.getSource().c_str(), loopCount, loopFled,
+                ai->GetLastExecutedActionName(BotState::BOT_STATE_COMBAT).c_str(), moved,
+                pos.getMapId(), pos.getX(), pos.getY(), pos.getZ(),
+                uint32(bot->GetHealthPercent()), bot->GetMaxPower(POWER_MANA) ? uint32(bot->GetPowerPercent(POWER_MANA)) : 0u,
+                ai->GetRange("flee"), mgen, chaseSame ? 1u : 0u, reachable ? 1u : 0u,
+                sServerFacade.IsInCombat(bot) ? 1u : 0u, uint32(bot->getAttackers().size()), uint32(bot->getHostileRefManager().getSize()),
+                bot->GetGroup() ? 1u : 0u,
+                target ? target->GetName() : "none", target ? target->GetEntry() : 0u, target ? target->GetLevel() : 0u,
+                target ? sServerFacade.GetDistance2d(bot, target) : -1.0f, target ? uint32(target->GetHealthPercent()) : 0u,
+                target && !target->GetMotionMaster()->empty() ? uint32(target->GetMotionMaster()->GetCurrentMovementGeneratorType()) : 0u,
+                victim ? victim->GetName() : "none", target && sServerFacade.IsInCombat(target) ? 1u : 0u);
+        }
+
+        loopWindowT = now;
+        loopCount = 0;
+        loopFled = 0;
+        loopPos = pos;
+    }
+
+    ++loopCount;
 }
 
 bool FleeWithPetAction::Execute(Event& event)
