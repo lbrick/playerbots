@@ -16,6 +16,10 @@
 #include "playerbot/strategy/values/TravelValues.h"
 #include "playerbot/TravelMgr.h"
 #include "playerbot/TravelNode.h"
+#include <algorithm>
+#include <functional>
+#include <iomanip>
+#include <sstream>
 
 using namespace ai;
 
@@ -1531,7 +1535,7 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
             if (dest == WorldPosition()) return false;
             // If dest is far and a flight master is nearby, suppress CHANGE_ZONE
             // so RPG_TRAVEL_FLIGHT gets selected instead (bot flies toward dest zone).
-            if (WorldPosition(bot).distance(dest) > 1000.0f)
+            if (dest.getMapId() == bot->GetMapId() && WorldPosition(bot).distance(dest) > 1000.0f)
             {
                 ObjectGuid fm;
                 std::vector<uint32> path;
@@ -1547,6 +1551,16 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
 }
 
 // ─── Zone Scoring ─────────────────────────────────────────────────────────────
+
+// A bot on Kalimdor or the Eastern Kingdoms scores zones on both; the change-zone route builder
+// plans the boat, zeppelin or teleport-spell legs between them (lbrick/cmangos-dev#38). Elsewhere
+// (instances, Outland) only the bot's own map counts.
+static bool IsZoneCandidateMap(uint32 candidateMap, uint32 botMap)
+{
+    if (candidateMap == botMap)
+        return true;
+    return (botMap == 0 || botMap == 1) && (candidateMap == 0 || candidateMap == 1);
+}
 
 std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot)
 {
@@ -1569,9 +1583,9 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
     {
         for (auto& [dest, wp, dist] : pointList)
         {
-            if (!wp || wp->getMapId() != mapId) continue;
+            if (!wp || !IsZoneCandidateMap(wp->getMapId(), mapId)) continue;
             if (!wp->isValid()) continue;
-            uint32 zone = sTerrainMgr.GetZoneId(mapId, wp->getX(), wp->getY(), wp->getZ());
+            uint32 zone = sTerrainMgr.GetZoneId(wp->getMapId(), wp->getX(), wp->getY(), wp->getZ());
             if (!zone) continue;
             zoneScores[zone] += 3.0f - (dist / 10000.0f);
         }
@@ -1587,7 +1601,7 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
     {
         for (auto& [dest, wp, dist] : pointList)
         {
-            if (!wp || wp->getMapId() != mapId) continue;
+            if (!wp || !IsZoneCandidateMap(wp->getMapId(), mapId)) continue;
             if (!wp->isValid()) continue;
             auto* qDest = dynamic_cast<QuestRelationTravelDestination*>(dest);
             if (!qDest) continue;
@@ -1597,7 +1611,7 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
             if ((int32)quest->GetQuestLevel() > (int32)bLevel + 2) continue;
             if ((int32)quest->GetMinLevel() > (int32)bLevel) continue;
             if (bot->GetQuestStatus(qDest->GetQuestId()) != QUEST_STATUS_NONE) continue;
-            uint32 zone = sTerrainMgr.GetZoneId(mapId, wp->getX(), wp->getY(), wp->getZ());
+            uint32 zone = sTerrainMgr.GetZoneId(wp->getMapId(), wp->getX(), wp->getY(), wp->getZ());
             if (!zone) continue;
             zoneScores[zone] += 10.0f - (dist / 10000.0f);
         }
@@ -1613,7 +1627,7 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
     {
         for (auto& [dest, wp, dist] : pointList)
         {
-            if (!wp || wp->getMapId() != mapId) continue;
+            if (!wp || !IsZoneCandidateMap(wp->getMapId(), mapId)) continue;
             if (!wp->isValid()) continue;
             auto* qDest = dynamic_cast<QuestObjectiveTravelDestination*>(dest);
             if (!qDest) continue;
@@ -1623,7 +1637,7 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
             Quest const* quest = sObjectMgr.GetQuestTemplate(qId);
             if (!quest) continue;
             if ((int32)quest->GetQuestLevel() > (int32)bot->GetLevel() + 3) continue;
-            uint32 zone = sTerrainMgr.GetZoneId(mapId, wp->getX(), wp->getY(), wp->getZ());
+            uint32 zone = sTerrainMgr.GetZoneId(wp->getMapId(), wp->getX(), wp->getY(), wp->getZ());
             if (!zone) continue;
             zoneScores[zone] += 8.0f - (dist / 10000.0f);
         }
@@ -1633,8 +1647,8 @@ std::unordered_map<uint32, float> NewRpgBaseAction::ScoreZonesForBot(Player* bot
     std::unordered_map<uint32, uint32> zoneBadCounts;
     for (const WorldPosition& bad : ai->badPositions)
     {
-        if (bad.getMapId() != mapId) continue;
-        uint32 z = sTerrainMgr.GetZoneId(mapId, bad.getX(), bad.getY(), bad.getZ());
+        if (!IsZoneCandidateMap(bad.getMapId(), mapId)) continue;
+        uint32 z = sTerrainMgr.GetZoneId(bad.getMapId(), bad.getX(), bad.getY(), bad.getZ());
         if (z) zoneBadCounts[z]++;
     }
 
@@ -1694,6 +1708,29 @@ WorldPosition NewRpgBaseAction::SelectBestZoneForBot(Player* bot)
         }
     }
 
+    // One line per scoring pass (at most one per bot per cache TTL): the current and best zones
+    // and the three best zones on the other continent (lbrick/cmangos-dev#38).
+    if (sPlayerbotAIConfig.logRpgTravelEvents)
+    {
+        std::vector<std::pair<float, uint32>> other;
+        for (auto& [zone, score] : scores)
+        {
+            AreaTableEntry const* area = GetAreaEntryByAreaID(zone);
+            if (area && area->mapid != curMap)
+                other.push_back({ score, zone });
+        }
+        std::sort(other.begin(), other.end(), std::greater<>());
+        std::ostringstream detail;
+        detail << std::fixed << std::setprecision(1) << "current=" << currentZone << ":" << currentScore
+               << " best=" << bestZone << ":" << bestScore << " other_continent=";
+        for (size_t i = 0; i < other.size() && i < 3; ++i)
+            detail << (i ? "," : "") << other[i].second << ":" << other[i].first;
+        if (other.empty())
+            detail << "none";
+        detail << " candidates=" << scores.size();
+        LogTravelEvent("zone_scores", WorldPosition(bot), WorldPosition(bot), detail.str().c_str());
+    }
+
     constexpr float CHANGE_THRESHOLD = 20.0f;
     if (bestZone == currentZone || bestScore - currentScore < CHANGE_THRESHOLD)
     {
@@ -1717,7 +1754,7 @@ WorldPosition NewRpgBaseAction::SelectBestZoneForBot(Player* bot)
     {
         for (auto& [dest, wp, dist] : pointList)
         {
-            if (!wp || wp->getMapId() != botPos.getMapId()) continue;
+            if (!wp || !IsZoneCandidateMap(wp->getMapId(), botPos.getMapId())) continue;
             if (!wp->isValid()) continue;
             if (IsPosBad(*wp)) continue;
             uint32 zone = sTerrainMgr.GetZoneId(wp->getMapId(), wp->getX(), wp->getY(), wp->getZ());
@@ -1737,6 +1774,12 @@ WorldPosition NewRpgBaseAction::SelectBestZoneForBot(Player* bot)
     NEWRPG_LOG("[New RPG] %s zone routing: zone %u (score %.1f) > zone %u (score %.1f), target Map:%u %.1f %.1f %.1f",
                   bot->GetName(), bestZone, bestScore, currentZone, currentScore,
                   dest.getMapId(), dest.getX(), dest.getY(), dest.getZ());
+
+    if (sPlayerbotAIConfig.logRpgTravelEvents)
+    {
+        std::string detail = "zone=" + std::to_string(bestZone) + " cross_continent=" + (dest.getMapId() != curMap ? "1" : "0");
+        LogTravelEvent("zone_pick", WorldPosition(bot), dest, detail.c_str());
+    }
 
     cache = { curLevel, curMap, bestZone, dest, bestScore, now };
     return dest;
