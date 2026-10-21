@@ -1900,7 +1900,9 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
     {
         PlayerbotAI* ai = bot->GetPlayerbotAI();
         AiObjectContext* context = ai->GetAiObjectContext();
-        if (AI_VALUE2(bool, "action useful", "hearthstone"))
+        // The fallback only finds routes through the hearthstone portal, so a caller that
+        // excludes teleport spells skips it (lbrick/cmangos-dev#76).
+        if (teleportSpells && AI_VALUE2(bool, "action useful", "hearthstone"))
         {
             startPath.clear();
             TravelNode* botNode = new TravelNode(startPos, "Bot Pos", false);
