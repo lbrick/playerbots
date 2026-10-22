@@ -2287,6 +2287,17 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
             return false;
         }
 
+        // Logging out ends a change-zone trip under way, so the logout waits for the trip as it
+        // waits for a group; the trip's progress limit bounds the wait (lbrick/cmangos-dev#83).
+        PlayerbotAI* botAi = player ? player->GetPlayerbotAI() : nullptr;
+        if (botsAllowedInWorld && botAi && botAi->rpgInfo.GetStatus() == RPG_CHANGE_ZONE)
+        {
+            SetEventValue(bot, "add", 1, 120);
+            if (sPlayerbotAIConfig.logRpgTravelEvents)
+                sLog.outString("[New RPG travel] bot=%s event=logout_deferred", player->GetName());
+            return false;
+        }
+
         if (!player || !player->IsInWorld())
             sLog.outDetail("Bot #%d: log out", bot);
         else
