@@ -72,6 +72,7 @@ protected:
     // Post-quest routine (lbrick/cmangos-dev#45): vendor or trainer search range and the cap.
     const float  postQuestNpcRange = 50.0f;
     const uint32 postQuestMaxTime  = 60 * 1000;
+    const uint32 postQuestStallTime = 15 * 1000; // late beyond the requested wait: the bot was throttled
 };
 
 } // namespace ai

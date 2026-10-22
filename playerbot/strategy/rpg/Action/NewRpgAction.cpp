@@ -949,8 +949,16 @@ bool NewRpgPostQuestAction::Execute(Event& /*event*/)
         return false;
 
     uint32 now = WorldTimer::getMSTime();
+    // A bot that fell to minimal activity skips this action until it is active again; the gap is
+    // not time spent in the routine, so end it rather than report it as a timeout.
+    if (WorldTimer::getMSTimeDiff(pq.lastT, now) > pq.lastWait + postQuestStallTime)
+        return EndPostQuest("inactive");
     if (WorldTimer::getMSTimeDiff(pq.startT, now) >= postQuestMaxTime)
         return EndPostQuest("timeout");
+
+    pq.lastT = now;
+    pq.lastWait = 0;
+    auto wait = [&](uint32 ms) { pq.lastWait = ms; return ForceToWait(ms); };
 
     if (pq.routine != NewRpgInfo::PostQuest::PAUSE)
     {
@@ -976,12 +984,12 @@ bool NewRpgPostQuestAction::Execute(Event& /*event*/)
                 ai->DoSpecificAction("sell", Event("rpg action", "vendor"), true);
             else
                 ai->DoSpecificAction("trainer", Event("rpg action", pq.target), true);
-            return ForceToWait(npcVisitTime);
+            return wait(npcVisitTime);
         }
 
         uint32 stayed = WorldTimer::getMSTimeDiff(pq.reachT, now);
         if (stayed < npcVisitTime)
-            return ForceToWait(npcVisitTime - stayed);
+            return wait(npcVisitTime - stayed);
         return EndPostQuest("done");
     }
 
@@ -996,12 +1004,12 @@ bool NewRpgPostQuestAction::Execute(Event& /*event*/)
         }
         else if (WorldObject* giver = bot->GetMap()->GetWorldObject(pq.giver))
             bot->SetFacingToObject(giver);
-        return ForceToWait(pq.pauseMs);
+        return wait(pq.pauseMs);
     }
 
     uint32 paused = WorldTimer::getMSTimeDiff(pq.reachT, now);
     if (paused < pq.pauseMs)
-        return ForceToWait(pq.pauseMs - paused);
+        return wait(pq.pauseMs - paused);
 
     // After an accept the bot turns from the quest giver before it leaves.
     if (pq.kind == NewRpgInfo::PostQuest::ACCEPT)

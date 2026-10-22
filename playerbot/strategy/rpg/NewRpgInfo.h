@@ -119,6 +119,8 @@ struct NewRpgInfo
         uint32 startT{0};
         uint32 pauseMs{0};
         uint32 reachT{0};      // pause begun, or vendor or trainer reached; 0 = not yet
+        uint32 lastT{0};       // last run of the routine's action (start time before the first)
+        uint32 lastWait{0};    // wait that run asked the engine for
     };
     PostQuest postQuest;
 

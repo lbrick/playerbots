@@ -536,6 +536,7 @@ void NewRpgBaseAction::StartPostQuest(bool turnedIn, ObjectGuid giver)
     pq.kind = turnedIn ? NewRpgInfo::PostQuest::TURN_IN : NewRpgInfo::PostQuest::ACCEPT;
     pq.giver = giver;
     pq.startT = WorldTimer::getMSTime();
+    pq.lastT = pq.startT;
 
     Creature* vendor = nullptr;
     Creature* trainer = nullptr;
