@@ -14,6 +14,12 @@ NextAction** NewRpgStrategy::GetDefaultNonCombatActions()
 
 void NewRpgStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
 {
+    // The post-quest routine runs before the bot's next activity and lasts at most 60 s
+    // (lbrick/cmangos-dev#45).
+    triggers.push_back(new TriggerNode(
+        "new rpg post quest",
+        NextAction::array(0, new NextAction("new rpg post quest", 4.0f), NULL)));
+
     triggers.push_back(new TriggerNode(
         "new rpg status due",
         NextAction::array(0, new NextAction("new rpg status update", 3.5f), NULL)));

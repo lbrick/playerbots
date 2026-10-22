@@ -8,6 +8,11 @@ bool NewRpgStatusTrigger::IsActive()
     return status == ai->rpgInfo.GetStatus();
 }
 
+bool NewRpgPostQuestTrigger::IsActive()
+{
+    return ai->rpgInfo.postQuest.kind != NewRpgInfo::PostQuest::NONE;
+}
+
 bool NewRpgStatusDueTrigger::IsActive()
 {
     NewRpgInfo const& info = ai->rpgInfo;

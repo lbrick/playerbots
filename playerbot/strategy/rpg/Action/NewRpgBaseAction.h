@@ -42,6 +42,9 @@ protected:
     bool AcceptQuest(Quest const* quest, ObjectGuid guid);
     bool TurnInQuest(Quest const* quest, ObjectGuid guid);
     bool OrganizeQuestLog();
+    void StartPostQuest(bool turnedIn, ObjectGuid giver);
+    static char const* PostQuestKindName(uint8 kind);
+    static char const* PostQuestRoutineName(uint8 routine);
 
     /* INTERNAL HELPERS */
     bool GetQuestPOIPosAndObjectiveIdx(uint32 questId, WorldPosition& outPos, int32& outObjIdx);
@@ -66,6 +69,10 @@ protected:
     // interaction; after questGiverMaxFailures the giver is skipped for the session.
     const uint32 questGiverBackoffBase  = 30 * 1000;
     const uint32 questGiverMaxFailures  = 4;
+    // Post-quest routine (lbrick/cmangos-dev#45): vendor or trainer search range and the cap.
+    const float  postQuestNpcRange = 50.0f;
+    const uint32 postQuestMaxTime  = 60 * 1000;
+    const uint32 postQuestStallTime = 15 * 1000; // late beyond the requested wait: the bot was throttled
 };
 
 } // namespace ai

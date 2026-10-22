@@ -130,6 +130,7 @@ namespace ai
             creators["new rpg do quest"] = [](PlayerbotAI* ai) { return new NewRpgDoQuestAction(ai); };
             creators["new rpg travel flight"] = [](PlayerbotAI* ai) { return new NewRpgTravelFlightAction(ai); };
             creators["new rpg go change zone"] = [](PlayerbotAI* ai) { return new NewRpgGoChangeZoneAction(ai); };
+            creators["new rpg post quest"] = [](PlayerbotAI* ai) { return new NewRpgPostQuestAction(ai); };
 			creators["travel"] = [](PlayerbotAI* ai) { return new TravelAction(ai); };
 			creators["choose travel target"] = [](PlayerbotAI* ai) { return new ChooseTravelTargetAction(ai); };
             creators["choose group travel target"] = [](PlayerbotAI* ai) { return new ChooseGroupTravelTargetAction(ai); };

@@ -425,6 +425,8 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
         return false;
 
     bool goFailed = false;
+    bool accepted = false;
+    bool turnedIn = false;
     bot->PrepareQuestMenu(guid);
     QuestMenu& menu = bot->GetPlayerMenu()->GetQuestMenu();
     if (!menu.MenuItemCount())
@@ -476,6 +478,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 BroadcastHelper::BroadcastQuestAccepted(ai, bot, quest);
                 ai->rpgStatistic.questAccepted++;
                 LogQuestEvent("accepted", item.m_qId, guid, object);
+                accepted = true;
                 NEWRPG_LOG("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
             }
         }
@@ -488,6 +491,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
             BroadcastHelper::BroadcastQuestTurnedIn(ai, bot, quest);
             ai->rpgStatistic.questRewarded++;
             LogQuestEvent("turned_in", quest->GetQuestId(), guid, object);
+            turnedIn = true;
             NEWRPG_LOG("[New RPG] %s turned in quest %u", bot->GetName(), quest->GetQuestId());
         }
     }
@@ -497,7 +501,77 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
     else
         ai->questGiverBackoff.erase(guid.GetRawValue());
 
+    if (turnedIn || accepted)
+        StartPostQuest(turnedIn, guid);
+
     return true;
+}
+
+char const* NewRpgBaseAction::PostQuestKindName(uint8 kind)
+{
+    switch (kind)
+    {
+        case NewRpgInfo::PostQuest::ACCEPT:  return "accept";
+        case NewRpgInfo::PostQuest::TURN_IN: return "turn_in";
+        default:                             return "none";
+    }
+}
+
+char const* NewRpgBaseAction::PostQuestRoutineName(uint8 routine)
+{
+    switch (routine)
+    {
+        case NewRpgInfo::PostQuest::VENDOR:  return "vendor";
+        case NewRpgInfo::PostQuest::TRAINER: return "trainer";
+        default:                             return "pause";
+    }
+}
+
+// After a turn-in: the nearest vendor within 50 yd, else the nearest trainer that can teach the
+// bot, else a 5-15 s pause with an emote. After an accept: a 2-5 s pause facing the giver, then
+// the bot turns away. NewRpgPostQuestAction runs it (lbrick/cmangos-dev#45).
+void NewRpgBaseAction::StartPostQuest(bool turnedIn, ObjectGuid giver)
+{
+    NewRpgInfo::PostQuest pq;
+    pq.kind = turnedIn ? NewRpgInfo::PostQuest::TURN_IN : NewRpgInfo::PostQuest::ACCEPT;
+    pq.giver = giver;
+    pq.startT = WorldTimer::getMSTime();
+    pq.lastT = pq.startT;
+
+    Creature* vendor = nullptr;
+    Creature* trainer = nullptr;
+    if (turnedIn)
+    {
+        for (ObjectGuid const& npcGuid : AI_VALUE(std::list<ObjectGuid>, "possible rpg targets"))
+        {
+            Creature* npc = ai->GetCreature(npcGuid);
+            if (!npc || !npc->IsAlive() || !bot->CanInteract(npc))
+                continue;
+            float dist = bot->GetDistance(npc);
+            if (dist > postQuestNpcRange)
+                continue;
+            if (npc->isVendor() && (!vendor || dist < bot->GetDistance(vendor)))
+                vendor = npc;
+            else if (npc->isTrainer() && npc->IsTrainerOf(bot, false) && (!trainer || dist < bot->GetDistance(trainer)))
+                trainer = npc;
+        }
+    }
+
+    Creature* npc = vendor ? vendor : trainer;
+    if (npc)
+    {
+        pq.routine = vendor ? NewRpgInfo::PostQuest::VENDOR : NewRpgInfo::PostQuest::TRAINER;
+        pq.target = npc->GetObjectGuid();
+    }
+    else
+        pq.pauseMs = turnedIn ? urand(5000, 15000) : urand(2000, 5000);
+
+    ai->rpgInfo.postQuest = pq;
+
+    if (sPlayerbotAIConfig.logRpgQuestEvents)
+        sLog.outString("[New RPG quest] bot=%s event=post_quest_start kind=%s routine=%s target=%u distance=%.1f pause_ms=%u",
+            bot->GetName(), PostQuestKindName(pq.kind), PostQuestRoutineName(pq.routine),
+            npc ? npc->GetEntry() : 0, npc ? bot->GetDistance(npc) : 0.0f, pq.pauseMs);
 }
 
 // One server log line per quest accept, failed accept, turn-in or abandoned quest giver,
