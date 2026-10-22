@@ -968,9 +968,14 @@ bool NewRpgPostQuestAction::Execute(Event& /*event*/)
 
         if (!pq.reachT)
         {
-            if (bot->GetDistance(npc) > INTERACTION_DISTANCE)
+            float distance = bot->GetDistance(npc);
+            if (distance > INTERACTION_DISTANCE)
             {
-                if (MoveWorldObjectTo(pq.target))
+                // The next run may come as late as the walk takes, which is not a throttle gap.
+                float speed = bot->GetSpeed(MOVE_RUN);
+                pq.lastWait = uint32(distance / (speed > 1.0f ? speed : 1.0f) * IN_MILLISECONDS);
+                // MoveWorldObjectTo refuses while the bot moves; a walk already under way is progress.
+                if (sServerFacade.isMoving(bot) || MoveWorldObjectTo(pq.target))
                     return true;
                 return EndPostQuest("unreachable");
             }
