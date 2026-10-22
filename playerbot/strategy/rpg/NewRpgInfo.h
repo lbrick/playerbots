@@ -154,6 +154,11 @@ struct NewRpgInfo
     const char* moveFarStep{"none"};
     bool moveFarResult{false};
     uint32 crossMapStartT{0};
+    // The change-zone trip under way (its startT) and why it ended, set by the exit that ends it.
+    // PlayerbotAI::LogChangeZoneEnd logs one change_zone_ended line per trip, with reason
+    // "unlogged" for an exit that set none (AiPlayerbot.LogRpgTravelEvents, lbrick/cmangos-dev#83).
+    uint32 tripStartT{0};
+    const char* tripEndReason{nullptr};
     // END MOVE_FAR
 
     using RpgData = std::variant<

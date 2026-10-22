@@ -2550,8 +2550,9 @@ static void EndChangeZoneTrip(Player* bot)
         return;
 
     if (sPlayerbotAIConfig.logRpgTravelEvents)
-        sLog.outString("[New RPG travel] bot=%s event=change_zone_ended reason=random_teleport teleport_reason=%s", bot->GetName(), s_randomTeleportReason);
+        sLog.outString("[New RPG travel] bot=%s event=random_teleport_trip_end teleport_reason=%s", bot->GetName(), s_randomTeleportReason);
 
+    ai->rpgInfo.tripEndReason = "random_teleport";
     ai->rpgInfo.ChangeToIdle();
 }
 

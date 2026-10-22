@@ -34,6 +34,7 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
                 ai->rpgStatistic.questAbandoned++;
             }
             NEWRPG_LOG("[New RPG] %s gave up an unreachable move target", bot->GetName());
+            info.tripEndReason = "stuck_abandoned";
             info.ChangeToIdle();
             return true;
         }
@@ -46,6 +47,7 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         {
             // The target is valid on the map the bot left, so a quest is not marked low priority.
             NEWRPG_LOG("[New RPG] %s dropped a move target on another map", bot->GetName());
+            info.tripEndReason = "cross_map";
             info.ChangeToIdle();
             return true;
         }
@@ -142,6 +144,7 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
                         " waypoints_left=" + std::to_string(data.waypoints.size());
                     LogTravelEvent("change_zone_timeout", WorldPosition(bot), data.dest, detail.c_str());
                 }
+                info.tripEndReason = "timeout";
                 info.ChangeToIdle();
                 return true;
             }
@@ -519,6 +522,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         }
 
         ai->zoneScoreCache = {};
+        ai->rpgInfo.tripEndReason = "arrived";
         ai->rpgInfo.ChangeToIdle();
         return true;
     }
@@ -854,6 +858,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                               bot->GetName(), wp.getZ(), wp.getX(), wp.getY(), wp.getMapId());
                 LogTravelEvent("teleport_rejected", WorldPosition(bot), wp, "reason=dest_z");
                 dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+                ai->rpgInfo.tripEndReason = "teleport_rejected";
                 ai->rpgInfo.Reset();
                 return false;
             }
@@ -930,6 +935,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     if (IsPosBad(dest))
     {
         NEWRPG_LOG("[New RPG] %s CHANGE_ZONE dest is bad — resetting to IDLE", bot->GetName());
+        ai->rpgInfo.tripEndReason = "dest_bad";
         ai->rpgInfo.Reset();
         return false;
     }
