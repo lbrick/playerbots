@@ -99,6 +99,7 @@ struct NewRpgInfo
         std::vector<WorldPosition> rejectedTransportDocks{};  // BUG-2: cache bad destDock coords to skip on rebuild
         uint32 progressT{0};  // last completed waypoint or transport leg; the timeout counts from here
         bool noTeleportSpells{false};  // a teleport-spell leg failed: rebuild without them (#76)
+        uint32 reroutes{0};  // routes rebuilt after another action moved the bot to another map (#83)
     };
     struct Idle
     {

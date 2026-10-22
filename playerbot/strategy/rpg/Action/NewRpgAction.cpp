@@ -527,6 +527,29 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         return true;
     }
 
+    // Another action (unstuck, a group invitation, a summon) moved the bot to another map mid-trip.
+    // The next waypoint lies on the map it left, so the cross-map check would drop the trip; rebuild
+    // the route from here instead, at most three times a trip (lbrick/cmangos-dev#83).
+    if (!dataPtr->waypoints.empty() && !dataPtr->waypoints.front().spell && dataPtr->reroutes < 3)
+    {
+        auto const& front = dataPtr->waypoints.front();
+        WorldPosition next = front.teleport && front.from != WorldPosition() ? front.from : front.pos;
+        if (next.getMapId() != bot->GetMapId())
+        {
+            ++dataPtr->reroutes;
+            if (sPlayerbotAIConfig.logRpgTravelEvents)
+            {
+                std::string detail = "reason=moved_map reroutes=" + std::to_string(dataPtr->reroutes);
+                LogTravelEvent("route_rebuilt", WorldPosition(bot), next, detail.c_str());
+            }
+            dataPtr->waypoints.clear();
+            dataPtr->waypointsBuilt = false;
+            dataPtr->progressT = WorldTimer::getMSTime();
+            ai->rpgInfo.SetMoveFarTo(WorldPosition());
+            return true;
+        }
+    }
+
     // 5.2 — mount up when far from dest
     // Not while a teleport-spell leg is next: mounting would interrupt the cast (#76).
     bool castLegNext = !dataPtr->waypoints.empty() && dataPtr->waypoints.front().spell;
