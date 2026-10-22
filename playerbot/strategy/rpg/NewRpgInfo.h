@@ -100,6 +100,10 @@ struct NewRpgInfo
         uint32 progressT{0};  // last completed waypoint or transport leg; the timeout counts from here
         bool noTeleportSpells{false};  // a teleport-spell leg failed: rebuild without them (#76)
         uint32 reroutes{0};  // routes rebuilt after another action moved the bot to another map (#83)
+        // The waypoint the bot walks to and its nearest distance to it so far: closing 100 yards
+        // also counts as progress, so a long walk between waypoints does not time out (#83).
+        WorldPosition progressTarget{};
+        float progressDist{0.0f};
     };
     struct Idle
     {

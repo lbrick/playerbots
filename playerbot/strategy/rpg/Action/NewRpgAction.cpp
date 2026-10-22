@@ -135,6 +135,29 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             // that keeps moving is not cut short (lbrick/cmangos-dev#71).
             auto& data = std::get<NewRpgInfo::ChangeZone>(info.data);
             uint32 now = WorldTimer::getMSTime();
+
+            // Closing 100 yards on the current waypoint (a transport leg's source dock) is progress
+            // too: a long walk between two waypoints is not a stall (lbrick/cmangos-dev#83).
+            if (!data.waypoints.empty() && !data.waypoints.front().spell)
+            {
+                auto const& front = data.waypoints.front();
+                WorldPosition target = front.teleport && front.from != WorldPosition() ? front.from : front.pos;
+                if (target.getMapId() == bot->GetMapId())
+                {
+                    float distance = WorldPosition(bot).distance(target);
+                    if (target != data.progressTarget)
+                    {
+                        data.progressTarget = target;
+                        data.progressDist = distance;
+                    }
+                    else if (distance + 100.0f < data.progressDist)
+                    {
+                        data.progressDist = distance;
+                        data.progressT = now;
+                    }
+                }
+            }
+
             if (WorldTimer::getMSTimeDiff(data.progressT, now) > 30 * 60 * 1000)
             {
                 NEWRPG_LOG("[New RPG] %s CHANGE_ZONE timed out, returning to idle", bot->GetName());
