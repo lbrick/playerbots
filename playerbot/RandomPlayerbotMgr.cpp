@@ -2288,9 +2288,11 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
         }
 
         // Logging out ends a change-zone trip under way, so the logout waits for the trip as it
-        // waits for a group; the trip's progress limit bounds the wait (lbrick/cmangos-dev#83).
+        // waits for a group. The wait ends once the trip is an hour old: a bot held by combat or a
+        // waypoint loop never reaches the trip's own progress limit (lbrick/cmangos-dev#83).
         PlayerbotAI* botAi = player ? player->GetPlayerbotAI() : nullptr;
-        if (botsAllowedInWorld && botAi && botAi->rpgInfo.GetStatus() == RPG_CHANGE_ZONE)
+        if (botsAllowedInWorld && botAi && botAi->rpgInfo.GetStatus() == RPG_CHANGE_ZONE &&
+            WorldTimer::getMSTimeDiff(botAi->rpgInfo.startT, WorldTimer::getMSTime()) < 60 * 60 * 1000)
         {
             SetEventValue(bot, "add", 1, 120);
             if (sPlayerbotAIConfig.logRpgTravelEvents)
