@@ -193,6 +193,11 @@ bool MoveToTravelTargetAction::isUseful()
     if (!ai->AllowActivity(TRAVEL_ACTIVITY))
         return false;
 
+    // A travel target picked while new RPG was idle no longer pulls the bot once new RPG has
+    // sent it somewhere (lbrick/cmangos-dev#85).
+    if (AI_VALUE(bool, "new rpg macro active"))
+        return false;
+
     if (!AI_VALUE(bool, "travel target traveling") && AI_VALUE(TravelTarget*, "travel target")->GetStatus() != TravelStatus::TRAVEL_STATUS_READY)
         return false;
 
