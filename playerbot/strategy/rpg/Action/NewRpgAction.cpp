@@ -147,8 +147,11 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         }
         case RPG_REST:
         {
-            if (info.HasStatusPersisted(statusRestDuration))
+            auto& data = std::get<NewRpgInfo::Rest>(info.data);
+            if (info.HasStatusPersisted(data.social ? statusSocialRestDuration : statusRestDuration))
             {
+                if (data.lastSocialT)
+                    EndLegacyRpgHandOver();
                 info.ChangeToIdle();
                 return true;
             }
@@ -304,6 +307,41 @@ bool NewRpgWanderNpcAction::Execute(Event& /*event*/)
         return MoveRandomNear(15.0f);
     }
 
+    return true;
+}
+
+// ─── NewRpgRestAction ────────────────────────────────────────────────────────
+
+bool NewRpgRestAction::Execute(Event& /*event*/)
+{
+    auto* rest = std::get_if<NewRpgInfo::Rest>(&ai->rpgInfo.data);
+    if (!rest)
+        return false;
+    if (!rest->checked)
+    {
+        rest->checked = true;
+        rest->social = InSocialPlace();
+    }
+    if (!rest->social)
+        return false;
+
+    uint32 now = WorldTimer::getMSTime();
+    if (rest->lastSocialT && WorldTimer::getMSTimeDiff(rest->lastSocialT, now) < socialInterval)
+        return false;
+    rest->lastSocialT = now;
+
+    std::vector<ObjectGuid> near;
+    for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, "nearest friendly players"))
+    {
+        Player* player = bot->GetMap()->GetPlayer(guid);
+        if (player && player != bot && player->IsInWorld() && !player->IsInCombat() && bot->GetDistance(player) < 15.0f)
+            near.push_back(guid);
+    }
+    if (near.empty())
+        return false;
+
+    // The legacy player sub-actions (emote, chat, duel, trade) pick what fits (#85).
+    HandOverToLegacyRpg(near[urand(0, near.size() - 1)], "social");
     return true;
 }
 

@@ -17,6 +17,7 @@ protected:
     const int32 statusWanderNpcDuration    = 5 * 60 * 1000;
     const int32 statusWanderRandomDuration = 5 * 60 * 1000;
     const int32 statusRestDuration         = 30 * 1000;
+    const int32 statusSocialRestDuration   = 2 * 60 * 1000;  // in a social place (#88)
     const int32 statusDoQuestDuration      = 30 * 60 * 1000;
 };
 
@@ -48,6 +49,17 @@ public:
     bool Execute(Event& event) override;
 
     const uint32 npcStayTime = 8 * 1000;
+};
+
+// Rests; in a city, an inn or by a flight master, turns to a nearby player or bot now and then
+// through the legacy RPG player sub-actions (lbrick/cmangos-dev#88).
+class NewRpgRestAction : public NewRpgBaseAction
+{
+public:
+    NewRpgRestAction(PlayerbotAI* ai) : NewRpgBaseAction(ai, "new rpg rest") {}
+    bool Execute(Event& event) override;
+
+    const uint32 socialInterval = 30 * 1000;
 };
 
 // Walks to herbs, ore or skinnable creatures and stays while the legacy loot actions gather

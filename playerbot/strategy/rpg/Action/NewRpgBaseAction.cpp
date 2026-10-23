@@ -596,7 +596,7 @@ void NewRpgBaseAction::LogQuestEvent(char const* event, uint32 questId, ObjectGu
 
 // One server log line per transport leg built or rejected, transport teleport and zone
 // arrival, when AiPlayerbot.LogRpgTravelEvents is on.
-std::string NewRpgBaseAction::HandOverToLegacyRpg(ObjectGuid target)
+std::string NewRpgBaseAction::HandOverToLegacyRpg(ObjectGuid target, char const* event)
 {
     WorldObject* object = bot->GetMap()->GetWorldObject(target);
     if (!object)
@@ -610,8 +610,9 @@ std::string NewRpgBaseAction::HandOverToLegacyRpg(ObjectGuid target)
     bool done = !next.empty() && next != "rpg" && ai->DoSpecificAction(next, Event("new rpg"), true);
 
     if (sPlayerbotAIConfig.logRpgStatusEvents)
-        sLog.outString("[New RPG status] bot=%s event=npc_handover entry=%u action=%s done=%d",
-            bot->GetName(), object->GetEntry(), next.empty() ? "none" : next.c_str(), done ? 1 : 0);
+        sLog.outString("[New RPG status] bot=%s event=%s entry=%u action=%s done=%d new_rpg_status=%d",
+            bot->GetName(), event, object->GetEntry(), next.empty() ? "none" : next.c_str(), done ? 1 : 0,
+            (int)ai->rpgInfo.GetStatus());
     return done ? next : "";
 }
 
@@ -625,6 +626,19 @@ void NewRpgBaseAction::EndLegacyRpgHandOver()
 
 static bool IsInCapitalCity(Player* bot);
 static bool IsInTavern(Player* bot);
+
+bool NewRpgBaseAction::InSocialPlace()
+{
+    if (IsInCapitalCity(bot) || IsInTavern(bot))
+        return true;
+    for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, "nearest npcs"))
+    {
+        Creature* npc = bot->GetMap()->GetCreature(guid);
+        if (npc && npc->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_FLIGHTMASTER) && bot->GetDistance(npc) < 30.0f)
+            return true;
+    }
+    return false;
+}
 
 static char const* ErrandNeedName(NewRpgErrandNeed need)
 {

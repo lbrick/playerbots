@@ -84,6 +84,11 @@ struct NewRpgInfo
     struct Rest
     {
         Rest() = default;
+        // In a city, an inn or by a flight master the bot rests longer and turns to the players
+        // and bots around it (lbrick/cmangos-dev#88).
+        bool checked{false};
+        bool social{false};
+        uint32 lastSocialT{0};
     };
     // RPG_CHANGE_ZONE
     struct ChangeZone

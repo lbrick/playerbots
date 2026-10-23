@@ -37,7 +37,9 @@ protected:
     // Hands an NPC or object the bot has reached to the legacy RPG sub-actions (repair, sell,
     // train, emote ...): the one that fits is chosen as legacy RPG chooses it, and run now.
     // Returns the sub-action run, or an empty string (lbrick/cmangos-dev#85).
-    std::string HandOverToLegacyRpg(ObjectGuid target);
+    std::string HandOverToLegacyRpg(ObjectGuid target, char const* event = "npc_handover");
+    // A city, an inn's rest area, or within 30 yards of a flight master (lbrick/cmangos-dev#88).
+    bool InSocialPlace();
     // Clears the legacy RPG target the hand-over set.
     void EndLegacyRpgHandOver();
     // Errands (lbrick/cmangos-dev#86): the bot's most pressing need, the nearest vendor spawn that
