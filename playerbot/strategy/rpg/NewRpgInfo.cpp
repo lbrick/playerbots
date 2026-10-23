@@ -67,6 +67,15 @@ void NewRpgInfo::ChangeToChangeZone(WorldPosition dest)
     std::get<ChangeZone>(data).progressT = startT;
 }
 
+void NewRpgInfo::ChangeToErrand(NewRpgErrandNeed need, WorldPosition pos)
+{
+    startT = WorldTimer::getMSTime();
+    Errand errand;
+    errand.need = need;
+    errand.pos = pos;
+    data = errand;
+}
+
 void NewRpgInfo::ChangeToIdle()
 {
     startT = WorldTimer::getMSTime();
@@ -106,6 +115,7 @@ NewRpgStatus NewRpgInfo::GetStatus()
         if constexpr (std::is_same_v<T, DoQuest>)       return RPG_DO_QUEST;
         if constexpr (std::is_same_v<T, TravelFlight>)  return RPG_TRAVEL_FLIGHT;
         if constexpr (std::is_same_v<T, ChangeZone>)    return RPG_CHANGE_ZONE;
+        if constexpr (std::is_same_v<T, Errand>)        return RPG_ERRAND;
         return RPG_IDLE;
     }, data);
 }

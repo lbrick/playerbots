@@ -53,9 +53,16 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         }
     }
 
+    // A need outranks grinding, camping, wandering and resting, not a quest or a trip (#86).
+    if ((status == RPG_GO_GRIND || status == RPG_GO_CAMP || status == RPG_WANDER_RANDOM ||
+         status == RPG_WANDER_NPC || status == RPG_REST) && TryStartErrand())
+        return true;
+
     switch (status)
     {
         case RPG_IDLE:
+            if (TryStartErrand())
+                return true;
             return RandomChangeStatus({RPG_GO_CAMP, RPG_GO_GRIND, RPG_WANDER_RANDOM, RPG_WANDER_NPC,
                                        RPG_DO_QUEST, RPG_TRAVEL_FLIGHT, RPG_REST, RPG_CHANGE_ZONE});
 
@@ -114,6 +121,12 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
                 info.ChangeToIdle();
                 return true;
             }
+            break;
+        }
+        case RPG_ERRAND:
+        {
+            if (info.HasStatusPersisted(20 * MINUTE * IN_MILLISECONDS))
+                return EndErrand("timeout");
             break;
         }
         case RPG_REST:
@@ -275,6 +288,77 @@ bool NewRpgWanderNpcAction::Execute(Event& /*event*/)
         return MoveRandomNear(15.0f);
     }
 
+    return true;
+}
+
+// ─── NewRpgErrandAction ──────────────────────────────────────────────────────
+
+bool NewRpgErrandAction::Execute(Event& /*event*/)
+{
+    auto* errand = std::get_if<NewRpgInfo::Errand>(&ai->rpgInfo.data);
+    if (!errand)
+        return false;
+
+    uint32 now = WorldTimer::getMSTime();
+    if (errand->reachT)
+    {
+        if (WorldTimer::getMSTimeDiff(errand->reachT, now) < npcVisitTime)
+            return false;
+        return EndErrand("done");
+    }
+
+    Creature* npc = errand->npc ? ai->GetCreature(errand->npc) : nullptr;
+    if (!npc)
+    {
+        WorldPosition here(bot);
+        if (here.getMapId() != errand->pos.getMapId() || here.distance(errand->pos) > 40.0f)
+        {
+            WorldPosition target = errand->pos;
+            if (sServerFacade.isMoving(bot) || MoveFarTo(target))
+                return true;
+            return EndErrand("no_path");
+        }
+
+        uint32 flag = errand->need == ERRAND_REPAIR ? UNIT_NPC_FLAG_REPAIR : UNIT_NPC_FLAG_VENDOR;
+        float best = FLT_MAX;
+        for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, "nearest npcs"))
+        {
+            Creature* candidate = bot->GetMap()->GetCreature(guid);
+            if (!candidate || !candidate->IsAlive() || !candidate->HasFlag(UNIT_NPC_FLAGS, flag) || GuidPosition(candidate).IsHostileTo(bot))
+                continue;
+            float distance = bot->GetDistance(candidate);
+            if (distance < best)
+            {
+                best = distance;
+                npc = candidate;
+            }
+        }
+        if (!npc)
+            return EndErrand("no_npc");
+        errand->npc = npc->GetObjectGuid();
+    }
+
+    if (!npc->IsAlive())
+        return EndErrand("no_npc");
+
+    if (bot->GetDistance(npc) > INTERACTION_DISTANCE)
+    {
+        if (sServerFacade.isMoving(bot) || MoveWorldObjectTo(errand->npc))
+            return true;
+        return EndErrand("unreachable");
+    }
+
+    errand->reachT = now;
+    bot->SetSelectionGuid(errand->npc);
+    bot->SetFacingToObject(npc);
+    // The legacy sub-action for the need first, then whatever else legacy RPG picks there (#85).
+    SET_AI_VALUE(GuidPosition, "rpg target", GuidPosition(npc));
+    char const* action = errand->need == ERRAND_REPAIR ? "rpg repair" : (errand->need == ERRAND_SELL ? "rpg sell" : "rpg buy");
+    bool done = ai->DoSpecificAction(action, Event("new rpg"), true);
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=errand_action entry=%u action=%s done=%d",
+            bot->GetName(), npc->GetEntry(), action, done ? 1 : 0);
+    HandOverToLegacyRpg(errand->npc);
     return true;
 }
 

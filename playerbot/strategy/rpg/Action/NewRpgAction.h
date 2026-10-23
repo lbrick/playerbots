@@ -50,6 +50,16 @@ public:
     const uint32 npcStayTime = 8 * 1000;
 };
 
+// Walks to a vendor for a need (repair, sale, ammunition) and deals with it (lbrick/cmangos-dev#86).
+class NewRpgErrandAction : public NewRpgBaseAction
+{
+public:
+    NewRpgErrandAction(PlayerbotAI* ai) : NewRpgBaseAction(ai, "new rpg errand") {}
+    bool Execute(Event& event) override;
+
+    const uint32 npcVisitTime = 8 * 1000;
+};
+
 class NewRpgDoQuestAction : public NewRpgBaseAction
 {
 public:

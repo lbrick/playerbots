@@ -40,6 +40,14 @@ protected:
     std::string HandOverToLegacyRpg(ObjectGuid target);
     // Clears the legacy RPG target the hand-over set.
     void EndLegacyRpgHandOver();
+    // Errands (lbrick/cmangos-dev#86): the bot's most pressing need, the nearest vendor spawn that
+    // serves it, and the end of an errand with its log line.
+    NewRpgErrandNeed CurrentErrandNeed();
+    bool SelectErrandDestination(NewRpgErrandNeed need, WorldPosition& out);
+    bool TryStartErrand();
+    bool EndErrand(char const* reason);
+    uint32 FreeBagSlots();
+    uint32 LowestDurabilityPct();
     void CheckStuckTeleport();
     uint32 BestRewardIndex(Quest const* quest);
     bool IsQuestWorthDoing(Quest const* quest);
