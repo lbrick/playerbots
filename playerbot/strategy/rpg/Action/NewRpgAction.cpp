@@ -711,6 +711,37 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     if (!nodePos.isMmapLoaded(0))
                         continue;
                     dataPtr->waypoints.push_back({nodePos, false});
+
+                    // Walk the link along its stored path, as the legacy travel path does, rather
+                    // than straight to the next node: one point in every 60 yards or more becomes a
+                    // waypoint (lbrick/cmangos-dev#84).
+                    if (nextNode)
+                    {
+                        auto linkIt = node->getLinks()->find(nextNode);
+                        if (linkIt != node->getLinks()->end() &&
+                            linkIt->second->getPathType() == TravelNodePathType::walk &&
+                            linkIt->second->getComplete())
+                        {
+                            std::vector<WorldPosition> path = linkIt->second->getPath();
+                            WorldPosition last = nodePos;
+                            for (size_t p = 1; p + 1 < path.size(); ++p)
+                            {
+                                WorldPosition point = path[p];
+                                point.setMapId(segmentMapId);
+                                float step = last.distance(point);
+                                // A gap over 200 yards is not a walk: restart the spacing after it.
+                                if (step > 200.0f)
+                                {
+                                    last = point;
+                                    continue;
+                                }
+                                if (step < 60.0f || !point.isValid() || IsPosBad(point))
+                                    continue;
+                                dataPtr->waypoints.push_back({point, false});
+                                last = point;
+                            }
+                        }
+                    }
                 }
                 else
                 {
