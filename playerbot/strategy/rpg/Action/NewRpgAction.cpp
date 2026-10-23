@@ -141,7 +141,9 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             if (!data.waypoints.empty() && !data.waypoints.front().spell)
             {
                 auto const& front = data.waypoints.front();
-                WorldPosition target = front.teleport && front.from != WorldPosition() ? front.from : front.pos;
+                // A teleport leg and a flight leg not yet taken start at their source point.
+                bool atSource = front.teleport || (front.taxiPath && !front.takeoffT);
+                WorldPosition target = atSource && front.from != WorldPosition() ? front.from : front.pos;
                 if (target.getMapId() == bot->GetMapId())
                 {
                     float distance = WorldPosition(bot).distance(target);
@@ -647,6 +649,27 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     }
                 }
 
+                // A flight-path link is a leg the bot flies from the flight master at this node.
+                // Walked, it sent the bot overland between flight masters, and those trips
+                // arrived least often (lbrick/cmangos-dev#84). The landing node stays in the
+                // route, so a flight that continues from it becomes the next leg.
+                if (nextNode && !isTransportLeg)
+                {
+                    auto linkIt = node->getLinks()->find(nextNode);
+                    if (linkIt != node->getLinks()->end() &&
+                        linkIt->second->getPathType() == TravelNodePathType::flightPath &&
+                        sTaxiPathStore.LookupEntry(uint32(linkIt->second->getPathObject())))
+                    {
+                        WorldPosition landPos = *nextNode->getPosition();
+                        NewRpgInfo::ChangeZone::Waypoint leg{landPos, false, nodePos};
+                        leg.taxiPath = uint32(linkIt->second->getPathObject());
+                        dataPtr->waypoints.push_back(leg);
+                        std::string detail = "taxi_path=" + std::to_string(leg.taxiPath);
+                        LogTravelEvent("flight_leg_built", nodePos, landPos, detail.c_str());
+                        continue;
+                    }
+                }
+
                 // Links the waypoints walk across although they are not walks: flight paths,
                 // teleport spells such as the hearthstone, and map changes (lbrick/cmangos-dev#76).
                 if (nextNode && !isTransportLeg && sPlayerbotAIConfig.logRpgTravelEvents)
@@ -786,7 +809,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     while (!dataPtr->waypoints.empty())
     {
         auto& front = dataPtr->waypoints.front();
-        if (front.teleport)
+        if (front.teleport || front.taxiPath)
             break;
         WorldPosition check = front.pos;
         check.setMapId(bot->GetMapId());
@@ -808,6 +831,66 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     {
         auto& front = dataPtr->waypoints.front();
         WorldPosition& wp = front.pos;
+
+        // Flight leg: walk to the flight master, fly, and drop the leg on landing. A flight that
+        // fails three times is walked instead, as every flight link was before
+        // (lbrick/cmangos-dev#84).
+        if (front.taxiPath)
+        {
+            uint32 now = WorldTimer::getMSTime();
+            std::string detail = "taxi_path=" + std::to_string(front.taxiPath) + " tries=" + std::to_string(front.taxiTries);
+            if (bot->IsTaxiFlying())
+            {
+                dataPtr->progressT = now;
+                return true;
+            }
+            if (front.takeoffT)
+            {
+                LogTravelEvent("flight_landed", WorldPosition(bot), wp, detail.c_str());
+                dataPtr->progressT = now;
+                dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+                ai->rpgInfo.SetMoveFarTo(WorldPosition());
+                return true;
+            }
+
+            if (WorldPosition(bot).distance(front.from) > 30.0f)
+            {
+                WorldPosition target = front.from;
+                if (MoveFarTo(target))
+                    return true;
+            }
+
+            Creature* flightMaster = nullptr;
+            for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, "nearest npcs"))
+            {
+                Creature* npc = bot->GetMap()->GetCreature(guid);
+                if (npc && npc->IsAlive() && npc->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_FLIGHTMASTER))
+                {
+                    flightMaster = npc;
+                    break;
+                }
+            }
+            if (flightMaster && bot->GetDistance(flightMaster) > INTERACTION_DISTANCE)
+            {
+                WorldPosition target(flightMaster);
+                if (MoveFarTo(target))
+                    return true;
+            }
+
+            if (flightMaster && UseTaxi(ai, front.taxiPath, true))
+            {
+                front.takeoffT = now;
+                dataPtr->progressT = now;
+                LogTravelEvent("flight_taken", WorldPosition(bot), wp, detail.c_str());
+                return true;
+            }
+
+            if (++front.taxiTries < 3)
+                return true;
+            LogTravelEvent("flight_failed", WorldPosition(bot), wp, flightMaster ? detail.c_str() : (detail + " no_flight_master=1").c_str());
+            front.taxiPath = 0;
+            return true;
+        }
 
         // Teleport-spell leg: cast the spell where the bot stands, then wait for the teleport.
         // A spell that cannot be cast, or a cast that does not move the bot, rebuilds the route
