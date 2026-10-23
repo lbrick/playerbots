@@ -322,6 +322,9 @@ PlayerbotAI::PlayerbotAI(Player* bot) :
 
 PlayerbotAI::~PlayerbotAI()
 {
+    if (bot)
+        LogChangeZoneEnd(true);
+
     for (uint8 i = 0 ; i < (uint8)BotState::BOT_STATE_ALL; i++)
     {
         if (engines[i])
@@ -336,6 +339,8 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 {
     if (!bot->IsInWorld() || bot->IsBeingTeleported())
         return;
+
+    LogChangeZoneEnd();
 
     if (sPlayerbotAIConfig.changeZoneSampleSeconds)
         LogChangeZoneSample();
@@ -705,6 +710,26 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 
         YieldAIInternalThread(min, bot->GetGUIDLow());
     }
+}
+
+void PlayerbotAI::LogChangeZoneEnd(bool logout)
+{
+    if (!sPlayerbotAIConfig.logRpgTravelEvents)
+        return;
+
+    bool onTrip = !logout && rpgInfo.GetStatus() == RPG_CHANGE_ZONE;
+    if (onTrip && rpgInfo.startT == rpgInfo.tripStartT)
+        return;
+
+    if (rpgInfo.tripStartT)
+    {
+        const char* reason = logout ? "logout" : (rpgInfo.tripEndReason ? rpgInfo.tripEndReason : "unlogged");
+        sLog.outString("[New RPG travel] bot=%s event=change_zone_ended reason=%s trip_min=%u new_status=%d",
+            bot->GetName(), reason, WorldTimer::getMSTimeDiff(rpgInfo.tripStartT, WorldTimer::getMSTime()) / 60000,
+            logout ? -1 : (int)rpgInfo.GetStatus());
+    }
+    rpgInfo.tripStartT = onTrip ? rpgInfo.startT : 0;
+    rpgInfo.tripEndReason = nullptr;
 }
 
 // One line per ChangeZoneSampleSeconds for a bot on a change-zone trip, to find where slow

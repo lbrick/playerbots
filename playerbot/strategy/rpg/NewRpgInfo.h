@@ -99,6 +99,11 @@ struct NewRpgInfo
         std::vector<WorldPosition> rejectedTransportDocks{};  // BUG-2: cache bad destDock coords to skip on rebuild
         uint32 progressT{0};  // last completed waypoint or transport leg; the timeout counts from here
         bool noTeleportSpells{false};  // a teleport-spell leg failed: rebuild without them (#76)
+        uint32 reroutes{0};  // routes rebuilt after another action moved the bot to another map (#83)
+        // The waypoint the bot walks to and its nearest distance to it so far: closing 100 yards
+        // also counts as progress, so a long walk between waypoints does not time out (#83).
+        WorldPosition progressTarget{};
+        float progressDist{0.0f};
     };
     struct Idle
     {
@@ -154,6 +159,11 @@ struct NewRpgInfo
     const char* moveFarStep{"none"};
     bool moveFarResult{false};
     uint32 crossMapStartT{0};
+    // The change-zone trip under way (its startT) and why it ended, set by the exit that ends it.
+    // PlayerbotAI::LogChangeZoneEnd logs one change_zone_ended line per trip, with reason
+    // "unlogged" for an exit that set none (AiPlayerbot.LogRpgTravelEvents, lbrick/cmangos-dev#83).
+    uint32 tripStartT{0};
+    const char* tripEndReason{nullptr};
     // END MOVE_FAR
 
     using RpgData = std::variant<
