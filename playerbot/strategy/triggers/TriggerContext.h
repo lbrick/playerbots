@@ -269,6 +269,8 @@ namespace ai
             creators["go grind status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GO_GRIND); };
             creators["go camp status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GO_CAMP); };
             creators["errand status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_ERRAND); };
+            creators["gather status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GATHER); };
+            creators["explore status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_EXPLORE); };
             creators["wander random status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_WANDER_RANDOM); };
             creators["wander npc status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_WANDER_NPC); };
             creators["do quest status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_DO_QUEST); };

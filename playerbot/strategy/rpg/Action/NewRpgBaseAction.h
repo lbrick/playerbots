@@ -48,6 +48,17 @@ protected:
     bool EndErrand(char const* reason);
     uint32 FreeBagSlots();
     uint32 LowestDurabilityPct();
+    // Gather and explore (lbrick/cmangos-dev#87): destinations from the legacy travel lists, kept
+    // between the availability check and the status change; and the end of either status.
+    bool SelectGatherDestination();
+    bool SelectExploreDestination();
+    bool AreaDiscovered(uint32 areaId);
+    bool EndGather(char const* reason);
+    bool EndExplore(char const* reason);
+    uint32 pendingSkill{0};
+    int32 pendingEntry{0};
+    uint32 pendingArea{0};
+    WorldPosition pendingPos{};
     void CheckStuckTeleport();
     uint32 BestRewardIndex(Quest const* quest);
     bool IsQuestWorthDoing(Quest const* quest);

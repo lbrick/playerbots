@@ -50,6 +50,25 @@ public:
     const uint32 npcStayTime = 8 * 1000;
 };
 
+// Walks to herbs, ore or skinnable creatures and stays while the legacy loot actions gather
+// (lbrick/cmangos-dev#87).
+class NewRpgGatherAction : public NewRpgBaseAction
+{
+public:
+    NewRpgGatherAction(PlayerbotAI* ai) : NewRpgBaseAction(ai, "new rpg gather") {}
+    bool Execute(Event& event) override;
+
+    const uint32 stayTime = 3 * MINUTE * IN_MILLISECONDS;
+};
+
+// Walks to an undiscovered area (lbrick/cmangos-dev#87).
+class NewRpgExploreAction : public NewRpgBaseAction
+{
+public:
+    NewRpgExploreAction(PlayerbotAI* ai) : NewRpgBaseAction(ai, "new rpg explore") {}
+    bool Execute(Event& event) override;
+};
+
 // Walks to a vendor for a need (repair, sale, ammunition) and deals with it (lbrick/cmangos-dev#86).
 class NewRpgErrandAction : public NewRpgBaseAction
 {

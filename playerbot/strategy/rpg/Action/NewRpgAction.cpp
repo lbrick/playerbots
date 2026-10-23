@@ -64,7 +64,8 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             if (TryStartErrand())
                 return true;
             return RandomChangeStatus({RPG_GO_CAMP, RPG_GO_GRIND, RPG_WANDER_RANDOM, RPG_WANDER_NPC,
-                                       RPG_DO_QUEST, RPG_TRAVEL_FLIGHT, RPG_REST, RPG_CHANGE_ZONE});
+                                       RPG_DO_QUEST, RPG_TRAVEL_FLIGHT, RPG_REST, RPG_CHANGE_ZONE,
+                                       RPG_GATHER, RPG_EXPLORE});
 
         case RPG_GO_GRIND:
         {
@@ -127,6 +128,21 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         {
             if (info.HasStatusPersisted(20 * MINUTE * IN_MILLISECONDS))
                 return EndErrand("timeout");
+            break;
+        }
+        case RPG_GATHER:
+        {
+            if (info.HasStatusPersisted(20 * MINUTE * IN_MILLISECONDS))
+                return EndGather("timeout");
+            break;
+        }
+        case RPG_EXPLORE:
+        {
+            auto& data = std::get<NewRpgInfo::Explore>(info.data);
+            if (AreaDiscovered(data.areaId))
+                return EndExplore("discovered");
+            if (info.HasStatusPersisted(15 * MINUTE * IN_MILLISECONDS))
+                return EndExplore("timeout");
             break;
         }
         case RPG_REST:
@@ -289,6 +305,56 @@ bool NewRpgWanderNpcAction::Execute(Event& /*event*/)
     }
 
     return true;
+}
+
+// ─── NewRpgGatherAction ──────────────────────────────────────────────────────
+
+bool NewRpgGatherAction::Execute(Event& /*event*/)
+{
+    auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data);
+    if (!g)
+        return false;
+
+    uint32 now = WorldTimer::getMSTime();
+    WorldPosition here(bot);
+    if (!g->arriveT)
+    {
+        if (here.getMapId() == g->pos.getMapId() && here.distance(g->pos) < 40.0f)
+        {
+            g->arriveT = now;
+            return true;
+        }
+        WorldPosition target = g->pos;
+        if (sServerFacade.isMoving(bot) || MoveFarTo(target))
+            return true;
+        return EndGather("no_path");
+    }
+
+    if (WorldTimer::getMSTimeDiff(g->arriveT, now) >= stayTime)
+        return EndGather("done");
+
+    // Roam the spot: the legacy gather and grind actions take any node or creature in sight.
+    if (sServerFacade.isMoving(bot))
+        return false;
+    return MoveRandomNear(40.0f);
+}
+
+// ─── NewRpgExploreAction ─────────────────────────────────────────────────────
+
+bool NewRpgExploreAction::Execute(Event& /*event*/)
+{
+    auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data);
+    if (!e)
+        return false;
+
+    WorldPosition here(bot);
+    if (here.getMapId() == e->pos.getMapId() && here.distance(e->pos) < 20.0f)
+        return EndExplore(AreaDiscovered(e->areaId) ? "discovered" : "reached");
+
+    WorldPosition target = e->pos;
+    if (sServerFacade.isMoving(bot) || MoveFarTo(target))
+        return true;
+    return EndExplore("no_path");
 }
 
 // ─── NewRpgErrandAction ──────────────────────────────────────────────────────

@@ -76,6 +76,26 @@ void NewRpgInfo::ChangeToErrand(NewRpgErrandNeed need, WorldPosition pos)
     data = errand;
 }
 
+void NewRpgInfo::ChangeToGather(uint32 skill, int32 entry, WorldPosition pos)
+{
+    startT = WorldTimer::getMSTime();
+    Gather g;
+    g.skill = skill;
+    g.entry = entry;
+    g.pos = pos;
+    g.gatheredAtStart = gathered;
+    data = g;
+}
+
+void NewRpgInfo::ChangeToExplore(uint32 areaId, WorldPosition pos)
+{
+    startT = WorldTimer::getMSTime();
+    Explore e;
+    e.areaId = areaId;
+    e.pos = pos;
+    data = e;
+}
+
 void NewRpgInfo::ChangeToIdle()
 {
     startT = WorldTimer::getMSTime();
@@ -116,6 +136,8 @@ NewRpgStatus NewRpgInfo::GetStatus()
         if constexpr (std::is_same_v<T, TravelFlight>)  return RPG_TRAVEL_FLIGHT;
         if constexpr (std::is_same_v<T, ChangeZone>)    return RPG_CHANGE_ZONE;
         if constexpr (std::is_same_v<T, Errand>)        return RPG_ERRAND;
+        if constexpr (std::is_same_v<T, Gather>)        return RPG_GATHER;
+        if constexpr (std::is_same_v<T, Explore>)       return RPG_EXPLORE;
         return RPG_IDLE;
     }, data);
 }

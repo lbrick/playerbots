@@ -22,7 +22,9 @@ enum NewRpgStatus : int
     RPG_REST           = 7,
     RPG_CHANGE_ZONE    = 8,
     RPG_ERRAND         = 9,
-    RPG_STATUS_END     = 10,
+    RPG_GATHER         = 10,
+    RPG_EXPLORE        = 11,
+    RPG_STATUS_END     = 12,
 };
 
 // What sends a bot on an errand (lbrick/cmangos-dev#86).
@@ -118,6 +120,22 @@ struct NewRpgInfo
     struct Idle
     {
     };
+    // RPG_GATHER (lbrick/cmangos-dev#87): the profession, the node or creature entry and its
+    // nearest spawn, when the bot arrived, and the gathering count when the status began.
+    struct Gather
+    {
+        uint32 skill{0};
+        int32 entry{0};
+        WorldPosition pos{};
+        uint32 arriveT{0};
+        uint32 gatheredAtStart{0};
+    };
+    // RPG_EXPLORE (lbrick/cmangos-dev#87): an undiscovered area of the bot's map.
+    struct Explore
+    {
+        uint32 areaId{0};
+        WorldPosition pos{};
+    };
     // RPG_ERRAND (lbrick/cmangos-dev#86): the need, the vendor's spawn point, and the vendor once
     // the bot has reached it.
     struct Errand
@@ -131,6 +149,8 @@ struct NewRpgInfo
     uint32 startT{0};  // start timestamp of the current status
     // No errand starts before this time: the last one found no vendor or did not finish (#86).
     uint32 errandRetryT{0};
+    // Herbs, ore and skins the legacy loot actions gathered, for the gather status's log (#87).
+    uint32 gathered{0};
 
     // Post-quest routine (lbrick/cmangos-dev#45): a pause, or a vendor or trainer visit, after a
     // quest accept or turn-in. Held beside the status, so a status change does not cut it short.
@@ -197,7 +217,9 @@ struct NewRpgInfo
         Rest,
         TravelFlight,
         ChangeZone,
-        Errand
+        Errand,
+        Gather,
+        Explore
     >;
     RpgData data;
 
@@ -212,6 +234,8 @@ struct NewRpgInfo
     void ChangeToRest();
     void ChangeToChangeZone(WorldPosition dest);
     void ChangeToErrand(NewRpgErrandNeed need, WorldPosition pos);
+    void ChangeToGather(uint32 skill, int32 entry, WorldPosition pos);
+    void ChangeToExplore(uint32 areaId, WorldPosition pos);
     void ChangeToIdle();
     bool CanChangeTo(NewRpgStatus status);
     void Reset();

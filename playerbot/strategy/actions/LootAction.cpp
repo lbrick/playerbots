@@ -56,6 +56,9 @@ bool OpenLootAction::Execute(Event& event)
     bool result = DoLoot(lootObject);
     if (result)
     {
+        // Counted for the new RPG gather status's log (lbrick/cmangos-dev#87).
+        if (lootObject.skillId == SKILL_HERBALISM || lootObject.skillId == SKILL_MINING || lootObject.skillId == SKILL_SKINNING)
+            ++ai->rpgInfo.gathered;
         AI_VALUE(LootObjectStack*, "available loot")->Remove(lootObject.guid);
         context->GetValue<LootObject>("loot target")->Set(LootObject());
     }
