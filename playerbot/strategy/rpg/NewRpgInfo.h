@@ -109,6 +109,10 @@ struct NewRpgInfo
         // also counts as progress, so a long walk between waypoints does not time out (#83).
         WorldPosition progressTarget{};
         float progressDist{0.0f};
+        // Where and since when the bot has stayed in combat; the status update does not run in
+        // combat, so PlayerbotAI ends a trip held there (lbrick/cmangos-dev#84).
+        WorldPosition combatPos{};
+        uint32 combatT{0};
     };
     struct Idle
     {
