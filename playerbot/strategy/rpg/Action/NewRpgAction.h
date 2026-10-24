@@ -59,6 +59,7 @@ public:
     bool Execute(Event& event) override;
 
     const uint32 stayTime = 3 * MINUTE * IN_MILLISECONDS;
+    const uint32 gatherEmptyTime = 30 * IN_MILLISECONDS;
 };
 
 // Walks to an undiscovered area (lbrick/cmangos-dev#87).
