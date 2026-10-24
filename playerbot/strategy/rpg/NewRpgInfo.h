@@ -240,8 +240,8 @@ struct NewRpgInfo
     bool HasStatusPersisted(uint32 maxDuration);
     // Active time in the current status: the time between full AI updates less than
     // activeGapLimit apart. A bot with no real player near it runs minimal updates, which skip
-    // every new RPG action, so wall-clock limits ended errands, gathers and explores that never
-    // got to run (lbrick/cmangos-dev#86). Those statuses time out on active time instead.
+    // every new RPG action, so a wall-clock limit ended errands that never got to run
+    // (lbrick/cmangos-dev#86). Errands time out on active time, under a wall-clock ceiling.
     void CountActiveTime(uint32 now);
     bool HasStatusBeenActive(uint32 maxDuration);
     void ChangeToGoGrind(WorldPosition pos);
