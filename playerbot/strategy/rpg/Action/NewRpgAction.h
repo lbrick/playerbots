@@ -58,6 +58,7 @@ public:
     bool Execute(Event& event) override;
 
     const uint32 npcVisitTime = 8 * 1000;
+    const float errandNpcRange = 60.0f;  // vendor search around the destination spawn
 };
 
 class NewRpgDoQuestAction : public NewRpgBaseAction

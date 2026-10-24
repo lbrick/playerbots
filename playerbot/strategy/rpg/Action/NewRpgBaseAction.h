@@ -23,6 +23,15 @@ protected:
     bool MoveWorldObjectTo(ObjectGuid guid, float distance = INTERACTION_DISTANCE);
     bool MoveRandomNear(float moveStep = 50.0f);
     bool ForceToWait(uint32 duration);
+    // Walks toward dest for a status that ends when it cannot get there. One false from MoveFarTo
+    // is not a failure: it also returns false on arrival and for a move refused this tick. The
+    // status gives up only when MoveFarTo abandons the target, or after moveGiveUpTime of
+    // failures in a row (lbrick/cmangos-dev#86).
+    enum class MoveResult { Moving, Arrived, Failed };
+    MoveResult MoveToward(WorldPosition dest, float arriveRange);
+    // The nearest live, non-hostile creature with the NPC flag within range, by grid search:
+    // the cached "nearest npcs" list can predate the bot's arrival.
+    Creature* FindNearestNpc(uint32 npcFlag, float range);
 
     /* QUEST */
     ObjectGuid ChooseNpcOrGoToInteract(bool questgiverOnly = false, float distanceLimit = 0.0f);
@@ -78,6 +87,7 @@ protected:
 protected:
     const float  pathFinderDis = 70.0f;
     const uint32 stuckTime     = 90 * 1000;  // ms before teleport stuck-recovery fires
+    const uint32 moveGiveUpTime = 30 * 1000; // MoveToward: failures in a row before a status gives up
     const float stuckObserverRange = 60.0f;  // no stuck teleport with a real player this close
     // Quest givers: retry delay doubles from this after each failed approach or game object
     // interaction; after questGiverMaxFailures the giver is skipped for the session.

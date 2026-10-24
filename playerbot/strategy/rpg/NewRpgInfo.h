@@ -129,6 +129,9 @@ struct NewRpgInfo
     };
 
     uint32 startT{0};  // start timestamp of the current status
+    // MoveToward (#86): when MoveFarTo began failing, and the status (its startT) it failed in.
+    uint32 moveFailT{0};
+    uint32 moveFailStartT{0};
     // No errand starts before this time: the last one found no vendor or did not finish (#86).
     uint32 errandRetryT{0};
 
