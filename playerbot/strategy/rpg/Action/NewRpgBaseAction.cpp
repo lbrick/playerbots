@@ -819,14 +819,29 @@ Creature* NewRpgBaseAction::FindNearestNpc(uint32 npcFlag, float range)
     return nearest;
 }
 
+std::string NewRpgBaseAction::TimeoutDetail(WorldPosition const& dest)
+{
+    NewRpgInfo const& info = ai->rpgInfo;
+    WorldPosition here(bot);
+    char buf[160];
+    snprintf(buf, sizeof(buf), " left=%.0f step=%s move_calls=%u combat=%d moving=%d",
+        here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f, info.moveFarStep, info.moveFarCalls,
+        bot->IsInCombat() ? 1 : 0, sServerFacade.isMoving(bot) ? 1 : 0);
+    return std::string(buf) + " last_nc=\"" + ai->GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT) +
+        "\" last_c=\"" + ai->GetLastExecutedActionName(BotState::BOT_STATE_COMBAT) + "\"";
+}
+
 bool NewRpgBaseAction::EndErrand(char const* reason)
 {
     auto* errand = std::get_if<NewRpgInfo::Errand>(&ai->rpgInfo.data);
     uint32 now = WorldTimer::getMSTime();
     if (errand && sPlayerbotAIConfig.logRpgStatusEvents)
-        sLog.outString("[New RPG status] bot=%s event=errand_end reason=%s need=%s min=%u durability=%u free_slots=%u",
+    {
+        std::string detail = std::string(reason) == "timeout" ? TimeoutDetail(errand->pos) : "";
+        sLog.outString("[New RPG status] bot=%s event=errand_end reason=%s need=%s min=%u durability=%u free_slots=%u%s",
             bot->GetName(), reason, ErrandNeedName(errand->need),
-            WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, now) / 60000, LowestDurabilityPct(), FreeBagSlots());
+            WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, now) / 60000, LowestDurabilityPct(), FreeBagSlots(), detail.c_str());
+    }
     EndLegacyRpgHandOver();
     // A need the visit did not meet (unsellable items, no money) must not start errand after errand.
     bool done = std::string(reason) == "done";
