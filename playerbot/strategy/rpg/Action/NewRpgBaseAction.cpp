@@ -790,7 +790,10 @@ NewRpgBaseAction::MoveResult NewRpgBaseAction::MoveToward(WorldPosition dest, fl
     bool hopeless = step == "abandoned" || step == "cross_map" || step == "no_dest";
     if (!hopeless)
     {
-        // Counted in active time, plus one so that 0 stays "not failing".
+        // Counted in active time, plus one so that 0 stays "not failing". Before the active
+        // clock has caught up with a new status, nothing is counted yet.
+        if (info.activeStartT != info.startT)
+            return MoveResult::Moving;
         if (!info.moveFailT || info.moveFailStartT != info.startT)
         {
             info.moveFailT = info.activeMs + 1;
@@ -893,9 +896,6 @@ bool NewRpgBaseAction::SelectGatherDestination()
         float distance = botPos.distance(*point);
         if (distance < 100.0f)
             continue;
-        // Legacy gather travel's check: within sight, the node or creature must be there.
-        if (!dest->IsActive(bot, info))
-            continue;
         candidates.push_back({distance, dest->GetEntry(), *point});
     }
     if (candidates.empty())
@@ -905,7 +905,7 @@ bool NewRpgBaseAction::SelectGatherDestination()
     auto const& chosen = candidates[urand(0, std::min<size_t>(candidates.size(), 5) - 1)];
     pendingSkill = skill;
     pendingEntry = std::get<1>(chosen);
-    pendingPos = std::get<2>(chosen);
+    pendingGatherPos = std::get<2>(chosen);
     return true;
 }
 
@@ -937,7 +937,7 @@ bool NewRpgBaseAction::SelectExploreDestination()
         {
             best = distance;
             pendingArea = dest->GetEntry();
-            pendingPos = *point;
+            pendingExplorePos = *point;
         }
     }
     return best < FLT_MAX;
@@ -978,7 +978,7 @@ bool NewRpgBaseAction::EndGather(char const* reason)
 bool NewRpgBaseAction::EndExplore(char const* reason)
 {
     if (auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data))
-        if (std::string(reason) == "no_path" || std::string(reason) == "timeout")
+        if (std::string(reason) == "no_path" || std::string(reason) == "timeout" || std::string(reason) == "stuck_abandoned")
             CooldownSpot(e->pos);
     if (auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data))
         if (sPlayerbotAIConfig.logRpgStatusEvents)
@@ -1898,15 +1898,15 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
         case RPG_GATHER:
             if (sPlayerbotAIConfig.logRpgStatusEvents)
                 sLog.outString("[New RPG status] bot=%s event=gather_start skill=%u entry=%d dist=%.0f",
-                    bot->GetName(), pendingSkill, pendingEntry, WorldPosition(bot).distance(pendingPos));
-            ai->rpgInfo.ChangeToGather(pendingSkill, pendingEntry, pendingPos);
+                    bot->GetName(), pendingSkill, pendingEntry, WorldPosition(bot).distance(pendingGatherPos));
+            ai->rpgInfo.ChangeToGather(pendingSkill, pendingEntry, pendingGatherPos);
             return true;
 
         case RPG_EXPLORE:
             if (sPlayerbotAIConfig.logRpgStatusEvents)
                 sLog.outString("[New RPG status] bot=%s event=explore_start area=%u dist=%.0f",
-                    bot->GetName(), pendingArea, WorldPosition(bot).distance(pendingPos));
-            ai->rpgInfo.ChangeToExplore(pendingArea, pendingPos);
+                    bot->GetName(), pendingArea, WorldPosition(bot).distance(pendingExplorePos));
+            ai->rpgInfo.ChangeToExplore(pendingArea, pendingExplorePos);
             return true;
 
         case RPG_REST:

@@ -19,6 +19,9 @@ protected:
     const int32 statusRestDuration         = 30 * 1000;
     const int32 statusSocialRestDuration   = 2 * 60 * 1000;  // in a social place (#88)
     const int32 statusDoQuestDuration      = 30 * 60 * 1000;
+    // Errands pick a vendor within 1,500 yd, so twice that means the bot was teleported (#86).
+    const float errandTeleportDistance     = 3000.0f;
+    const uint32 errandWallLimit           = 60 * 60 * 1000;
 };
 
 class NewRpgGoGrindAction : public NewRpgBaseAction
