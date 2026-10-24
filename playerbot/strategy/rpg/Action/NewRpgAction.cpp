@@ -36,6 +36,14 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
                 ai->rpgStatistic.questAbandoned++;
             }
             NEWRPG_LOG("[New RPG] %s gave up an unreachable move target", bot->GetName());
+            // An errand ends through EndErrand, for its log line and retry delay (#86).
+            if (status == RPG_ERRAND)
+                return EndErrand("stuck_abandoned");
+            // Gather and explore too, for their end line and spot cooldown (#87).
+            if (status == RPG_GATHER)
+                return EndGather("stuck_abandoned");
+            if (status == RPG_EXPLORE)
+                return EndExplore("stuck_abandoned");
             info.tripEndReason = "stuck_abandoned";
             info.ChangeToIdle();
             return true;
@@ -49,6 +57,12 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         {
             // The target is valid on the map the bot left, so a quest is not marked low priority.
             NEWRPG_LOG("[New RPG] %s dropped a move target on another map", bot->GetName());
+            if (status == RPG_ERRAND)
+                return EndErrand("cross_map");
+            if (status == RPG_GATHER)
+                return EndGather("cross_map");
+            if (status == RPG_EXPLORE)
+                return EndExplore("cross_map");
             info.tripEndReason = "cross_map";
             info.ChangeToIdle();
             return true;
@@ -145,7 +159,14 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         }
         case RPG_ERRAND:
         {
-            if (info.HasStatusBeenActive(20 * MINUTE * IN_MILLISECONDS))
+            // A teleport (random teleport, summon, hearth) took the bot away from its errand.
+            auto& errand = std::get<NewRpgInfo::Errand>(info.data);
+            WorldPosition here(bot);
+            if (here.getMapId() != errand.pos.getMapId() || here.distance(errand.pos) > errandTeleportDistance)
+                return EndErrand("teleported");
+            // 20 min of active time, and a wall-clock ceiling for a bot that stays inactive or
+            // keeps fighting, since the active clock does not end it then.
+            if (info.HasStatusBeenActive(20 * MINUTE * IN_MILLISECONDS) || info.HasStatusPersisted(errandWallLimit))
                 return EndErrand("timeout");
             break;
         }
