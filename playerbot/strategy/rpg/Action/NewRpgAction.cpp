@@ -1,5 +1,6 @@
 #include "playerbot/playerbot.h"
 #include "NewRpgAction.h"
+#include "playerbot/LootObjectStack.h"
 
 #define NEWRPG_LOG(...) do { if (!sPlayerbotAIConfig.logFilterPlayerBot) sLog.outDebug(__VA_ARGS__); } while(0)
 #include "playerbot/strategy/rpg/NewRpgInfo.h"
@@ -354,18 +355,16 @@ bool NewRpgGatherAction::Execute(Event& /*event*/)
         return false;
 
     uint32 now = WorldTimer::getMSTime();
-    WorldPosition here(bot);
     if (!g->arriveT)
     {
-        if (here.getMapId() == g->pos.getMapId() && here.distance(g->pos) < 40.0f)
+        switch (MoveToward(g->pos, 40.0f))
         {
-            g->arriveT = now;
-            return true;
+            case MoveResult::Moving: return true;
+            case MoveResult::Failed: return EndGather("no_path");
+            case MoveResult::Arrived: break;
         }
-        WorldPosition target = g->pos;
-        if (sServerFacade.isMoving(bot) || MoveFarTo(target))
-            return true;
-        return EndGather("no_path");
+        g->arriveT = now;
+        return true;
     }
 
     if (WorldTimer::getMSTimeDiff(g->arriveT, now) >= stayTime)
@@ -385,14 +384,16 @@ bool NewRpgExploreAction::Execute(Event& /*event*/)
     if (!e)
         return false;
 
-    WorldPosition here(bot);
-    if (here.getMapId() == e->pos.getMapId() && here.distance(e->pos) < 20.0f)
-        return EndExplore(AreaDiscovered(e->areaId) ? "discovered" : "reached");
+    if (AreaDiscovered(e->areaId))
+        return EndExplore("discovered");
 
-    WorldPosition target = e->pos;
-    if (sServerFacade.isMoving(bot) || MoveFarTo(target))
-        return true;
-    return EndExplore("no_path");
+    switch (MoveToward(e->pos, 20.0f))
+    {
+        case MoveResult::Moving: return true;
+        case MoveResult::Failed: return EndExplore("no_path");
+        case MoveResult::Arrived: break;
+    }
+    return EndExplore(AreaDiscovered(e->areaId) ? "discovered" : "reached");
 }
 
 // ─── NewRpgErrandAction ──────────────────────────────────────────────────────
@@ -414,29 +415,14 @@ bool NewRpgErrandAction::Execute(Event& /*event*/)
     Creature* npc = errand->npc ? ai->GetCreature(errand->npc) : nullptr;
     if (!npc)
     {
-        WorldPosition here(bot);
-        if (here.getMapId() != errand->pos.getMapId() || here.distance(errand->pos) > 40.0f)
+        switch (MoveToward(errand->pos, 40.0f))
         {
-            WorldPosition target = errand->pos;
-            if (sServerFacade.isMoving(bot) || MoveFarTo(target))
-                return true;
-            return EndErrand("no_path");
+            case MoveResult::Moving: return true;
+            case MoveResult::Failed: return EndErrand("no_path");
+            case MoveResult::Arrived: break;
         }
 
-        uint32 flag = errand->need == ERRAND_REPAIR ? UNIT_NPC_FLAG_REPAIR : UNIT_NPC_FLAG_VENDOR;
-        float best = FLT_MAX;
-        for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, "nearest npcs"))
-        {
-            Creature* candidate = bot->GetMap()->GetCreature(guid);
-            if (!candidate || !candidate->IsAlive() || !candidate->HasFlag(UNIT_NPC_FLAGS, flag) || GuidPosition(candidate).IsHostileTo(bot))
-                continue;
-            float distance = bot->GetDistance(candidate);
-            if (distance < best)
-            {
-                best = distance;
-                npc = candidate;
-            }
-        }
+        npc = FindNearestNpc(errand->need == ERRAND_REPAIR ? UNIT_NPC_FLAG_REPAIR : UNIT_NPC_FLAG_VENDOR, errandNpcRange);
         if (!npc)
             return EndErrand("no_npc");
         errand->npc = npc->GetObjectGuid();
@@ -464,6 +450,26 @@ bool NewRpgErrandAction::Execute(Event& /*event*/)
             bot->GetName(), npc->GetEntry(), action, done ? 1 : 0);
     HandOverToLegacyRpg(errand->npc);
     return true;
+}
+
+// ─── NewRpgLootAction ────────────────────────────────────────────────────────
+
+bool NewRpgLootAction::isUseful()
+{
+    return ai->rpgInfo.GetStatus() != RPG_IDLE && !bot->IsTaxiFlying() && !bot->IsInCombat();
+}
+
+bool NewRpgLootAction::Execute(Event& /*event*/)
+{
+    if (ai->HasStrategy("loot", BotState::BOT_STATE_NON_COMBAT))
+        ai->DoSpecificAction("add all loot", Event("new rpg loot"), true);
+    if (ai->HasStrategy("gather", BotState::BOT_STATE_NON_COMBAT))
+        ai->DoSpecificAction("add gathering loot", Event("new rpg loot"), true);
+
+    // "loot available" waits for the bot to dismount, and new RPG travel keeps it mounted.
+    if (bot->IsMounted() && !AI_VALUE(LootObjectStack*, "available loot")->GetLoot(dismountRange).IsEmpty())
+        ai->Unmount();
+    return false;
 }
 
 // ─── NewRpgDoQuestAction ─────────────────────────────────────────────────────

@@ -67,4 +67,9 @@ void NewRpgStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode(
         "change zone status",
         NextAction::array(0, new NextAction("new rpg go change zone", 3.0f), NULL)));
+
+    // Above every status action, so looting is not starved while a status is active (#87).
+    triggers.push_back(new TriggerNode(
+        "often",
+        NextAction::array(0, new NextAction("new rpg loot", 3.5f), NULL)));
 }

@@ -89,6 +89,22 @@ public:
     bool Execute(Event& event) override;
 
     const uint32 npcVisitTime = 8 * 1000;
+    const float errandNpcRange = 60.0f;  // vendor search around the destination spawn
+};
+
+/// Looting while a new RPG status is active (lbrick/cmangos-dev#87). The engine runs one action
+/// per tick, and the legacy "add all loot" (1.0) and "add gathering loot" (2.0) rank below every
+/// status action (3.0), so the loot list stayed empty under new RPG. This runs them for a bot whose
+/// loot or gather strategy is on; the legacy loot, move-to-loot and open-loot actions (6.0 to 8.0)
+/// then take the loot. It always returns false, so the status action still runs this tick.
+class NewRpgLootAction : public NewRpgBaseAction
+{
+public:
+    NewRpgLootAction(PlayerbotAI* ai) : NewRpgBaseAction(ai, "new rpg loot") {}
+    bool Execute(Event& event) override;
+    bool isUseful() override;
+
+    const float dismountRange = 30.0f;  // a mounted bot dismounts for loot this close
 };
 
 class NewRpgDoQuestAction : public NewRpgBaseAction

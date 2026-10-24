@@ -16,6 +16,9 @@
 #include "playerbot/strategy/values/TravelValues.h"
 #include "playerbot/TravelMgr.h"
 #include "playerbot/TravelNode.h"
+#include "Grids/GridNotifiers.h"
+#include "Grids/GridNotifiersImpl.h"
+#include "Grids/CellImpl.h"
 
 using namespace ai;
 
@@ -768,6 +771,66 @@ bool NewRpgBaseAction::TryStartErrand()
     }
     ai->rpgInfo.ChangeToErrand(need, pos);
     return true;
+}
+
+NewRpgBaseAction::MoveResult NewRpgBaseAction::MoveToward(WorldPosition dest, float arriveRange)
+{
+    WorldPosition here(bot);
+    if (here.getMapId() == dest.getMapId() && here.distance(dest) <= arriveRange)
+        return MoveResult::Arrived;
+
+    NewRpgInfo& info = ai->rpgInfo;
+    if (sServerFacade.isMoving(bot) || MoveFarTo(dest))
+    {
+        info.moveFailT = 0;
+        return MoveResult::Moving;
+    }
+
+    std::string step = info.moveFarStep;
+    bool hopeless = step == "abandoned" || step == "cross_map" || step == "no_dest";
+    uint32 now = WorldTimer::getMSTime();
+    if (!hopeless)
+    {
+        if (!info.moveFailT || info.moveFailStartT != info.startT)
+        {
+            info.moveFailT = now;
+            info.moveFailStartT = info.startT;
+        }
+        if (WorldTimer::getMSTimeDiff(info.moveFailT, now) < moveGiveUpTime)
+            return MoveResult::Moving;
+    }
+
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=move_gave_up status=%s step=%s distance=%.0f",
+            bot->GetName(), StatusName(info.GetStatus()), step.c_str(),
+            here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f);
+    info.moveFailT = 0;
+    return MoveResult::Failed;
+}
+
+Creature* NewRpgBaseAction::FindNearestNpc(uint32 npcFlag, float range)
+{
+    std::list<Unit*> units;
+    MaNGOS::AnyUnitInObjectRangeCheck check(bot, range);
+    MaNGOS::UnitListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(units, check);
+    Cell::VisitAllObjects(bot, searcher, range);
+
+    Creature* nearest = nullptr;
+    float nearestDist = range;
+    for (Unit* unit : units)
+    {
+        if (unit->GetTypeId() != TYPEID_UNIT || !unit->IsAlive() || !unit->HasFlag(UNIT_NPC_FLAGS, npcFlag))
+            continue;
+        if (GuidPosition(unit).IsHostileTo(bot))
+            continue;
+        float dist = bot->GetDistance(unit);
+        if (dist <= nearestDist)
+        {
+            nearest = static_cast<Creature*>(unit);
+            nearestDist = dist;
+        }
+    }
+    return nearest;
 }
 
 bool NewRpgBaseAction::EndErrand(char const* reason)
