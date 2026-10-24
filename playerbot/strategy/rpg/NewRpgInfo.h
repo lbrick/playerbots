@@ -129,9 +129,14 @@ struct NewRpgInfo
     };
 
     uint32 startT{0};  // start timestamp of the current status
-    // MoveToward (#86): when MoveFarTo began failing, and the status (its startT) it failed in.
+    // MoveToward (#86): the active time when MoveFarTo began failing, and the status (its
+    // startT) it failed in.
     uint32 moveFailT{0};
     uint32 moveFailStartT{0};
+    // CountActiveTime (#86): active ms in the status whose startT is activeStartT.
+    uint32 activeMs{0};
+    uint32 activeStartT{0};
+    uint32 lastFullUpdateT{0};
     // No errand starts before this time: the last one found no vendor or did not finish (#86).
     uint32 errandRetryT{0};
 
@@ -206,6 +211,12 @@ struct NewRpgInfo
 
     NewRpgStatus GetStatus();
     bool HasStatusPersisted(uint32 maxDuration);
+    // Active time in the current status: the time between full AI updates less than
+    // activeGapLimit apart. A bot with no real player near it runs minimal updates, which skip
+    // every new RPG action, so wall-clock limits ended errands, gathers and explores that never
+    // got to run (lbrick/cmangos-dev#86). Those statuses time out on active time instead.
+    void CountActiveTime(uint32 now);
+    bool HasStatusBeenActive(uint32 maxDuration);
     void ChangeToGoGrind(WorldPosition pos);
     void ChangeToGoCamp(WorldPosition pos);
     void ChangeToWanderNpc();

@@ -125,7 +125,7 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         }
         case RPG_ERRAND:
         {
-            if (info.HasStatusPersisted(20 * MINUTE * IN_MILLISECONDS))
+            if (info.HasStatusBeenActive(20 * MINUTE * IN_MILLISECONDS))
                 return EndErrand("timeout");
             break;
         }
