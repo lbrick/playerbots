@@ -93,6 +93,13 @@ struct NewRpgInfo
             uint32 spell{0};
             uint32 castT{0};
             uint32 castTries{0};
+            // Flight legs only (lbrick/cmangos-dev#84): the TaxiPath the bot flies from the
+            // flight master at `from` to `pos`, when it took off, its failed tries, and when
+            // it last tried.
+            uint32 taxiPath{0};
+            uint32 takeoffT{0};
+            uint32 taxiTries{0};
+            uint32 taxiTryT{0};
         };
         std::vector<Waypoint> waypoints{};   // TravelNode multi-hop path; empty = direct
         bool waypointsBuilt{false};          // true after first TravelNode build — no rebuild
@@ -104,6 +111,10 @@ struct NewRpgInfo
         // also counts as progress, so a long walk between waypoints does not time out (#83).
         WorldPosition progressTarget{};
         float progressDist{0.0f};
+        // Where and since when the bot has stayed in combat; the status update does not run in
+        // combat, so PlayerbotAI ends a trip held there (lbrick/cmangos-dev#84).
+        WorldPosition combatPos{};
+        uint32 combatT{0};
     };
     struct Idle
     {

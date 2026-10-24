@@ -9,6 +9,9 @@
 #include "Server/DBCStructure.h"
 #include "Server/DBCStores.h"
 #include "playerbot/ServerFacade.h"
+#include "Grids/GridNotifiers.h"
+#include "Grids/GridNotifiersImpl.h"
+#include "Grids/CellImpl.h"
 
 using namespace ai;
 
@@ -141,7 +144,9 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             if (!data.waypoints.empty() && !data.waypoints.front().spell)
             {
                 auto const& front = data.waypoints.front();
-                WorldPosition target = front.teleport && front.from != WorldPosition() ? front.from : front.pos;
+                // A teleport leg and a flight leg not yet taken start at their source point.
+                bool atSource = front.teleport || (front.taxiPath && !front.takeoffT);
+                WorldPosition target = atSource && front.from != WorldPosition() ? front.from : front.pos;
                 if (target.getMapId() == bot->GetMapId())
                 {
                     float distance = WorldPosition(bot).distance(target);
@@ -488,6 +493,29 @@ bool NewRpgTravelFlightAction::Execute(Event& /*event*/)
 
 // ─── NewRpgGoChangeZoneAction ─────────────────────────────────────────────────
 
+Creature* NewRpgGoChangeZoneAction::FindFlightMaster(float range)
+{
+    std::list<Unit*> units;
+    MaNGOS::AnyUnitInObjectRangeCheck check(bot, range);
+    MaNGOS::UnitListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(units, check);
+    Cell::VisitAllObjects(bot, searcher, range);
+
+    Creature* nearest = nullptr;
+    float nearestDist = range;
+    for (Unit* unit : units)
+    {
+        if (unit->GetTypeId() != TYPEID_UNIT || !unit->IsAlive() || !unit->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_FLIGHTMASTER))
+            continue;
+        float dist = bot->GetDistance(unit);
+        if (dist <= nearestDist)
+        {
+            nearest = static_cast<Creature*>(unit);
+            nearestDist = dist;
+        }
+    }
+    return nearest;
+}
+
 bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 {
     auto* dataPtr = std::get_if<NewRpgInfo::ChangeZone>(&ai->rpgInfo.data);
@@ -647,6 +675,27 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     }
                 }
 
+                // A flight-path link is a leg the bot flies from the flight master at this node.
+                // Walked, it sent the bot overland between flight masters, and those trips
+                // arrived least often (lbrick/cmangos-dev#84). The landing node stays in the
+                // route, so a flight that continues from it becomes the next leg.
+                if (nextNode && !isTransportLeg)
+                {
+                    auto linkIt = node->getLinks()->find(nextNode);
+                    if (linkIt != node->getLinks()->end() &&
+                        linkIt->second->getPathType() == TravelNodePathType::flightPath &&
+                        sTaxiPathStore.LookupEntry(uint32(linkIt->second->getPathObject())))
+                    {
+                        WorldPosition landPos = *nextNode->getPosition();
+                        NewRpgInfo::ChangeZone::Waypoint leg{landPos, false, nodePos};
+                        leg.taxiPath = uint32(linkIt->second->getPathObject());
+                        dataPtr->waypoints.push_back(leg);
+                        std::string detail = "taxi_path=" + std::to_string(leg.taxiPath);
+                        LogTravelEvent("flight_leg_built", nodePos, landPos, detail.c_str());
+                        continue;
+                    }
+                }
+
                 // Links the waypoints walk across although they are not walks: flight paths,
                 // teleport spells such as the hearthstone, and map changes (lbrick/cmangos-dev#76).
                 if (nextNode && !isTransportLeg && sPlayerbotAIConfig.logRpgTravelEvents)
@@ -688,6 +737,37 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     if (!nodePos.isMmapLoaded(0))
                         continue;
                     dataPtr->waypoints.push_back({nodePos, false});
+
+                    // Walk the link along its stored path, as the legacy travel path does, rather
+                    // than straight to the next node: one point in every 60 yards or more becomes a
+                    // waypoint (lbrick/cmangos-dev#84).
+                    if (nextNode)
+                    {
+                        auto linkIt = node->getLinks()->find(nextNode);
+                        if (linkIt != node->getLinks()->end() &&
+                            linkIt->second->getPathType() == TravelNodePathType::walk &&
+                            linkIt->second->getComplete())
+                        {
+                            std::vector<WorldPosition> path = linkIt->second->getPath();
+                            WorldPosition last = nodePos;
+                            for (size_t p = 1; p + 1 < path.size(); ++p)
+                            {
+                                WorldPosition point = path[p];
+                                point.setMapId(segmentMapId);
+                                float step = last.distance(point);
+                                // A gap over 200 yards is not a walk: restart the spacing after it.
+                                if (step > 200.0f)
+                                {
+                                    last = point;
+                                    continue;
+                                }
+                                if (step < 60.0f || !point.isValid() || IsPosBad(point))
+                                    continue;
+                                dataPtr->waypoints.push_back({point, false});
+                                last = point;
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -786,7 +866,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     while (!dataPtr->waypoints.empty())
     {
         auto& front = dataPtr->waypoints.front();
-        if (front.teleport)
+        if (front.teleport || front.taxiPath)
             break;
         WorldPosition check = front.pos;
         check.setMapId(bot->GetMapId());
@@ -808,6 +888,72 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     {
         auto& front = dataPtr->waypoints.front();
         WorldPosition& wp = front.pos;
+
+        // Flight leg: walk to the flight master, fly, and drop the leg on landing. A flight that
+        // fails three times is walked instead, as every flight link was before
+        // (lbrick/cmangos-dev#84).
+        if (front.taxiPath)
+        {
+            uint32 now = WorldTimer::getMSTime();
+            std::string detail = "taxi_path=" + std::to_string(front.taxiPath) + " tries=" + std::to_string(front.taxiTries);
+            if (bot->IsTaxiFlying())
+            {
+                dataPtr->progressT = now;
+                return true;
+            }
+            if (front.takeoffT)
+            {
+                LogTravelEvent("flight_landed", WorldPosition(bot), wp, detail.c_str());
+                dataPtr->progressT = now;
+                dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+                ai->rpgInfo.SetMoveFarTo(WorldPosition());
+                return true;
+            }
+
+            if (WorldPosition(bot).distance(front.from) > 30.0f)
+            {
+                WorldPosition target = front.from;
+                if (MoveFarTo(target))
+                    return true;
+            }
+
+            if (front.taxiTryT && WorldTimer::getMSTimeDiff(front.taxiTryT, now) < flightRetryTime)
+                return true;
+
+            // A grid search, not the cached "nearest npcs" list: that list can predate the
+            // bot's arrival, and with three tries in three ticks a stale list alone failed
+            // 114 of 149 flight legs in the 4 h combined run (lbrick/cmangos-dev#84).
+            Creature* flightMaster = FindFlightMaster(flightMasterSearchRange);
+            if (flightMaster && bot->GetDistance(flightMaster) > INTERACTION_DISTANCE)
+            {
+                WorldPosition target(flightMaster);
+                if (MoveFarTo(target))
+                    return true;
+            }
+
+            front.taxiTryT = now;
+
+            if (flightMaster && UseTaxi(ai, front.taxiPath, true, flightMaster))
+            {
+                front.takeoffT = now;
+                dataPtr->progressT = now;
+                LogTravelEvent("flight_taken", WorldPosition(bot), wp, detail.c_str());
+                return true;
+            }
+
+            if (++front.taxiTries < 3)
+                return true;
+            std::string reason;
+            if (!flightMaster)
+                reason = " no_flight_master=1";
+            else
+                reason = " flight_master=" + std::to_string(flightMaster->GetEntry()) +
+                    " distance=" + std::to_string(int(bot->GetDistance(flightMaster))) +
+                    " money=" + std::to_string(bot->GetMoney());
+            LogTravelEvent("flight_failed", WorldPosition(bot), wp, (detail + reason).c_str());
+            front.taxiPath = 0;
+            return true;
+        }
 
         // Teleport-spell leg: cast the spell where the bot stands, then wait for the teleport.
         // A spell that cannot be cast, or a cast that does not move the bot, rebuilds the route

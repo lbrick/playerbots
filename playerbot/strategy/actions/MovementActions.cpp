@@ -238,7 +238,7 @@ bool MovementAction::FlyDirect(const WorldPosition &startPosition, const WorldPo
 #endif
 }
 
-bool MovementAction::UseTaxi(PlayerbotAI* ai, uint32 entry, bool needNpc)
+bool MovementAction::UseTaxi(PlayerbotAI* ai, uint32 entry, bool needNpc, Creature* flightMaster)
 {
     AiObjectContext* context = ai->GetAiObjectContext();
     Player* bot = ai->GetBot();
@@ -255,9 +255,11 @@ bool MovementAction::UseTaxi(PlayerbotAI* ai, uint32 entry, bool needNpc)
         return goClick;
     }
 
-    Creature* unit = nullptr;
+    // A caller that found the flight master itself passes it, and skips the cached
+    // "nearest npcs" list, which can predate the bot's arrival (lbrick/cmangos-dev#84).
+    Creature* unit = flightMaster;
 
-    if (needNpc)
+    if (needNpc && !unit)
     {
         std::list<ObjectGuid> npcs = AI_VALUE(std::list<ObjectGuid>, "nearest npcs");
         for (std::list<ObjectGuid>::iterator i = npcs.begin(); i != npcs.end(); i++)
@@ -271,13 +273,13 @@ bool MovementAction::UseTaxi(PlayerbotAI* ai, uint32 entry, bool needNpc)
         {
             return false;
         }
+    }
 
-        if (unit && !bot->m_taxi.IsTaximaskNodeKnown(tEntry->from))
-        {
-            bot->GetSession()->SendLearnNewTaxiNode(unit);
+    if (unit && !bot->m_taxi.IsTaximaskNodeKnown(tEntry->from))
+    {
+        bot->GetSession()->SendLearnNewTaxiNode(unit);
 
-            unit->SetFacingTo(unit->GetAngle(bot));
-        }
+        unit->SetFacingTo(unit->GetAngle(bot));
     }
 
     uint32 botMoney = bot->GetMoney();
