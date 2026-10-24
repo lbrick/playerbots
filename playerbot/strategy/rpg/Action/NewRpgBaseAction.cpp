@@ -788,15 +788,15 @@ NewRpgBaseAction::MoveResult NewRpgBaseAction::MoveToward(WorldPosition dest, fl
 
     std::string step = info.moveFarStep;
     bool hopeless = step == "abandoned" || step == "cross_map" || step == "no_dest";
-    uint32 now = WorldTimer::getMSTime();
     if (!hopeless)
     {
+        // Counted in active time, plus one so that 0 stays "not failing".
         if (!info.moveFailT || info.moveFailStartT != info.startT)
         {
-            info.moveFailT = now;
+            info.moveFailT = info.activeMs + 1;
             info.moveFailStartT = info.startT;
         }
-        if (WorldTimer::getMSTimeDiff(info.moveFailT, now) < moveGiveUpTime)
+        if (info.activeMs + 1 - info.moveFailT < moveGiveUpTime)
             return MoveResult::Moving;
     }
 
@@ -852,9 +852,10 @@ bool NewRpgBaseAction::EndErrand(char const* reason)
     if (errand && sPlayerbotAIConfig.logRpgStatusEvents)
     {
         std::string detail = std::string(reason) == "timeout" ? TimeoutDetail(errand->pos) : "";
-        sLog.outString("[New RPG status] bot=%s event=errand_end reason=%s need=%s min=%u durability=%u free_slots=%u%s",
+        sLog.outString("[New RPG status] bot=%s event=errand_end reason=%s need=%s min=%u active_min=%u durability=%u free_slots=%u%s",
             bot->GetName(), reason, ErrandNeedName(errand->need),
-            WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, now) / 60000, LowestDurabilityPct(), FreeBagSlots(), detail.c_str());
+            WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, now) / 60000, ai->rpgInfo.activeMs / 60000,
+            LowestDurabilityPct(), FreeBagSlots(), detail.c_str());
     }
     EndLegacyRpgHandOver();
     // A need the visit did not meet (unsellable items, no money) must not start errand after errand.

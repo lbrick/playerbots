@@ -127,13 +127,13 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         }
         case RPG_ERRAND:
         {
-            if (info.HasStatusPersisted(20 * MINUTE * IN_MILLISECONDS))
+            if (info.HasStatusBeenActive(20 * MINUTE * IN_MILLISECONDS))
                 return EndErrand("timeout");
             break;
         }
         case RPG_GATHER:
         {
-            if (info.HasStatusPersisted(20 * MINUTE * IN_MILLISECONDS))
+            if (info.HasStatusBeenActive(20 * MINUTE * IN_MILLISECONDS))
                 return EndGather("timeout");
             break;
         }
@@ -142,7 +142,7 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             auto& data = std::get<NewRpgInfo::Explore>(info.data);
             if (AreaDiscovered(data.areaId))
                 return EndExplore("discovered");
-            if (info.HasStatusPersisted(15 * MINUTE * IN_MILLISECONDS))
+            if (info.HasStatusBeenActive(15 * MINUTE * IN_MILLISECONDS))
                 return EndExplore("timeout");
             break;
         }
@@ -354,7 +354,6 @@ bool NewRpgGatherAction::Execute(Event& /*event*/)
     if (!g)
         return false;
 
-    uint32 now = WorldTimer::getMSTime();
     if (!g->arriveT)
     {
         switch (MoveToward(g->pos, 40.0f))
@@ -363,11 +362,12 @@ bool NewRpgGatherAction::Execute(Event& /*event*/)
             case MoveResult::Failed: return EndGather("no_path");
             case MoveResult::Arrived: break;
         }
-        g->arriveT = now;
+        // Active time, plus one so that 0 stays "not arrived" (#86 CountActiveTime).
+        g->arriveT = ai->rpgInfo.activeMs + 1;
         return true;
     }
 
-    if (WorldTimer::getMSTimeDiff(g->arriveT, now) >= stayTime)
+    if (ai->rpgInfo.activeMs + 1 - g->arriveT >= stayTime)
         return EndGather("done");
 
     // Take a node of the status's skill in sight. The legacy "add gathering loot" skips a node

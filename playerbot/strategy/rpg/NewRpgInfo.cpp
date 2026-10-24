@@ -11,6 +11,30 @@ bool NewRpgInfo::HasStatusPersisted(uint32 maxDuration)
     return WorldTimer::getMSTimeDiff(startT, WorldTimer::getMSTime()) > maxDuration;
 }
 
+static const uint32 activeGapLimit = 5 * IN_MILLISECONDS;
+
+void NewRpgInfo::CountActiveTime(uint32 now)
+{
+    if (activeStartT != startT)
+    {
+        activeStartT = startT;
+        activeMs = 0;
+        lastFullUpdateT = 0;
+    }
+    if (lastFullUpdateT)
+    {
+        uint32 gap = WorldTimer::getMSTimeDiff(lastFullUpdateT, now);
+        if (gap < activeGapLimit)
+            activeMs += gap;
+    }
+    lastFullUpdateT = now;
+}
+
+bool NewRpgInfo::HasStatusBeenActive(uint32 maxDuration)
+{
+    return activeStartT == startT && activeMs > maxDuration;
+}
+
 void NewRpgInfo::ChangeToGoGrind(WorldPosition pos)
 {
     startT = WorldTimer::getMSTime();
