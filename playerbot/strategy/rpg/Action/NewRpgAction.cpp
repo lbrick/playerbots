@@ -417,6 +417,10 @@ bool NewRpgGatherAction::Execute(Event& /*event*/)
         return false;
     }
 
+    // No node seen 30 s (active time) after arriving: the spot is empty for now.
+    if (!g->nodesSeen && ai->rpgInfo.activeMs + 1 - g->arriveT >= gatherEmptyTime)
+        return EndGather("empty");
+
     // No node in sight: roam the spot.
     if (sServerFacade.isMoving(bot))
         return false;
