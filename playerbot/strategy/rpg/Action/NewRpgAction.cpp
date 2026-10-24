@@ -55,6 +55,20 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         }
     }
 
+    // A grouped bot that does not lead its group follows the leader with the existing follow and
+    // group travel actions; a status of its own would pull it away (lbrick/cmangos-dev#90).
+    if (bot->GetGroup() && !ai->IsGroupLeader())
+    {
+        if (status == RPG_IDLE)
+            return false;
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+            sLog.outString("[New RPG status] bot=%s event=status_end reason=grouped status=%u",
+                bot->GetName(), uint32(status));
+        info.tripEndReason = "grouped";
+        info.ChangeToIdle();
+        return true;
+    }
+
     // A need outranks grinding, camping, wandering and resting, not a quest or a trip (#86).
     if ((status == RPG_GO_GRIND || status == RPG_GO_CAMP || status == RPG_WANDER_RANDOM ||
          status == RPG_WANDER_NPC || status == RPG_REST) && TryStartErrand())
