@@ -254,6 +254,9 @@ bool NewRpgWanderNpcAction::Execute(Event& /*event*/)
             data.lastReach = WorldTimer::getMSTime();
             if (CanInteractWithQuestGiver(object))
                 InteractWithNpcOrGoForQuest(data.npcOrGo);
+            // Whatever else the NPC offers (repair, sale, training, a flight path, a chat) is the
+            // legacy RPG sub-actions' to do (lbrick/cmangos-dev#85).
+            HandOverToLegacyRpg(data.npcOrGo);
             return true;
         }
 
@@ -261,6 +264,7 @@ bool NewRpgWanderNpcAction::Execute(Event& /*event*/)
             return false;
 
         // stayed long enough — pick next target
+        EndLegacyRpgHandOver();
         data.npcOrGo = ObjectGuid();
         data.lastReach = 0;
     }
@@ -1041,12 +1045,15 @@ bool NewRpgPostQuestAction::Execute(Event& /*event*/)
                 ai->DoSpecificAction("sell", Event("rpg action", "vendor"), true);
             else
                 ai->DoSpecificAction("trainer", Event("rpg action", pq.target), true);
+            // Then whatever else the NPC offers, through the legacy sub-actions (#85).
+            HandOverToLegacyRpg(pq.target);
             return wait(npcVisitTime);
         }
 
         uint32 stayed = WorldTimer::getMSTimeDiff(pq.reachT, now);
         if (stayed < npcVisitTime)
             return wait(npcVisitTime - stayed);
+        EndLegacyRpgHandOver();
         return EndPostQuest("done");
     }
 

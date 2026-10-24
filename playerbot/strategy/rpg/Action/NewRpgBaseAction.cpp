@@ -596,6 +596,31 @@ void NewRpgBaseAction::LogQuestEvent(char const* event, uint32 questId, ObjectGu
 
 // One server log line per transport leg built or rejected, transport teleport and zone
 // arrival, when AiPlayerbot.LogRpgTravelEvents is on.
+std::string NewRpgBaseAction::HandOverToLegacyRpg(ObjectGuid target)
+{
+    WorldObject* object = bot->GetMap()->GetWorldObject(target);
+    if (!object)
+        return "";
+
+    SET_AI_VALUE(GuidPosition, "rpg target", GuidPosition(object));
+    SET_AI_VALUE(std::string, "next rpg action", "");
+    // The legacy "rpg" action weighs every useful sub-action for the target and stores its pick.
+    ai->DoSpecificAction("rpg", Event("new rpg"), true);
+    std::string next = AI_VALUE(std::string, "next rpg action");
+    bool done = !next.empty() && next != "rpg" && ai->DoSpecificAction(next, Event("new rpg"), true);
+
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=npc_handover entry=%u action=%s done=%d",
+            bot->GetName(), object->GetEntry(), next.empty() ? "none" : next.c_str(), done ? 1 : 0);
+    return done ? next : "";
+}
+
+void NewRpgBaseAction::EndLegacyRpgHandOver()
+{
+    RESET_AI_VALUE(GuidPosition, "rpg target");
+    SET_AI_VALUE(std::string, "next rpg action", "");
+}
+
 void NewRpgBaseAction::LogTravelEvent(char const* event, WorldPosition const& from, WorldPosition const& to, char const* detail)
 {
     if (!sPlayerbotAIConfig.logRpgTravelEvents)

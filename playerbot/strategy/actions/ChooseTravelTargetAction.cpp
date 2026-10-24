@@ -80,13 +80,23 @@ bool ChooseTravelTargetAction::Execute(Event& event)
     }
 
     setNewTarget(requester, &newTarget, travelTarget);
-    
+
+    // One line per legacy travel pick, with the new RPG status, so a run shows legacy travel
+    // choosing only while new RPG is idle (lbrick/cmangos-dev#85).
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=legacy_travel_target new_rpg_status=%d purpose=%s",
+            bot->GetName(), (int)ai->rpgInfo.GetStatus(), futureTravelPurposeName.c_str());
+
     return true;
 }
 
 bool ChooseTravelTargetAction::isUseful()
 {
     if (!ai->AllowActivity(TRAVEL_ACTIVITY))
+        return false;
+
+    // New RPG owns where the bot goes outside its idle status (lbrick/cmangos-dev#85).
+    if (AI_VALUE(bool, "new rpg macro active"))
         return false;
 
     if (!AI_VALUE(bool, "can move around"))
