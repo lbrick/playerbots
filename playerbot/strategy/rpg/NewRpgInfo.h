@@ -134,6 +134,8 @@ struct NewRpgInfo
         WorldPosition pos{};
         uint32 arriveT{0};
         uint32 gatheredAtStart{0};
+        uint32 nodesSeen{0};    // distinct ticks a node of the skill was in sight
+        uint32 nodesReached{0}; // times the bot stood at a node and made it the loot target
     };
     // RPG_EXPLORE (lbrick/cmangos-dev#87): an undiscovered area of the bot's map.
     struct Explore

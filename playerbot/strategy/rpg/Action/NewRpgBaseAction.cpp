@@ -943,8 +943,9 @@ bool NewRpgBaseAction::EndGather(char const* reason)
 {
     if (auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data))
         if (sPlayerbotAIConfig.logRpgStatusEvents)
-            sLog.outString("[New RPG status] bot=%s event=gather_end reason=%s skill=%u entry=%d gathered=%u min=%u%s",
+            sLog.outString("[New RPG status] bot=%s event=gather_end reason=%s skill=%u entry=%d gathered=%u nodes_seen=%u nodes_reached=%u min=%u%s",
                 bot->GetName(), reason, g->skill, g->entry, ai->rpgInfo.gathered - g->gatheredAtStart,
+                g->nodesSeen, g->nodesReached,
                 WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, WorldTimer::getMSTime()) / 60000,
                 std::string(reason) == "timeout" ? TimeoutDetail(g->pos).c_str() : "");
     ai->rpgInfo.ChangeToIdle();

@@ -373,9 +373,10 @@ bool NewRpgGatherAction::Execute(Event& /*event*/)
     // Take a node of the status's skill in sight. The legacy "add gathering loot" skips a node
     // farther than 15 yd or with a mob near the bot's level within 30 yd, which at a gather spot
     // is almost every node: the xstack2 run logged no herb or ore loot during a gather status.
-    // The legacy loot actions take a node within loot range, and the bot fights what it pulls.
-    LootObjectStack* stack = AI_VALUE(LootObjectStack*, "available loot");
-    if (!stack->GetLoot(sPlayerbotAIConfig.lootDistance).IsEmpty())
+    // "loot available" waits for no attackable mob nearby, so the status walks to the node and
+    // makes it the loot target itself; "can loot" then runs "open loot" (xstack3, 4 of 265).
+    LootObject current = AI_VALUE(LootObject, "loot target");
+    if (!current.IsEmpty() && current.skillId == g->skill && current.GetWorldObject(bot) && current.IsLootPossible(bot))
         return false;
 
     ObjectGuid nodeGuid;
@@ -399,13 +400,20 @@ bool NewRpgGatherAction::Execute(Event& /*event*/)
     }
     if (node)
     {
-        if (nodeDist > gatherNodeLootRange)
+        ++g->nodesSeen;
+        if (nodeDist > INTERACTION_DISTANCE - 1.0f)
         {
             if (sServerFacade.isMoving(bot))
                 return true;
+            if (bot->IsMounted() && nodeDist < 30.0f)
+                ai->Unmount();
             return MoveTo(node->GetMapId(), node->GetPositionX(), node->GetPositionY(), node->GetPositionZ(), false, false, false, true);
         }
-        stack->Add(nodeGuid);
+        ++g->nodesReached;
+        if (bot->IsMounted())
+            ai->Unmount();
+        AI_VALUE(LootObjectStack*, "available loot")->Add(nodeGuid);
+        SET_AI_VALUE(LootObject, "loot target", LootObject(bot, nodeGuid));
         return false;
     }
 
