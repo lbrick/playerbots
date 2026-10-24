@@ -776,7 +776,10 @@ NewRpgBaseAction::MoveResult NewRpgBaseAction::MoveToward(WorldPosition dest, fl
     bool hopeless = step == "abandoned" || step == "cross_map" || step == "no_dest";
     if (!hopeless)
     {
-        // Counted in active time, plus one so that 0 stays "not failing".
+        // Counted in active time, plus one so that 0 stays "not failing". Before the active
+        // clock has caught up with a new status, nothing is counted yet.
+        if (info.activeStartT != info.startT)
+            return MoveResult::Moving;
         if (!info.moveFailT || info.moveFailStartT != info.startT)
         {
             info.moveFailT = info.activeMs + 1;
