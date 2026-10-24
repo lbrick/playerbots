@@ -833,14 +833,29 @@ Creature* NewRpgBaseAction::FindNearestNpc(uint32 npcFlag, float range)
     return nearest;
 }
 
+std::string NewRpgBaseAction::TimeoutDetail(WorldPosition const& dest)
+{
+    NewRpgInfo const& info = ai->rpgInfo;
+    WorldPosition here(bot);
+    char buf[160];
+    snprintf(buf, sizeof(buf), " left=%.0f step=%s move_calls=%u combat=%d moving=%d",
+        here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f, info.moveFarStep, info.moveFarCalls,
+        bot->IsInCombat() ? 1 : 0, sServerFacade.isMoving(bot) ? 1 : 0);
+    return std::string(buf) + " last_nc=\"" + ai->GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT) +
+        "\" last_c=\"" + ai->GetLastExecutedActionName(BotState::BOT_STATE_COMBAT) + "\"";
+}
+
 bool NewRpgBaseAction::EndErrand(char const* reason)
 {
     auto* errand = std::get_if<NewRpgInfo::Errand>(&ai->rpgInfo.data);
     uint32 now = WorldTimer::getMSTime();
     if (errand && sPlayerbotAIConfig.logRpgStatusEvents)
-        sLog.outString("[New RPG status] bot=%s event=errand_end reason=%s need=%s min=%u durability=%u free_slots=%u",
+    {
+        std::string detail = std::string(reason) == "timeout" ? TimeoutDetail(errand->pos) : "";
+        sLog.outString("[New RPG status] bot=%s event=errand_end reason=%s need=%s min=%u durability=%u free_slots=%u%s",
             bot->GetName(), reason, ErrandNeedName(errand->need),
-            WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, now) / 60000, LowestDurabilityPct(), FreeBagSlots());
+            WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, now) / 60000, LowestDurabilityPct(), FreeBagSlots(), detail.c_str());
+    }
     EndLegacyRpgHandOver();
     // A need the visit did not meet (unsellable items, no money) must not start errand after errand.
     bool done = std::string(reason) == "done";
@@ -928,9 +943,10 @@ bool NewRpgBaseAction::EndGather(char const* reason)
 {
     if (auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data))
         if (sPlayerbotAIConfig.logRpgStatusEvents)
-            sLog.outString("[New RPG status] bot=%s event=gather_end reason=%s skill=%u entry=%d gathered=%u min=%u",
+            sLog.outString("[New RPG status] bot=%s event=gather_end reason=%s skill=%u entry=%d gathered=%u min=%u%s",
                 bot->GetName(), reason, g->skill, g->entry, ai->rpgInfo.gathered - g->gatheredAtStart,
-                WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, WorldTimer::getMSTime()) / 60000);
+                WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, WorldTimer::getMSTime()) / 60000,
+                std::string(reason) == "timeout" ? TimeoutDetail(g->pos).c_str() : "");
     ai->rpgInfo.ChangeToIdle();
     return true;
 }
@@ -939,9 +955,10 @@ bool NewRpgBaseAction::EndExplore(char const* reason)
 {
     if (auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data))
         if (sPlayerbotAIConfig.logRpgStatusEvents)
-            sLog.outString("[New RPG status] bot=%s event=explore_end reason=%s area=%u discovered=%u min=%u",
+            sLog.outString("[New RPG status] bot=%s event=explore_end reason=%s area=%u discovered=%u min=%u%s",
                 bot->GetName(), reason, e->areaId, AreaDiscovered(e->areaId) ? 1u : 0u,
-                WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, WorldTimer::getMSTime()) / 60000);
+                WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, WorldTimer::getMSTime()) / 60000,
+                std::string(reason) == "timeout" ? TimeoutDetail(e->pos).c_str() : "");
     ai->rpgInfo.ChangeToIdle();
     return true;
 }
