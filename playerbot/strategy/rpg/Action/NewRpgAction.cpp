@@ -1,6 +1,7 @@
 #include "playerbot/playerbot.h"
 #include "NewRpgAction.h"
 #include "playerbot/LootObjectStack.h"
+#include "playerbot/strategy/values/LastMovementValue.h"
 
 #define NEWRPG_LOG(...) do { if (!sPlayerbotAIConfig.logFilterPlayerBot) sLog.outDebug(__VA_ARGS__); } while(0)
 #include "playerbot/strategy/rpg/NewRpgInfo.h"
@@ -479,6 +480,42 @@ bool NewRpgLootAction::Execute(Event& /*event*/)
     if (bot->IsMounted() && !AI_VALUE(LootObjectStack*, "available loot")->GetLoot(dismountRange).IsEmpty())
         ai->Unmount();
     return false;
+}
+
+// ─── NewRpgMinimalRouteAction ────────────────────────────────────────────────
+
+bool NewRpgMinimalRouteAction::Execute(Event& /*event*/)
+{
+    NewRpgInfo& info = ai->rpgInfo;
+    WorldPosition dest = info.GetDestination();
+    if (dest == WorldPosition())
+        return false;
+
+    WorldPosition here(bot);
+    if (here.getMapId() == dest.getMapId() && here.distance(dest) < 20.0f)
+        return false;
+
+    LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
+    if (!lastMove.lastPath.empty() && lastMove.lastPath.getBack().distance(dest) < 30.0f)
+        return false;
+
+    uint32 now = WorldTimer::getMSTime();
+    if (info.minimalRouteT && WorldTimer::getMSTimeDiff(info.minimalRouteT, now) < rebuildTime)
+        return false;
+    info.minimalRouteT = now;
+
+    TravelPath path = ResolveMovePath(here, dest, bot, lastMove);
+    bool usable = path.getPath().size() > 1 && path.getBack().distance(dest) < 50.0f;
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=minimal_route status=%u points=%u dist=%.0f cross_map=%u stored=%u",
+            bot->GetName(), uint32(info.GetStatus()), uint32(path.getPath().size()),
+            here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f,
+            here.getMapId() != dest.getMapId() ? 1u : 0u, usable ? 1u : 0u);
+    if (!usable)
+        return false;
+
+    lastMove.setPath(path);
+    return true;
 }
 
 // ─── NewRpgDoQuestAction ─────────────────────────────────────────────────────

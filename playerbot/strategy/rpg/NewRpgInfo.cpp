@@ -146,6 +146,25 @@ void NewRpgInfo::SetMoveFarTo(WorldPosition pos)
     moveFarPos        = pos;
 }
 
+WorldPosition NewRpgInfo::GetDestination()
+{
+    if (auto* d = std::get_if<GoGrind>(&data))
+        return d->pos;
+    if (auto* d = std::get_if<GoCamp>(&data))
+        return d->pos;
+    if (auto* d = std::get_if<DoQuest>(&data))
+        return d->pos;
+    if (auto* d = std::get_if<ChangeZone>(&data))
+        return d->dest;
+    if (auto* d = std::get_if<Errand>(&data))
+        return d->pos;
+    if (auto* d = std::get_if<Gather>(&data))
+        return d->arriveT ? WorldPosition() : d->pos;
+    if (auto* d = std::get_if<Explore>(&data))
+        return d->pos;
+    return WorldPosition();
+}
+
 NewRpgStatus NewRpgInfo::GetStatus()
 {
     return std::visit([](auto&& arg) -> NewRpgStatus {

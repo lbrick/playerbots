@@ -234,6 +234,10 @@ struct NewRpgInfo
     RpgData data;
 
     NewRpgStatus GetStatus();
+    // The position the current status travels to, or an empty position (lbrick/cmangos-dev#90).
+    WorldPosition GetDestination();
+    // When the minimal-update route was last built (#90), to rebuild it at most once a minute.
+    uint32 minimalRouteT{0};
     bool HasStatusPersisted(uint32 maxDuration);
     // Active time in the current status: the time between full AI updates less than
     // activeGapLimit apart. A bot with no real player near it runs minimal updates, which skip
