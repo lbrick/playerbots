@@ -317,18 +317,16 @@ bool NewRpgGatherAction::Execute(Event& /*event*/)
         return false;
 
     uint32 now = WorldTimer::getMSTime();
-    WorldPosition here(bot);
     if (!g->arriveT)
     {
-        if (here.getMapId() == g->pos.getMapId() && here.distance(g->pos) < 40.0f)
+        switch (MoveToward(g->pos, 40.0f))
         {
-            g->arriveT = now;
-            return true;
+            case MoveResult::Moving: return true;
+            case MoveResult::Failed: return EndGather("no_path");
+            case MoveResult::Arrived: break;
         }
-        WorldPosition target = g->pos;
-        if (sServerFacade.isMoving(bot) || MoveFarTo(target))
-            return true;
-        return EndGather("no_path");
+        g->arriveT = now;
+        return true;
     }
 
     if (WorldTimer::getMSTimeDiff(g->arriveT, now) >= stayTime)
@@ -348,14 +346,16 @@ bool NewRpgExploreAction::Execute(Event& /*event*/)
     if (!e)
         return false;
 
-    WorldPosition here(bot);
-    if (here.getMapId() == e->pos.getMapId() && here.distance(e->pos) < 20.0f)
-        return EndExplore(AreaDiscovered(e->areaId) ? "discovered" : "reached");
+    if (AreaDiscovered(e->areaId))
+        return EndExplore("discovered");
 
-    WorldPosition target = e->pos;
-    if (sServerFacade.isMoving(bot) || MoveFarTo(target))
-        return true;
-    return EndExplore("no_path");
+    switch (MoveToward(e->pos, 20.0f))
+    {
+        case MoveResult::Moving: return true;
+        case MoveResult::Failed: return EndExplore("no_path");
+        case MoveResult::Arrived: break;
+    }
+    return EndExplore(AreaDiscovered(e->areaId) ? "discovered" : "reached");
 }
 
 // ─── NewRpgErrandAction ──────────────────────────────────────────────────────
