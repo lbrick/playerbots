@@ -1,5 +1,6 @@
 #include "playerbot/playerbot.h"
 #include "NewRpgAction.h"
+#include "playerbot/LootObjectStack.h"
 
 #define NEWRPG_LOG(...) do { if (!sPlayerbotAIConfig.logFilterPlayerBot) sLog.outDebug(__VA_ARGS__); } while(0)
 #include "playerbot/strategy/rpg/NewRpgInfo.h"
@@ -411,6 +412,26 @@ bool NewRpgErrandAction::Execute(Event& /*event*/)
             bot->GetName(), npc->GetEntry(), action, done ? 1 : 0);
     HandOverToLegacyRpg(errand->npc);
     return true;
+}
+
+// ─── NewRpgLootAction ────────────────────────────────────────────────────────
+
+bool NewRpgLootAction::isUseful()
+{
+    return ai->rpgInfo.GetStatus() != RPG_IDLE && !bot->IsTaxiFlying() && !bot->IsInCombat();
+}
+
+bool NewRpgLootAction::Execute(Event& /*event*/)
+{
+    if (ai->HasStrategy("loot", BotState::BOT_STATE_NON_COMBAT))
+        ai->DoSpecificAction("add all loot", Event("new rpg loot"), true);
+    if (ai->HasStrategy("gather", BotState::BOT_STATE_NON_COMBAT))
+        ai->DoSpecificAction("add gathering loot", Event("new rpg loot"), true);
+
+    // "loot available" waits for the bot to dismount, and new RPG travel keeps it mounted.
+    if (bot->IsMounted() && !AI_VALUE(LootObjectStack*, "available loot")->GetLoot(dismountRange).IsEmpty())
+        ai->Unmount();
+    return false;
 }
 
 // ─── NewRpgDoQuestAction ─────────────────────────────────────────────────────
