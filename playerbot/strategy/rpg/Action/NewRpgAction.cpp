@@ -332,7 +332,46 @@ bool NewRpgGatherAction::Execute(Event& /*event*/)
     if (WorldTimer::getMSTimeDiff(g->arriveT, now) >= stayTime)
         return EndGather("done");
 
-    // Roam the spot: the legacy gather and grind actions take any node or creature in sight.
+    // Take a node of the status's skill in sight. The legacy "add gathering loot" skips a node
+    // farther than 15 yd or with a mob near the bot's level within 30 yd, which at a gather spot
+    // is almost every node: the xstack2 run logged no herb or ore loot during a gather status.
+    // The legacy loot actions take a node within loot range, and the bot fights what it pulls.
+    LootObjectStack* stack = AI_VALUE(LootObjectStack*, "available loot");
+    if (!stack->GetLoot(sPlayerbotAIConfig.lootDistance).IsEmpty())
+        return false;
+
+    ObjectGuid nodeGuid;
+    WorldObject* node = nullptr;
+    float nodeDist = sPlayerbotAIConfig.sightDistance;
+    for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, g->skill == SKILL_SKINNING ? "nearest corpses" : "nearest game objects no los"))
+    {
+        LootObject loot(bot, guid);
+        if (loot.IsEmpty() || loot.skillId != g->skill || !loot.IsLootPossible(bot))
+            continue;
+        WorldObject* wo = loot.GetWorldObject(bot);
+        if (!wo)
+            continue;
+        float dist = bot->GetDistance(wo);
+        if (dist < nodeDist)
+        {
+            node = wo;
+            nodeGuid = guid;
+            nodeDist = dist;
+        }
+    }
+    if (node)
+    {
+        if (nodeDist > gatherNodeLootRange)
+        {
+            if (sServerFacade.isMoving(bot))
+                return true;
+            return MoveTo(node->GetMapId(), node->GetPositionX(), node->GetPositionY(), node->GetPositionZ(), false, false, false, true);
+        }
+        stack->Add(nodeGuid);
+        return false;
+    }
+
+    // No node in sight: roam the spot.
     if (sServerFacade.isMoving(bot))
         return false;
     return MoveRandomNear(40.0f);
