@@ -94,10 +94,12 @@ struct NewRpgInfo
             uint32 castT{0};
             uint32 castTries{0};
             // Flight legs only (lbrick/cmangos-dev#84): the TaxiPath the bot flies from the
-            // flight master at `from` to `pos`, when it took off, and its failed tries.
+            // flight master at `from` to `pos`, when it took off, its failed tries, and when
+            // it last tried.
             uint32 taxiPath{0};
             uint32 takeoffT{0};
             uint32 taxiTries{0};
+            uint32 taxiTryT{0};
         };
         std::vector<Waypoint> waypoints{};   // TravelNode multi-hop path; empty = direct
         bool waypointsBuilt{false};          // true after first TravelNode build — no rebuild

@@ -9,6 +9,9 @@
 #include "Server/DBCStructure.h"
 #include "Server/DBCStores.h"
 #include "playerbot/ServerFacade.h"
+#include "Grids/GridNotifiers.h"
+#include "Grids/GridNotifiersImpl.h"
+#include "Grids/CellImpl.h"
 
 using namespace ai;
 
@@ -490,6 +493,29 @@ bool NewRpgTravelFlightAction::Execute(Event& /*event*/)
 
 // ─── NewRpgGoChangeZoneAction ─────────────────────────────────────────────────
 
+Creature* NewRpgGoChangeZoneAction::FindFlightMaster(float range)
+{
+    std::list<Unit*> units;
+    MaNGOS::AnyUnitInObjectRangeCheck check(bot, range);
+    MaNGOS::UnitListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(units, check);
+    Cell::VisitAllObjects(bot, searcher, range);
+
+    Creature* nearest = nullptr;
+    float nearestDist = range;
+    for (Unit* unit : units)
+    {
+        if (unit->GetTypeId() != TYPEID_UNIT || !unit->IsAlive() || !unit->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_FLIGHTMASTER))
+            continue;
+        float dist = bot->GetDistance(unit);
+        if (dist <= nearestDist)
+        {
+            nearest = static_cast<Creature*>(unit);
+            nearestDist = dist;
+        }
+    }
+    return nearest;
+}
+
 bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 {
     auto* dataPtr = std::get_if<NewRpgInfo::ChangeZone>(&ai->rpgInfo.data);
@@ -891,16 +917,13 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     return true;
             }
 
-            Creature* flightMaster = nullptr;
-            for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, "nearest npcs"))
-            {
-                Creature* npc = bot->GetMap()->GetCreature(guid);
-                if (npc && npc->IsAlive() && npc->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_FLIGHTMASTER))
-                {
-                    flightMaster = npc;
-                    break;
-                }
-            }
+            if (front.taxiTryT && WorldTimer::getMSTimeDiff(front.taxiTryT, now) < flightRetryTime)
+                return true;
+
+            // A grid search, not the cached "nearest npcs" list: that list can predate the
+            // bot's arrival, and with three tries in three ticks a stale list alone failed
+            // 114 of 149 flight legs in the 4 h combined run (lbrick/cmangos-dev#84).
+            Creature* flightMaster = FindFlightMaster(flightMasterSearchRange);
             if (flightMaster && bot->GetDistance(flightMaster) > INTERACTION_DISTANCE)
             {
                 WorldPosition target(flightMaster);
@@ -908,7 +931,9 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     return true;
             }
 
-            if (flightMaster && UseTaxi(ai, front.taxiPath, true))
+            front.taxiTryT = now;
+
+            if (flightMaster && UseTaxi(ai, front.taxiPath, true, flightMaster))
             {
                 front.takeoffT = now;
                 dataPtr->progressT = now;
@@ -918,7 +943,14 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 
             if (++front.taxiTries < 3)
                 return true;
-            LogTravelEvent("flight_failed", WorldPosition(bot), wp, flightMaster ? detail.c_str() : (detail + " no_flight_master=1").c_str());
+            std::string reason;
+            if (!flightMaster)
+                reason = " no_flight_master=1";
+            else
+                reason = " flight_master=" + std::to_string(flightMaster->GetEntry()) +
+                    " distance=" + std::to_string(int(bot->GetDistance(flightMaster))) +
+                    " money=" + std::to_string(bot->GetMoney());
+            LogTravelEvent("flight_failed", WorldPosition(bot), wp, (detail + reason).c_str());
             front.taxiPath = 0;
             return true;
         }
