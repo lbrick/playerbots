@@ -55,6 +55,9 @@ protected:
     bool SelectErrandDestination(NewRpgErrandNeed need, WorldPosition& out);
     bool TryStartErrand();
     bool EndErrand(char const* reason);
+    // Appended to a status's timeout line: distance left, the last MoveFarTo step, combat, and
+    // the last actions run, to tell a walk that is slow from one that never ran (#86).
+    std::string TimeoutDetail(WorldPosition const& dest);
     uint32 FreeBagSlots();
     uint32 LowestDurabilityPct();
     void CheckStuckTeleport();
