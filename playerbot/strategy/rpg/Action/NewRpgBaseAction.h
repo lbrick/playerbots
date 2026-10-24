@@ -74,7 +74,9 @@ protected:
     uint32 pendingSkill{0};
     int32 pendingEntry{0};
     uint32 pendingArea{0};
-    WorldPosition pendingPos{};
+    // Separate, because availability checks select both before the roll picks one.
+    WorldPosition pendingGatherPos{};
+    WorldPosition pendingExplorePos{};
     void CheckStuckTeleport();
     uint32 BestRewardIndex(Quest const* quest);
     bool IsQuestWorthDoing(Quest const* quest);

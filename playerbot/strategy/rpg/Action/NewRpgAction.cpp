@@ -38,6 +38,11 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             // An errand ends through EndErrand, for its log line and retry delay (#86).
             if (status == RPG_ERRAND)
                 return EndErrand("stuck_abandoned");
+            // Gather and explore too, for their end line and spot cooldown (#87).
+            if (status == RPG_GATHER)
+                return EndGather("stuck_abandoned");
+            if (status == RPG_EXPLORE)
+                return EndExplore("stuck_abandoned");
             info.tripEndReason = "stuck_abandoned";
             info.ChangeToIdle();
             return true;
@@ -53,6 +58,10 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             NEWRPG_LOG("[New RPG] %s dropped a move target on another map", bot->GetName());
             if (status == RPG_ERRAND)
                 return EndErrand("cross_map");
+            if (status == RPG_GATHER)
+                return EndGather("cross_map");
+            if (status == RPG_EXPLORE)
+                return EndExplore("cross_map");
             info.tripEndReason = "cross_map";
             info.ChangeToIdle();
             return true;
