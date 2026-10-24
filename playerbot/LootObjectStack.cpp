@@ -94,6 +94,10 @@ void LootObject::Refresh(Player* bot, ObjectGuid guid, bool debug)
     }
 
     GameObject* go = ai->GetGameObject(guid);
+    // A trap carries a lock but holds no loot; bots kept "looting" hunters' traps once new RPG ran
+    // the add-loot actions (lbrick/cmangos-dev#87).
+    if (go && go->GetGoType() == GAMEOBJECT_TYPE_TRAP)
+        return;
     if (go && sServerFacade.isSpawned(go) && !go->IsInUse())
     {
         bool isQuestItemOnly = false;

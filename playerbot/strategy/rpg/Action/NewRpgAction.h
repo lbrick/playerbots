@@ -71,6 +71,7 @@ public:
     bool Execute(Event& event) override;
 
     const uint32 stayTime = 3 * MINUTE * IN_MILLISECONDS;
+    const float gatherNodeLootRange = 20.0f;  // within the legacy loot range (AiPlayerbot.LootDistance, 25)
 };
 
 // Walks to an undiscovered area (lbrick/cmangos-dev#87).
