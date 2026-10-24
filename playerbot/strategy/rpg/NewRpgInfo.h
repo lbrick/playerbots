@@ -161,6 +161,9 @@ struct NewRpgInfo
     uint32 errandRetryT{0};
     // Herbs, ore and skins the legacy loot actions gathered, for the gather status's log (#87).
     uint32 gathered{0};
+    // Gather and explore spots that failed or yielded nothing, with the time each cooldown ends
+    // (lbrick/cmangos-dev#87), as legacy travel puts a used destination on cooldown.
+    std::vector<std::pair<WorldPosition, uint32>> spotCooldowns;
 
     // Post-quest routine (lbrick/cmangos-dev#45): a pause, or a vendor or trainer visit, after a
     // quest accept or turn-in. Held beside the status, so a status change does not cut it short.

@@ -874,10 +874,13 @@ bool NewRpgBaseAction::SelectGatherDestination()
     for (TravelDestination* dest : sTravelMgr.GetDestinations(info, (uint32)purpose, {}, true, 1500.0f))
     {
         WorldPosition* point = dest->GetClosestPoint(botPos);
-        if (!point || point->getMapId() != botPos.getMapId() || IsPosBad(*point))
+        if (!point || point->getMapId() != botPos.getMapId() || IsPosBad(*point) || SpotOnCooldown(*point))
             continue;
         float distance = botPos.distance(*point);
         if (distance < 100.0f)
+            continue;
+        // Legacy gather travel's check: within sight, the node or creature must be there.
+        if (!dest->IsActive(bot, info))
             continue;
         candidates.push_back({distance, dest->GetEntry(), *point});
     }
@@ -913,7 +916,7 @@ bool NewRpgBaseAction::SelectExploreDestination()
         if (dest->GetEntry() <= 0 || AreaDiscovered(dest->GetEntry()))
             continue;
         WorldPosition* point = dest->GetClosestPoint(botPos);
-        if (!point || point->getMapId() != botPos.getMapId() || IsPosBad(*point))
+        if (!point || point->getMapId() != botPos.getMapId() || IsPosBad(*point) || SpotOnCooldown(*point))
             continue;
         float distance = botPos.distance(*point);
         if (distance < best)
@@ -926,8 +929,27 @@ bool NewRpgBaseAction::SelectExploreDestination()
     return best < FLT_MAX;
 }
 
+bool NewRpgBaseAction::SpotOnCooldown(WorldPosition const& pos)
+{
+    uint32 now = WorldTimer::getMSTime();
+    auto& spots = ai->rpgInfo.spotCooldowns;
+    spots.erase(std::remove_if(spots.begin(), spots.end(), [now](auto const& s) { return int32(s.second - now) <= 0; }), spots.end());
+    for (auto const& s : spots)
+        if (s.first.getMapId() == pos.getMapId() && s.first.distance(pos) < 50.0f)
+            return true;
+    return false;
+}
+
+void NewRpgBaseAction::CooldownSpot(WorldPosition const& pos)
+{
+    ai->rpgInfo.spotCooldowns.push_back({pos, WorldTimer::getMSTime() + spotCooldownTime});
+}
+
 bool NewRpgBaseAction::EndGather(char const* reason)
 {
+    if (auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data))
+        if (std::string(reason) != "done" || ai->rpgInfo.gathered == g->gatheredAtStart)
+            CooldownSpot(g->pos);
     if (auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data))
         if (sPlayerbotAIConfig.logRpgStatusEvents)
             sLog.outString("[New RPG status] bot=%s event=gather_end reason=%s skill=%u entry=%d gathered=%u nodes_seen=%u nodes_reached=%u min=%u%s",
@@ -941,6 +963,9 @@ bool NewRpgBaseAction::EndGather(char const* reason)
 
 bool NewRpgBaseAction::EndExplore(char const* reason)
 {
+    if (auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data))
+        if (std::string(reason) == "no_path" || std::string(reason) == "timeout")
+            CooldownSpot(e->pos);
     if (auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data))
         if (sPlayerbotAIConfig.logRpgStatusEvents)
             sLog.outString("[New RPG status] bot=%s event=explore_end reason=%s area=%u discovered=%u min=%u%s",

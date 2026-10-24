@@ -67,6 +67,10 @@ protected:
     bool AreaDiscovered(uint32 areaId);
     bool EndGather(char const* reason);
     bool EndExplore(char const* reason);
+    // Spot memory (#87): a spot within 50 yd of one on cooldown is not picked.
+    bool SpotOnCooldown(WorldPosition const& pos);
+    void CooldownSpot(WorldPosition const& pos);
+    const uint32 spotCooldownTime = 30 * MINUTE * IN_MILLISECONDS;
     uint32 pendingSkill{0};
     int32 pendingEntry{0};
     uint32 pendingArea{0};
