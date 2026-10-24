@@ -376,29 +376,14 @@ bool NewRpgErrandAction::Execute(Event& /*event*/)
     Creature* npc = errand->npc ? ai->GetCreature(errand->npc) : nullptr;
     if (!npc)
     {
-        WorldPosition here(bot);
-        if (here.getMapId() != errand->pos.getMapId() || here.distance(errand->pos) > 40.0f)
+        switch (MoveToward(errand->pos, 40.0f))
         {
-            WorldPosition target = errand->pos;
-            if (sServerFacade.isMoving(bot) || MoveFarTo(target))
-                return true;
-            return EndErrand("no_path");
+            case MoveResult::Moving: return true;
+            case MoveResult::Failed: return EndErrand("no_path");
+            case MoveResult::Arrived: break;
         }
 
-        uint32 flag = errand->need == ERRAND_REPAIR ? UNIT_NPC_FLAG_REPAIR : UNIT_NPC_FLAG_VENDOR;
-        float best = FLT_MAX;
-        for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, "nearest npcs"))
-        {
-            Creature* candidate = bot->GetMap()->GetCreature(guid);
-            if (!candidate || !candidate->IsAlive() || !candidate->HasFlag(UNIT_NPC_FLAGS, flag) || GuidPosition(candidate).IsHostileTo(bot))
-                continue;
-            float distance = bot->GetDistance(candidate);
-            if (distance < best)
-            {
-                best = distance;
-                npc = candidate;
-            }
-        }
+        npc = FindNearestNpc(errand->need == ERRAND_REPAIR ? UNIT_NPC_FLAG_REPAIR : UNIT_NPC_FLAG_VENDOR, errandNpcRange);
         if (!npc)
             return EndErrand("no_npc");
         errand->npc = npc->GetObjectGuid();
