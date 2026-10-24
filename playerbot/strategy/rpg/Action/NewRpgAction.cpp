@@ -63,6 +63,9 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
     switch (status)
     {
         case RPG_IDLE:
+            // No new work while the activity throttle keeps the bot inactive, as legacy RPG (#90).
+            if (!ai->AllowActivity(RPG_ACTIVITY))
+                return false;
             if (TryStartErrand())
                 return true;
             return RandomChangeStatus({RPG_GO_CAMP, RPG_GO_GRIND, RPG_WANDER_RANDOM, RPG_WANDER_NPC,

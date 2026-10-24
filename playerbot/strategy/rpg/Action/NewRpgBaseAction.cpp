@@ -76,6 +76,11 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     if (dest != ai->rpgInfo.moveFarPos)
         ai->rpgInfo.SetMoveFarTo(dest);
 
+    // Wait out an open trade, a crafting cast or a group that is not ready, as legacy travel and
+    // RPG do (lbrick/cmangos-dev#90).
+    if (!AI_VALUE(bool, "can move around"))
+        return step("cannot_move", true);
+
     // Let committed movement finish before recomputing path.
     // If bot is still moving toward its last waypoint, wait.
     {
