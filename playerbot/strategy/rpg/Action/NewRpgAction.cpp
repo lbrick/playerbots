@@ -536,6 +536,10 @@ bool NewRpgMinimalRouteAction::Execute(Event& /*event*/)
     WorldPosition here(bot);
     if (here.getMapId() == dest.getMapId() && here.distance(dest) < 20.0f)
         return false;
+    // Only a change-zone trip crosses maps; any other status aimed at another map is dropped
+    // (lbrick/cmangos-dev#67), so it is not carried there either.
+    if (here.getMapId() != dest.getMapId() && info.GetStatus() != RPG_CHANGE_ZONE)
+        return false;
 
     LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
     if (!lastMove.lastPath.empty() && lastMove.lastPath.getBack().distance(dest) < 30.0f)
