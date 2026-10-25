@@ -111,6 +111,9 @@ public:
     const uint32 rebuildTime = 60 * 1000;
     // The gather status roams 40 yd around the bot at its spot (#87); inactive, around the spot.
     const float gatherRoamRadius = 40.0f;
+    // When the route finds nothing usable, a navmesh path to a stepping stone this far along the
+    // line to the destination (#92).
+    const float steppingStoneDistance = 200.0f;
 };
 
 class NewRpgDoQuestAction : public NewRpgBaseAction

@@ -587,12 +587,36 @@ bool NewRpgMinimalRouteAction::Execute(Event& /*event*/)
     // A route that stops short of the destination still takes the bot 20 yd or more closer;
     // the next build, a minute on, carries it further (#92).
     bool partial = !full && path.getPath().size() > 1 && hereDist >= 0.0f && endDist + 20.0f < hereDist;
+    // Neither: the node route failed and handed back the destination alone. Walk the navmesh to
+    // a stepping stone on the line to the destination instead, as MoveFarTo's fallback does (#92).
+    bool fallback = false;
+    uint32 routePoints = uint32(path.getPath().size());
+    if (!full && !partial && hereDist >= 0.0f)
+    {
+        WorldPosition step = dest;
+        if (hereDist > steppingStoneDistance)
+        {
+            float ratio = steppingStoneDistance / hereDist;
+            step = WorldPosition(dest.getMapId(), here.getX() + (dest.getX() - here.getX()) * ratio,
+                here.getY() + (dest.getY() - here.getY()) * ratio, here.getZ());
+            step.setZ(step.getHeight());
+        }
+        TravelPath meshPath;
+        meshPath.addPath(here.getPathTo(step, bot));
+        if (meshPath.getPath().size() > 1 && meshPath.getBack().distance(dest) + 20.0f < hereDist)
+        {
+            path = meshPath;
+            endDist = path.getBack().distance(dest);
+            fallback = true;
+        }
+    }
     if (sPlayerbotAIConfig.logRpgStatusEvents)
-        sLog.outString("[New RPG status] bot=%s event=minimal_route status=%u points=%u dist=%.0f end_dist=%.0f long=%u roam=%u cross_map=%u stored=%u partial=%u",
+        sLog.outString("[New RPG status] bot=%s event=minimal_route status=%u points=%u dist=%.0f end_dist=%.0f long=%u roam=%u cross_map=%u stored=%u partial=%u fallback=%u route_points=%u",
             bot->GetName(), uint32(info.GetStatus()), uint32(path.getPath().size()), hereDist, endDist,
             (here.getMapId() != dest.getMapId() || hereDist > sPlayerbotAIConfig.sightDistance) ? 1u : 0u,
-            roam ? 1u : 0u, here.getMapId() != dest.getMapId() ? 1u : 0u, (full || partial) ? 1u : 0u, partial ? 1u : 0u);
-    if (!full && !partial)
+            roam ? 1u : 0u, here.getMapId() != dest.getMapId() ? 1u : 0u, (full || partial || fallback) ? 1u : 0u,
+            partial ? 1u : 0u, fallback ? 1u : 0u, routePoints);
+    if (!full && !partial && !fallback)
         return false;
 
     lastMove.setPath(path);
