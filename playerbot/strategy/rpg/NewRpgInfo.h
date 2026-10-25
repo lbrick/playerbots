@@ -177,6 +177,11 @@ struct NewRpgInfo
     WorldPosition stallPos{};
     uint32 stallT{0};
     uint32 stallStartT{0};
+    // When the bot last made damage progress in that fight: its target fell below the lowest
+    // health seen for it, or a target it fought died. fightTargetHealth is that lowest health.
+    uint32 fightProgressT{0};
+    ObjectGuid fightTarget{};
+    uint32 fightTargetHealth{0};
     // Set by PlayerbotAI for a held status; the status update ends that status (its startT is
     // lockupStartT) with this reason and its own end line (lbrick/cmangos-dev#94).
     char const* lockupEnd{nullptr};

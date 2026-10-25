@@ -758,33 +758,59 @@ void PlayerbotAI::CheckRpgStatusLockup()
         return;
     }
 
-    // Combat that moves the bot on (fighting along the road) is not a stall.
-    uint32 now = WorldTimer::getMSTime();
-    WorldPosition here(bot);
-    if (!rpgInfo.stallT || rpgInfo.stallStartT != rpgInfo.startT || here.getMapId() != rpgInfo.stallPos.getMapId() ||
-        here.distance(rpgInfo.stallPos) > 30.0f)
-    {
-        rpgInfo.stallPos = here;
-        rpgInfo.stallT = now;
-        rpgInfo.stallStartT = rpgInfo.startT;
-        return;
-    }
-
-    if (WorldTimer::getMSTimeDiff(rpgInfo.stallT, now) < 10 * MINUTE * IN_MILLISECONDS)
-        return;
-
     AiObjectContext* context = aiObjectContext;
     ObjectGuid target = AI_VALUE(ObjectGuid, "current target");
     if (!target)
         target = AI_VALUE(ObjectGuid, "attack target");
+    Unit* unit = target ? GetUnit(target) : nullptr;
+
+    // A fight that carries the bot well away from where it started (fighting along the road) is
+    // not a stall. One that edges a few yards at a time is, so the timer runs from where the
+    // fight started, not from the last 30 yd move (#94).
+    uint32 now = WorldTimer::getMSTime();
+    WorldPosition here(bot);
+    if (!rpgInfo.stallT || rpgInfo.stallStartT != rpgInfo.startT || here.getMapId() != rpgInfo.stallPos.getMapId() ||
+        here.distance(rpgInfo.stallPos) > 100.0f)
+    {
+        rpgInfo.stallPos = here;
+        rpgInfo.stallT = now;
+        rpgInfo.stallStartT = rpgInfo.startT;
+        rpgInfo.fightProgressT = now;
+        rpgInfo.fightTarget = target;
+        rpgInfo.fightTargetHealth = unit ? unit->GetHealth() : 0;
+        return;
+    }
+
+    // Damage progress: the target falls below the lowest health seen for it, or the target the
+    // bot fought before this one died. A bot killing mobs at one quest camp keeps fighting (#94).
+    if (target != rpgInfo.fightTarget)
+    {
+        Unit* previous = rpgInfo.fightTarget ? GetUnit(rpgInfo.fightTarget) : nullptr;
+        if (rpgInfo.fightTarget && (!previous || !previous->IsAlive()))
+            rpgInfo.fightProgressT = now;
+        rpgInfo.fightTarget = target;
+        rpgInfo.fightTargetHealth = unit ? unit->GetHealth() : 0;
+    }
+    else if (unit && unit->GetHealth() < rpgInfo.fightTargetHealth)
+    {
+        rpgInfo.fightTargetHealth = unit->GetHealth();
+        rpgInfo.fightProgressT = now;
+    }
+
+    if (WorldTimer::getMSTimeDiff(rpgInfo.stallT, now) < 10 * MINUTE * IN_MILLISECONDS ||
+        WorldTimer::getMSTimeDiff(rpgInfo.fightProgressT, now) < 3 * MINUTE * IN_MILLISECONDS)
+        return;
+
     if (sPlayerbotAIConfig.logRpgTravelEvents && status == RPG_CHANGE_ZONE)
         sLog.outString("[New RPG travel] bot=%s event=change_zone_combat_stalled from=%u:%.1f,%.1f,%.1f trip_min=%u",
             bot->GetName(), here.getMapId(), here.getX(), here.getY(), here.getZ(),
             WorldTimer::getMSTimeDiff(rpgInfo.startT, now) / 60000);
     if (sPlayerbotAIConfig.logRpgStatusEvents)
-        sLog.outString("[New RPG status] bot=%s event=combat_lockup status=%u combat=%d engine_combat=%d attackers=%u hostile_refs=%u target=%s",
+        sLog.outString("[New RPG status] bot=%s event=combat_lockup status=%u combat=%d engine_combat=%d attackers=%u hostile_refs=%u target=%s stall_s=%u progress_s=%u",
             bot->GetName(), uint32(status), bot->IsInCombat() ? 1 : 0, currentState == BotState::BOT_STATE_COMBAT ? 1 : 0,
-            uint32(bot->getAttackers().size()), uint32(bot->getHostileRefManager().getSize()), target.GetString().c_str());
+            uint32(bot->getAttackers().size()), uint32(bot->getHostileRefManager().getSize()), target.GetString().c_str(),
+            WorldTimer::getMSTimeDiff(rpgInfo.stallT, now) / IN_MILLISECONDS,
+            WorldTimer::getMSTimeDiff(rpgInfo.fightProgressT, now) / IN_MILLISECONDS);
 
     // Break the lockup: Reset() clears the targets and stops combat older than 5 minutes, as
     // legacy does; the threat references that hold the bot in combat go with it, and the grind
