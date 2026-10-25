@@ -126,6 +126,9 @@ namespace ai
             creators["new rpg go grind"] = [](PlayerbotAI* ai) { return new NewRpgGoGrindAction(ai); };
             creators["new rpg go camp"] = [](PlayerbotAI* ai) { return new NewRpgGoCampAction(ai); };
             creators["new rpg errand"] = [](PlayerbotAI* ai) { return new NewRpgErrandAction(ai); };
+            creators["new rpg loot"] = [](PlayerbotAI* ai) { return new NewRpgLootAction(ai); };
+            creators["new rpg gather"] = [](PlayerbotAI* ai) { return new NewRpgGatherAction(ai); };
+            creators["new rpg explore"] = [](PlayerbotAI* ai) { return new NewRpgExploreAction(ai); };
             creators["new rpg wander random"] = [](PlayerbotAI* ai) { return new NewRpgWanderRandomAction(ai); };
             creators["new rpg wander npc"] = [](PlayerbotAI* ai) { return new NewRpgWanderNpcAction(ai); };
             creators["new rpg do quest"] = [](PlayerbotAI* ai) { return new NewRpgDoQuestAction(ai); };

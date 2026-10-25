@@ -234,6 +234,10 @@ AiPlayerbot.RpgStatusProbWeight.Rest         = 5
 # Errands are not weighed: a bot with equipment under 25% durability, fewer than 2 free bag
 # slots, or (a hunter) under 100 ammunition walks to the nearest vendor first. 0 turns errands off.
 AiPlayerbot.RpgStatusProbWeight.Errand       = 1
+# Gather: walk to herbs, ore or skinnable creatures the bot's profession can use (#87).
+AiPlayerbot.RpgStatusProbWeight.Gather       = 10
+# Explore: walk to an undiscovered area of the bot's map (#87).
+AiPlayerbot.RpgStatusProbWeight.Explore      = 5
 
 # Show helmet and cloak on randombots (reset required)
 AiPlayerbot.RandomBotShowHelmet = 1

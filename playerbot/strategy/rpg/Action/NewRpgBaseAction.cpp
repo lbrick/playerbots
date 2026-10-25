@@ -36,7 +36,7 @@ static WorldObject* GetWorldObjectByGuid(PlayerbotAI* ai, Player* bot, ObjectGui
 static char const* StatusName(NewRpgStatus status)
 {
     static char const* const names[] = { "idle", "go_grind", "go_camp", "wander_random",
-        "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "errand", "none" };
+        "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "errand", "gather", "explore", "none" };
     return names[status <= RPG_STATUS_END ? status : RPG_STATUS_END];
 }
 
@@ -850,6 +850,128 @@ bool NewRpgBaseAction::EndErrand(char const* reason)
     // A need the visit did not meet (unsellable items, no money) must not start errand after errand.
     bool done = std::string(reason) == "done";
     ai->rpgInfo.errandRetryT = now + (done ? 10 : 20) * MINUTE * IN_MILLISECONDS;
+    ai->rpgInfo.ChangeToIdle();
+    return true;
+}
+
+// ─── Gather and explore (lbrick/cmangos-dev#87) ──────────────────────────────
+
+// One of the bot's gathering professions at random, then a node or creature its skill can use on
+// the bot's map, 100 to 1,500 yards away: one of the five nearest, so bots do not all pick one.
+bool NewRpgBaseAction::SelectGatherDestination()
+{
+    std::vector<std::pair<uint32, TravelDestinationPurpose>> skills;
+    if (ai->HasSkill(SKILL_HERBALISM))
+        skills.push_back({SKILL_HERBALISM, TravelDestinationPurpose::GatherHerbalism});
+    if (ai->HasSkill(SKILL_MINING))
+        skills.push_back({SKILL_MINING, TravelDestinationPurpose::GatherMining});
+    if (ai->HasSkill(SKILL_SKINNING))
+        skills.push_back({SKILL_SKINNING, TravelDestinationPurpose::GatherSkinning});
+    if (skills.empty())
+        return false;
+
+    auto const& [skill, purpose] = skills[urand(0, skills.size() - 1)];
+    PlayerTravelInfo info(bot);
+    WorldPosition botPos(bot);
+    std::vector<std::tuple<float, int32, WorldPosition>> candidates;
+    for (TravelDestination* dest : sTravelMgr.GetDestinations(info, (uint32)purpose, {}, true, 1500.0f))
+    {
+        WorldPosition* point = dest->GetClosestPoint(botPos);
+        if (!point || point->getMapId() != botPos.getMapId() || IsPosBad(*point) || SpotOnCooldown(*point))
+            continue;
+        float distance = botPos.distance(*point);
+        if (distance < 100.0f)
+            continue;
+        candidates.push_back({distance, dest->GetEntry(), *point});
+    }
+    if (candidates.empty())
+        return false;
+
+    std::sort(candidates.begin(), candidates.end(), [](auto const& a, auto const& b) { return std::get<0>(a) < std::get<0>(b); });
+    auto const& chosen = candidates[urand(0, std::min<size_t>(candidates.size(), 5) - 1)];
+    pendingSkill = skill;
+    pendingEntry = std::get<1>(chosen);
+    pendingGatherPos = std::get<2>(chosen);
+    return true;
+}
+
+bool NewRpgBaseAction::AreaDiscovered(uint32 areaId)
+{
+    AreaTableEntry const* area = GetAreaEntryByAreaID(areaId);
+    if (!area || area->exploreFlag == 0xffff)
+        return true;
+    uint32 offset = area->exploreFlag / 32;
+    uint32 mask = uint32(1) << (area->exploreFlag % 32);
+    return bot->GetUInt32Value(PLAYER_EXPLORED_ZONES_1 + offset) & mask;
+}
+
+// The nearest undiscovered area on the bot's map within 1,500 yards that is not above its level.
+bool NewRpgBaseAction::SelectExploreDestination()
+{
+    PlayerTravelInfo info(bot);
+    WorldPosition botPos(bot);
+    float best = FLT_MAX;
+    for (TravelDestination* dest : sTravelMgr.GetDestinations(info, (uint32)TravelDestinationPurpose::Explore, {}, true, 1500.0f))
+    {
+        if (dest->GetEntry() <= 0 || AreaDiscovered(dest->GetEntry()))
+            continue;
+        WorldPosition* point = dest->GetClosestPoint(botPos);
+        if (!point || point->getMapId() != botPos.getMapId() || IsPosBad(*point) || SpotOnCooldown(*point))
+            continue;
+        float distance = botPos.distance(*point);
+        if (distance < best)
+        {
+            best = distance;
+            pendingArea = dest->GetEntry();
+            pendingExplorePos = *point;
+        }
+    }
+    return best < FLT_MAX;
+}
+
+bool NewRpgBaseAction::SpotOnCooldown(WorldPosition const& pos)
+{
+    uint32 now = WorldTimer::getMSTime();
+    auto& spots = ai->rpgInfo.spotCooldowns;
+    spots.erase(std::remove_if(spots.begin(), spots.end(), [now](auto const& s) { return int32(s.second - now) <= 0; }), spots.end());
+    for (auto const& s : spots)
+        if (s.first.getMapId() == pos.getMapId() && s.first.distance(pos) < 50.0f)
+            return true;
+    return false;
+}
+
+void NewRpgBaseAction::CooldownSpot(WorldPosition const& pos)
+{
+    ai->rpgInfo.spotCooldowns.push_back({pos, WorldTimer::getMSTime() + spotCooldownTime});
+}
+
+bool NewRpgBaseAction::EndGather(char const* reason)
+{
+    if (auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data))
+        if (std::string(reason) != "done" || ai->rpgInfo.gathered == g->gatheredAtStart)
+            CooldownSpot(g->pos);
+    if (auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data))
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+            sLog.outString("[New RPG status] bot=%s event=gather_end reason=%s skill=%u entry=%d gathered=%u nodes_seen=%u nodes_reached=%u min=%u%s",
+                bot->GetName(), reason, g->skill, g->entry, ai->rpgInfo.gathered - g->gatheredAtStart,
+                g->nodesSeen, g->nodesReached,
+                WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, WorldTimer::getMSTime()) / 60000,
+                std::string(reason) == "timeout" ? TimeoutDetail(g->pos).c_str() : "");
+    ai->rpgInfo.ChangeToIdle();
+    return true;
+}
+
+bool NewRpgBaseAction::EndExplore(char const* reason)
+{
+    if (auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data))
+        if (std::string(reason) == "no_path" || std::string(reason) == "timeout" || std::string(reason) == "stuck_abandoned")
+            CooldownSpot(e->pos);
+    if (auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data))
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+            sLog.outString("[New RPG status] bot=%s event=explore_end reason=%s area=%u discovered=%u min=%u%s",
+                bot->GetName(), reason, e->areaId, AreaDiscovered(e->areaId) ? 1u : 0u,
+                WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, WorldTimer::getMSTime()) / 60000,
+                std::string(reason) == "timeout" ? TimeoutDetail(e->pos).c_str() : "");
     ai->rpgInfo.ChangeToIdle();
     return true;
 }
@@ -1759,6 +1881,20 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
             ai->rpgInfo.ChangeToIdle();
             return true;
 
+        case RPG_GATHER:
+            if (sPlayerbotAIConfig.logRpgStatusEvents)
+                sLog.outString("[New RPG status] bot=%s event=gather_start skill=%u entry=%d dist=%.0f",
+                    bot->GetName(), pendingSkill, pendingEntry, WorldPosition(bot).distance(pendingGatherPos));
+            ai->rpgInfo.ChangeToGather(pendingSkill, pendingEntry, pendingGatherPos);
+            return true;
+
+        case RPG_EXPLORE:
+            if (sPlayerbotAIConfig.logRpgStatusEvents)
+                sLog.outString("[New RPG status] bot=%s event=explore_start area=%u dist=%.0f",
+                    bot->GetName(), pendingArea, WorldPosition(bot).distance(pendingExplorePos));
+            ai->rpgInfo.ChangeToExplore(pendingArea, pendingExplorePos);
+            return true;
+
         case RPG_REST:
         default:
             ai->rpgInfo.ChangeToRest();
@@ -1772,6 +1908,12 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
 {
     switch (status)
     {
+        case RPG_GATHER:
+            return SelectGatherDestination();
+
+        case RPG_EXPLORE:
+            return SelectExploreDestination();
+
         case RPG_IDLE:
         case RPG_REST:
             return true;

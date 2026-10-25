@@ -49,10 +49,23 @@ void NewRpgStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
         NextAction::array(0, new NextAction("new rpg travel flight", 3.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
+        "gather status",
+        NextAction::array(0, new NextAction("new rpg gather", 3.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "explore status",
+        NextAction::array(0, new NextAction("new rpg explore", 3.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
         "errand status",
         NextAction::array(0, new NextAction("new rpg errand", 3.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
         "change zone status",
         NextAction::array(0, new NextAction("new rpg go change zone", 3.0f), NULL)));
+
+    // Above every status action, so looting is not starved while a status is active (#87).
+    triggers.push_back(new TriggerNode(
+        "often",
+        NextAction::array(0, new NextAction("new rpg loot", 3.5f), NULL)));
 }

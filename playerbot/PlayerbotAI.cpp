@@ -767,11 +767,19 @@ void PlayerbotAI::CheckChangeZoneCombatStall()
 }
 
 // One line per ChangeZoneSampleSeconds for a bot on a change-zone trip, to find where slow
-// trips spend their time (lbrick/cmangos-dev#74).
+// trips spend their time (lbrick/cmangos-dev#74), and for errand, gather and explore statuses,
+// whose timeouts showed bots standing still with a path to follow (lbrick/cmangos-dev#86, #87).
 void PlayerbotAI::LogChangeZoneSample()
 {
     auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&rpgInfo.data);
-    if (!cz)
+    WorldPosition target;
+    if (auto* errand = std::get_if<NewRpgInfo::Errand>(&rpgInfo.data))
+        target = errand->pos;
+    else if (auto* gather = std::get_if<NewRpgInfo::Gather>(&rpgInfo.data))
+        target = gather->pos;
+    else if (auto* explore = std::get_if<NewRpgInfo::Explore>(&rpgInfo.data))
+        target = explore->pos;
+    if (!cz && target == WorldPosition())
     {
         czSampleT = 0;
         return;
@@ -793,20 +801,20 @@ void PlayerbotAI::LogChangeZoneSample()
     if (since < sPlayerbotAIConfig.changeZoneSampleSeconds * IN_MILLISECONDS)
         return;
 
-    WorldPosition next = cz->waypoints.empty() ? cz->dest : cz->waypoints.front().pos;
-    bool leg = !cz->waypoints.empty() && cz->waypoints.front().teleport;
+    WorldPosition next = !cz ? target : (cz->waypoints.empty() ? cz->dest : cz->waypoints.front().pos);
+    bool leg = cz && !cz->waypoints.empty() && cz->waypoints.front().teleport;
     float distNext = next.getMapId() == pos.getMapId() ? pos.distance(next) : -1.0f;
     float moved = czSamplePos.getMapId() == pos.getMapId() ? pos.fDist(czSamplePos) : -1.0f;
     MotionMaster* mm = bot->GetMotionMaster();
 
-    sLog.outString("[New RPG sample] bot=%s pos=%u:%.1f,%.1f,%.1f next=%u:%.1f,%.1f,%.1f dist_next=%.0f moved=%.0f since_s=%u internal=%u minimal=%u combat=%u moving=%u mgen=%u dead=%u taxi=%u leg=%u waypoints_left=%u movefar_calls=%u movefar=%s:%u last_nc=\"%s\"",
+    sLog.outString("[New RPG sample] bot=%s pos=%u:%.1f,%.1f,%.1f next=%u:%.1f,%.1f,%.1f dist_next=%.0f moved=%.0f since_s=%u internal=%u minimal=%u combat=%u moving=%u mgen=%u dead=%u taxi=%u leg=%u waypoints_left=%u movefar_calls=%u movefar=%s:%u last_nc=\"%s\" status=%u",
         bot->GetName(), pos.getMapId(), pos.getX(), pos.getY(), pos.getZ(),
         next.getMapId(), next.getX(), next.getY(), next.getZ(), distNext, moved, since / IN_MILLISECONDS,
         czInternalRuns, czMinimalRuns, sServerFacade.IsInCombat(bot) ? 1u : 0u, bot->IsStopped() ? 0u : 1u,
         mm->empty() ? 0u : uint32(mm->GetCurrentMovementGeneratorType()), sServerFacade.UnitIsDead(bot) ? 1u : 0u,
-        bot->IsTaxiFlying() ? 1u : 0u, leg ? 1u : 0u, uint32(cz->waypoints.size()),
+        bot->IsTaxiFlying() ? 1u : 0u, leg ? 1u : 0u, cz ? uint32(cz->waypoints.size()) : 0u,
         rpgInfo.moveFarCalls, rpgInfo.moveFarStep, rpgInfo.moveFarResult ? 1u : 0u,
-        GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT).c_str());
+        GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT).c_str(), uint32(rpgInfo.GetStatus()));
 
     // The five actions tried most since the last sample, as name:executed/tried/delay_s, where
     // delay_s is the AI delay the executed runs set in total.

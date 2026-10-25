@@ -1,5 +1,6 @@
 #include "playerbot/playerbot.h"
 #include "NewRpgAction.h"
+#include "playerbot/LootObjectStack.h"
 
 #define NEWRPG_LOG(...) do { if (!sPlayerbotAIConfig.logFilterPlayerBot) sLog.outDebug(__VA_ARGS__); } while(0)
 #include "playerbot/strategy/rpg/NewRpgInfo.h"
@@ -40,6 +41,11 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             // An errand ends through EndErrand, for its log line and retry delay (#86).
             if (status == RPG_ERRAND)
                 return EndErrand("stuck_abandoned");
+            // Gather and explore too, for their end line and spot cooldown (#87).
+            if (status == RPG_GATHER)
+                return EndGather("stuck_abandoned");
+            if (status == RPG_EXPLORE)
+                return EndExplore("stuck_abandoned");
             info.tripEndReason = "stuck_abandoned";
             info.ChangeToIdle();
             return true;
@@ -55,6 +61,10 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             NEWRPG_LOG("[New RPG] %s dropped a move target on another map", bot->GetName());
             if (status == RPG_ERRAND)
                 return EndErrand("cross_map");
+            if (status == RPG_GATHER)
+                return EndGather("cross_map");
+            if (status == RPG_EXPLORE)
+                return EndExplore("cross_map");
             info.tripEndReason = "cross_map";
             info.ChangeToIdle();
             return true;
@@ -72,7 +82,8 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             if (TryStartErrand())
                 return true;
             return RandomChangeStatus({RPG_GO_CAMP, RPG_GO_GRIND, RPG_WANDER_RANDOM, RPG_WANDER_NPC,
-                                       RPG_DO_QUEST, RPG_TRAVEL_FLIGHT, RPG_REST, RPG_CHANGE_ZONE});
+                                       RPG_DO_QUEST, RPG_TRAVEL_FLIGHT, RPG_REST, RPG_CHANGE_ZONE,
+                                       RPG_GATHER, RPG_EXPLORE});
 
         case RPG_GO_GRIND:
         {
@@ -142,6 +153,21 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             // keeps fighting, since the active clock does not end it then.
             if (info.HasStatusBeenActive(20 * MINUTE * IN_MILLISECONDS) || info.HasStatusPersisted(errandWallLimit))
                 return EndErrand("timeout");
+            break;
+        }
+        case RPG_GATHER:
+        {
+            if (info.HasStatusBeenActive(20 * MINUTE * IN_MILLISECONDS))
+                return EndGather("timeout");
+            break;
+        }
+        case RPG_EXPLORE:
+        {
+            auto& data = std::get<NewRpgInfo::Explore>(info.data);
+            if (AreaDiscovered(data.areaId))
+                return EndExplore("discovered");
+            if (info.HasStatusBeenActive(15 * MINUTE * IN_MILLISECONDS))
+                return EndExplore("timeout");
             break;
         }
         case RPG_REST:
@@ -308,6 +334,107 @@ bool NewRpgWanderNpcAction::Execute(Event& /*event*/)
     return true;
 }
 
+// ─── NewRpgGatherAction ──────────────────────────────────────────────────────
+
+bool NewRpgGatherAction::Execute(Event& /*event*/)
+{
+    auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data);
+    if (!g)
+        return false;
+
+    if (!g->arriveT)
+    {
+        switch (MoveToward(g->pos, 40.0f))
+        {
+            case MoveResult::Moving: return true;
+            case MoveResult::Failed: return EndGather("no_path");
+            case MoveResult::Arrived: break;
+        }
+        // Active time, plus one so that 0 stays "not arrived" (#86 CountActiveTime).
+        g->arriveT = ai->rpgInfo.activeMs + 1;
+        return true;
+    }
+
+    if (ai->rpgInfo.activeMs + 1 - g->arriveT >= stayTime)
+        return EndGather("done");
+
+    // Take a node of the status's skill in sight. The legacy "add gathering loot" skips a node
+    // farther than 15 yd or with a mob near the bot's level within 30 yd, which at a gather spot
+    // is almost every node: the xstack2 run logged no herb or ore loot during a gather status.
+    // "loot available" waits for no attackable mob nearby, so the status walks to the node and
+    // makes it the loot target itself; "can loot" then runs "open loot" (xstack3, 4 of 265).
+    LootObject current = AI_VALUE(LootObject, "loot target");
+    if (!current.IsEmpty() && current.skillId == g->skill && current.GetWorldObject(bot) && current.IsLootPossible(bot))
+        return false;
+
+    ObjectGuid nodeGuid;
+    WorldObject* node = nullptr;
+    float nodeDist = sPlayerbotAIConfig.sightDistance;
+    for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, g->skill == SKILL_SKINNING ? "nearest corpses" : "nearest game objects no los"))
+    {
+        LootObject loot(bot, guid);
+        if (loot.IsEmpty() || loot.skillId != g->skill || !loot.IsLootPossible(bot))
+            continue;
+        WorldObject* wo = loot.GetWorldObject(bot);
+        if (!wo)
+            continue;
+        float dist = bot->GetDistance(wo);
+        if (dist < nodeDist)
+        {
+            node = wo;
+            nodeGuid = guid;
+            nodeDist = dist;
+        }
+    }
+    if (node)
+    {
+        ++g->nodesSeen;
+        if (nodeDist > INTERACTION_DISTANCE - 1.0f)
+        {
+            if (sServerFacade.isMoving(bot))
+                return true;
+            if (bot->IsMounted() && nodeDist < 30.0f)
+                ai->Unmount();
+            return MoveTo(node->GetMapId(), node->GetPositionX(), node->GetPositionY(), node->GetPositionZ(), false, false, false, true);
+        }
+        ++g->nodesReached;
+        if (bot->IsMounted())
+            ai->Unmount();
+        AI_VALUE(LootObjectStack*, "available loot")->Add(nodeGuid);
+        SET_AI_VALUE(LootObject, "loot target", LootObject(bot, nodeGuid));
+        return false;
+    }
+
+    // No node seen 30 s (active time) after arriving: the spot is empty for now.
+    if (!g->nodesSeen && ai->rpgInfo.activeMs + 1 - g->arriveT >= gatherEmptyTime)
+        return EndGather("empty");
+
+    // No node in sight: roam the spot.
+    if (sServerFacade.isMoving(bot))
+        return false;
+    return MoveRandomNear(40.0f);
+}
+
+// ─── NewRpgExploreAction ─────────────────────────────────────────────────────
+
+bool NewRpgExploreAction::Execute(Event& /*event*/)
+{
+    auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data);
+    if (!e)
+        return false;
+
+    if (AreaDiscovered(e->areaId))
+        return EndExplore("discovered");
+
+    switch (MoveToward(e->pos, 20.0f))
+    {
+        case MoveResult::Moving: return true;
+        case MoveResult::Failed: return EndExplore("no_path");
+        case MoveResult::Arrived: break;
+    }
+    return EndExplore(AreaDiscovered(e->areaId) ? "discovered" : "reached");
+}
+
 // ─── NewRpgErrandAction ──────────────────────────────────────────────────────
 
 bool NewRpgErrandAction::Execute(Event& /*event*/)
@@ -362,6 +489,26 @@ bool NewRpgErrandAction::Execute(Event& /*event*/)
             bot->GetName(), npc->GetEntry(), action, done ? 1 : 0);
     HandOverToLegacyRpg(errand->npc);
     return true;
+}
+
+// ─── NewRpgLootAction ────────────────────────────────────────────────────────
+
+bool NewRpgLootAction::isUseful()
+{
+    return ai->rpgInfo.GetStatus() != RPG_IDLE && !bot->IsTaxiFlying() && !bot->IsInCombat();
+}
+
+bool NewRpgLootAction::Execute(Event& /*event*/)
+{
+    if (ai->HasStrategy("loot", BotState::BOT_STATE_NON_COMBAT))
+        ai->DoSpecificAction("add all loot", Event("new rpg loot"), true);
+    if (ai->HasStrategy("gather", BotState::BOT_STATE_NON_COMBAT))
+        ai->DoSpecificAction("add gathering loot", Event("new rpg loot"), true);
+
+    // "loot available" waits for the bot to dismount, and new RPG travel keeps it mounted.
+    if (bot->IsMounted() && !AI_VALUE(LootObjectStack*, "available loot")->GetLoot(dismountRange).IsEmpty())
+        ai->Unmount();
+    return false;
 }
 
 // ─── NewRpgDoQuestAction ─────────────────────────────────────────────────────

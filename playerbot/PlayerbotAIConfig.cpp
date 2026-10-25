@@ -534,6 +534,8 @@ bool PlayerbotAIConfig::Initialize()
     RpgStatusProbWeight[RPG_CHANGE_ZONE]    = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.ChangeZone",    20);
     // A need starts an errand ahead of the weighted pick; 0 turns errands off (lbrick/cmangos-dev#86).
     RpgStatusProbWeight[RPG_ERRAND]         = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.Errand",         1);
+    RpgStatusProbWeight[RPG_GATHER]         = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.Gather",        10);
+    RpgStatusProbWeight[RPG_EXPLORE]        = config.GetIntDefault("AiPlayerbot.RpgStatusProbWeight.Explore",        5);
 	disableRandomLevels = config.GetBoolDefault("AiPlayerbot.DisableRandomLevels", false);
     instantRandomize = config.GetBoolDefault("AiPlayerbot.InstantRandomize", true);
     randomBotRandomPassword = config.GetBoolDefault("AiPlayerbot.RandomBotRandomPassword", true);
