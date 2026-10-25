@@ -27,6 +27,28 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
     info.statusUpdateTs = WorldTimer::getMSTime();
     NewRpgStatus status = info.GetStatus();
 
+    // PlayerbotAI found the status held in a lockup and ends it here, for its own end line (#94).
+    if (info.lockupEnd)
+    {
+        char const* reason = info.lockupEnd;
+        info.lockupEnd = nullptr;
+        if (info.lockupStartT == info.startT && status != RPG_IDLE)
+        {
+            if (status == RPG_ERRAND)
+                return EndErrand(reason);
+            if (status == RPG_GATHER)
+                return EndGather(reason);
+            if (status == RPG_EXPLORE)
+                return EndExplore(reason);
+            if (sPlayerbotAIConfig.logRpgStatusEvents)
+                sLog.outString("[New RPG status] bot=%s event=status_end reason=%s status=%u",
+                    bot->GetName(), reason, uint32(status));
+            info.tripEndReason = reason;
+            info.ChangeToIdle();
+            return true;
+        }
+    }
+
     if (info.abandonMoveFar)
     {
         info.abandonMoveFar = false;

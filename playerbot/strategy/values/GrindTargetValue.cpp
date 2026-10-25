@@ -90,10 +90,18 @@ Unit* GrindTargetValue::FindTargetForGrinding(int assistCount)
 
     std::unordered_map<uint32, bool> needForQuestCache;
 
+    // A target the bot fought for 10 minutes without moving on (lbrick/cmangos-dev#94).
+    NewRpgInfo const& rpgInfo = ai->rpgInfo;
+    bool skipDropped = rpgInfo.droppedTarget &&
+        WorldTimer::getMSTimeDiff(rpgInfo.droppedTargetT, WorldTimer::getMSTime()) < 10 * MINUTE * IN_MILLISECONDS;
+
     for (std::list<ObjectGuid>::iterator tIter = targets.begin(); tIter != targets.end(); tIter++)
     {
         Unit* unit = ai->GetUnit(*tIter);
         if (!unit)
+            continue;
+
+        if (skipDropped && unit->GetObjectGuid() == rpgInfo.droppedTarget)
             continue;
 
 #ifdef MANGOSBOT_TWO 

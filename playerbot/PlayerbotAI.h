@@ -448,8 +448,10 @@ public:
     void LogChangeZoneSample();
     // Logs change_zone_ended once the trip in rpgInfo.tripStartT is over (lbrick/cmangos-dev#83).
     void LogChangeZoneEnd(bool logout = false);
-    // Ends a change-zone trip held in combat at one place for 10 minutes (lbrick/cmangos-dev#84).
-    void CheckChangeZoneCombatStall();
+    // Ends a new RPG status held fighting at one place for 10 minutes, or an errand past its
+    // wall-clock ceiling, from outside the engines (lbrick/cmangos-dev#84, #94).
+    void CheckRpgStatusLockup();
+    void EndRpgStatusLockup(char const* reason);
     // Counts an engine action for the change-zone sample line (lbrick/cmangos-dev#74).
     void CountSampledAction(const std::string& name, bool executed, uint32 durationMs);
     bool CanDoSpecificAction(const std::string& name, bool isUseful = true, bool isPossible = true);
