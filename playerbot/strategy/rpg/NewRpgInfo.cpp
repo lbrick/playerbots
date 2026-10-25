@@ -11,6 +11,30 @@ bool NewRpgInfo::HasStatusPersisted(uint32 maxDuration)
     return WorldTimer::getMSTimeDiff(startT, WorldTimer::getMSTime()) > maxDuration;
 }
 
+static const uint32 activeGapLimit = 5 * IN_MILLISECONDS;
+
+void NewRpgInfo::CountActiveTime(uint32 now)
+{
+    if (activeStartT != startT)
+    {
+        activeStartT = startT;
+        activeMs = 0;
+        lastFullUpdateT = 0;
+    }
+    if (lastFullUpdateT)
+    {
+        uint32 gap = WorldTimer::getMSTimeDiff(lastFullUpdateT, now);
+        if (gap < activeGapLimit)
+            activeMs += gap;
+    }
+    lastFullUpdateT = now;
+}
+
+bool NewRpgInfo::HasStatusBeenActive(uint32 maxDuration)
+{
+    return activeStartT == startT && activeMs > maxDuration;
+}
+
 void NewRpgInfo::ChangeToGoGrind(WorldPosition pos)
 {
     startT = WorldTimer::getMSTime();
@@ -67,6 +91,15 @@ void NewRpgInfo::ChangeToChangeZone(WorldPosition dest)
     std::get<ChangeZone>(data).progressT = startT;
 }
 
+void NewRpgInfo::ChangeToErrand(NewRpgErrandNeed need, WorldPosition pos)
+{
+    startT = WorldTimer::getMSTime();
+    Errand errand;
+    errand.need = need;
+    errand.pos = pos;
+    data = errand;
+}
+
 void NewRpgInfo::ChangeToIdle()
 {
     startT = WorldTimer::getMSTime();
@@ -106,6 +139,7 @@ NewRpgStatus NewRpgInfo::GetStatus()
         if constexpr (std::is_same_v<T, DoQuest>)       return RPG_DO_QUEST;
         if constexpr (std::is_same_v<T, TravelFlight>)  return RPG_TRAVEL_FLIGHT;
         if constexpr (std::is_same_v<T, ChangeZone>)    return RPG_CHANGE_ZONE;
+        if constexpr (std::is_same_v<T, Errand>)        return RPG_ERRAND;
         return RPG_IDLE;
     }, data);
 }

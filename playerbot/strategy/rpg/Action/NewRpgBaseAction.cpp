@@ -16,6 +16,9 @@
 #include "playerbot/strategy/values/TravelValues.h"
 #include "playerbot/TravelMgr.h"
 #include "playerbot/TravelNode.h"
+#include "Grids/GridNotifiers.h"
+#include "Grids/GridNotifiersImpl.h"
+#include "Grids/CellImpl.h"
 
 using namespace ai;
 
@@ -33,7 +36,7 @@ static WorldObject* GetWorldObjectByGuid(PlayerbotAI* ai, Player* bot, ObjectGui
 static char const* StatusName(NewRpgStatus status)
 {
     static char const* const names[] = { "idle", "go_grind", "go_camp", "wander_random",
-        "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "none" };
+        "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "errand", "none" };
     return names[status <= RPG_STATUS_END ? status : RPG_STATUS_END];
 }
 
@@ -619,6 +622,236 @@ void NewRpgBaseAction::EndLegacyRpgHandOver()
 {
     RESET_AI_VALUE(GuidPosition, "rpg target");
     SET_AI_VALUE(std::string, "next rpg action", "");
+}
+
+// ─── Errands (lbrick/cmangos-dev#86) ─────────────────────────────────────────
+
+static bool IsInCapitalCity(Player* bot);
+static bool IsInTavern(Player* bot);
+
+static char const* ErrandNeedName(NewRpgErrandNeed need)
+{
+    switch (need)
+    {
+        case ERRAND_REPAIR: return "repair";
+        case ERRAND_SELL:   return "sell";
+        case ERRAND_AMMO:   return "ammo";
+        default:            return "none";
+    }
+}
+
+uint32 NewRpgBaseAction::LowestDurabilityPct()
+{
+    uint32 lowest = 100;
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+    {
+        Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+        if (!item)
+            continue;
+        uint32 maxDurability = item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY);
+        if (!maxDurability)
+            continue;
+        uint32 pct = item->GetUInt32Value(ITEM_FIELD_DURABILITY) * 100 / maxDurability;
+        if (pct < lowest)
+            lowest = pct;
+    }
+    return lowest;
+}
+
+uint32 NewRpgBaseAction::FreeBagSlots()
+{
+    uint32 free = 0;
+    for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        if (!bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            ++free;
+    // Plain bags only: a quiver or soul bag cannot take loot.
+    for (uint8 slot = INVENTORY_SLOT_BAG_START; slot < INVENTORY_SLOT_BAG_END; ++slot)
+    {
+        Bag* bag = dynamic_cast<Bag*>(bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot));
+        if (bag && bag->GetProto()->Class == ITEM_CLASS_CONTAINER && bag->GetProto()->SubClass == ITEM_SUBCLASS_CONTAINER)
+            free += bag->GetFreeSlots();
+    }
+    return free;
+}
+
+NewRpgErrandNeed NewRpgBaseAction::CurrentErrandNeed()
+{
+    if (LowestDurabilityPct() < 25)
+        return ERRAND_REPAIR;
+    if (FreeBagSlots() < 2)
+        return ERRAND_SELL;
+    if (bot->getClass() == CLASS_HUNTER)
+    {
+        Item* ranged = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED);
+        uint32 sub = ranged ? ranged->GetProto()->SubClass : 0;
+        if (ranged && (sub == ITEM_SUBCLASS_WEAPON_BOW || sub == ITEM_SUBCLASS_WEAPON_GUN || sub == ITEM_SUBCLASS_WEAPON_CROSSBOW))
+        {
+            uint32 ammo = bot->GetUInt32Value(PLAYER_AMMO_ID);
+            if (!ammo || bot->GetItemCount(ammo) < 100)
+                return ERRAND_AMMO;
+        }
+    }
+    return ERRAND_NONE;
+}
+
+// The nearest repairer (for repair) or vendor (otherwise) on the bot's map within 1,500 yards,
+// from the legacy travel destinations, that is not hostile to the bot.
+bool NewRpgBaseAction::SelectErrandDestination(NewRpgErrandNeed need, WorldPosition& out)
+{
+    PlayerTravelInfo info(bot);
+    uint32 purpose = (uint32)(need == ERRAND_REPAIR ? TravelDestinationPurpose::Repair : TravelDestinationPurpose::Vendor);
+    WorldPosition botPos(bot);
+    float best = FLT_MAX;
+    for (TravelDestination* dest : sTravelMgr.GetDestinations(info, purpose, {}, true, 1500.0f))
+    {
+        auto* entryDest = dynamic_cast<EntryTravelDestination*>(dest);
+        if (!entryDest || entryDest->GetEntry() <= 0)
+            continue;
+        if (need == ERRAND_REPAIR && !entryDest->HasNpcFlag(UNIT_NPC_FLAG_REPAIR))
+            continue;
+        if (GuidPosition(HIGHGUID_UNIT, entryDest->GetEntry()).IsHostileTo(bot))
+            continue;
+        WorldPosition* point = dest->GetClosestPoint(botPos);
+        if (!point || point->getMapId() != botPos.getMapId())
+            continue;
+        float distance = botPos.distance(*point);
+        if (distance < best)
+        {
+            best = distance;
+            out = *point;
+        }
+    }
+    return best < FLT_MAX;
+}
+
+bool NewRpgBaseAction::TryStartErrand()
+{
+    if (!sPlayerbotAIConfig.RpgStatusProbWeight[RPG_ERRAND])
+        return false;
+    uint32 now = WorldTimer::getMSTime();
+    if (ai->rpgInfo.errandRetryT && int32(ai->rpgInfo.errandRetryT - now) > 0)
+        return false;
+
+    NewRpgErrandNeed need = CurrentErrandNeed();
+    if (need == ERRAND_NONE)
+        return false;
+
+    WorldPosition pos;
+    if (!SelectErrandDestination(need, pos))
+    {
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+            sLog.outString("[New RPG status] bot=%s event=errand_skipped need=%s", bot->GetName(), ErrandNeedName(need));
+        ai->rpgInfo.errandRetryT = now + 20 * MINUTE * IN_MILLISECONDS;
+        return false;
+    }
+
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+    {
+        sLog.outString("[New RPG status] bot=%s status=%s zone=%u area=%u resting=%u capital=%u tavern=%u grind_target=%u",
+            bot->GetName(), StatusName(RPG_ERRAND),
+            bot->GetZoneId(), bot->GetAreaId(), (uint32)bot->GetRestType(),
+            IsInCapitalCity(bot) ? 1u : 0u, IsInTavern(bot) ? 1u : 0u,
+            ai->GetUnit(AI_VALUE(ObjectGuid, "grind target")) ? 1u : 0u);
+        sLog.outString("[New RPG status] bot=%s event=errand_start need=%s dist=%.0f durability=%u free_slots=%u",
+            bot->GetName(), ErrandNeedName(need), WorldPosition(bot).distance(pos), LowestDurabilityPct(), FreeBagSlots());
+    }
+    ai->rpgInfo.ChangeToErrand(need, pos);
+    return true;
+}
+
+NewRpgBaseAction::MoveResult NewRpgBaseAction::MoveToward(WorldPosition dest, float arriveRange)
+{
+    WorldPosition here(bot);
+    if (here.getMapId() == dest.getMapId() && here.distance(dest) <= arriveRange)
+        return MoveResult::Arrived;
+
+    NewRpgInfo& info = ai->rpgInfo;
+    if (sServerFacade.isMoving(bot) || MoveFarTo(dest))
+    {
+        info.moveFailT = 0;
+        return MoveResult::Moving;
+    }
+
+    std::string step = info.moveFarStep;
+    bool hopeless = step == "abandoned" || step == "cross_map" || step == "no_dest";
+    if (!hopeless)
+    {
+        // Counted in active time, plus one so that 0 stays "not failing". Before the active
+        // clock has caught up with a new status, nothing is counted yet.
+        if (info.activeStartT != info.startT)
+            return MoveResult::Moving;
+        if (!info.moveFailT || info.moveFailStartT != info.startT)
+        {
+            info.moveFailT = info.activeMs + 1;
+            info.moveFailStartT = info.startT;
+        }
+        if (info.activeMs + 1 - info.moveFailT < moveGiveUpTime)
+            return MoveResult::Moving;
+    }
+
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=move_gave_up status=%s step=%s distance=%.0f",
+            bot->GetName(), StatusName(info.GetStatus()), step.c_str(),
+            here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f);
+    info.moveFailT = 0;
+    return MoveResult::Failed;
+}
+
+Creature* NewRpgBaseAction::FindNearestNpc(uint32 npcFlag, float range)
+{
+    std::list<Unit*> units;
+    MaNGOS::AnyUnitInObjectRangeCheck check(bot, range);
+    MaNGOS::UnitListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(units, check);
+    Cell::VisitAllObjects(bot, searcher, range);
+
+    Creature* nearest = nullptr;
+    float nearestDist = range;
+    for (Unit* unit : units)
+    {
+        if (unit->GetTypeId() != TYPEID_UNIT || !unit->IsAlive() || !unit->HasFlag(UNIT_NPC_FLAGS, npcFlag))
+            continue;
+        if (GuidPosition(unit).IsHostileTo(bot))
+            continue;
+        float dist = bot->GetDistance(unit);
+        if (dist <= nearestDist)
+        {
+            nearest = static_cast<Creature*>(unit);
+            nearestDist = dist;
+        }
+    }
+    return nearest;
+}
+
+std::string NewRpgBaseAction::TimeoutDetail(WorldPosition const& dest)
+{
+    NewRpgInfo const& info = ai->rpgInfo;
+    WorldPosition here(bot);
+    char buf[160];
+    snprintf(buf, sizeof(buf), " left=%.0f step=%s move_calls=%u combat=%d moving=%d",
+        here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f, info.moveFarStep, info.moveFarCalls,
+        bot->IsInCombat() ? 1 : 0, sServerFacade.isMoving(bot) ? 1 : 0);
+    return std::string(buf) + " last_nc=\"" + ai->GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT) +
+        "\" last_c=\"" + ai->GetLastExecutedActionName(BotState::BOT_STATE_COMBAT) + "\"";
+}
+
+bool NewRpgBaseAction::EndErrand(char const* reason)
+{
+    auto* errand = std::get_if<NewRpgInfo::Errand>(&ai->rpgInfo.data);
+    uint32 now = WorldTimer::getMSTime();
+    if (errand && sPlayerbotAIConfig.logRpgStatusEvents)
+    {
+        std::string detail = std::string(reason) == "timeout" ? TimeoutDetail(errand->pos) : "";
+        sLog.outString("[New RPG status] bot=%s event=errand_end reason=%s need=%s min=%u active_min=%u durability=%u free_slots=%u%s",
+            bot->GetName(), reason, ErrandNeedName(errand->need),
+            WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, now) / 60000, ai->rpgInfo.activeMs / 60000,
+            LowestDurabilityPct(), FreeBagSlots(), detail.c_str());
+    }
+    EndLegacyRpgHandOver();
+    // A need the visit did not meet (unsellable items, no money) must not start errand after errand.
+    bool done = std::string(reason) == "done";
+    ai->rpgInfo.errandRetryT = now + (done ? 10 : 20) * MINUTE * IN_MILLISECONDS;
+    ai->rpgInfo.ChangeToIdle();
+    return true;
 }
 
 void NewRpgBaseAction::LogTravelEvent(char const* event, WorldPosition const& from, WorldPosition const& to, char const* detail)

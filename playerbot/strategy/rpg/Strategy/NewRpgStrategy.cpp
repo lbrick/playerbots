@@ -49,6 +49,10 @@ void NewRpgStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
         NextAction::array(0, new NextAction("new rpg travel flight", 3.0f), NULL)));
 
     triggers.push_back(new TriggerNode(
+        "errand status",
+        NextAction::array(0, new NextAction("new rpg errand", 3.0f), NULL)));
+
+    triggers.push_back(new TriggerNode(
         "change zone status",
         NextAction::array(0, new NextAction("new rpg go change zone", 3.0f), NULL)));
 }

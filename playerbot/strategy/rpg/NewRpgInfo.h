@@ -21,7 +21,17 @@ enum NewRpgStatus : int
     RPG_TRAVEL_FLIGHT  = 6,
     RPG_REST           = 7,
     RPG_CHANGE_ZONE    = 8,
-    RPG_STATUS_END     = 9,
+    RPG_ERRAND         = 9,
+    RPG_STATUS_END     = 10,
+};
+
+// What sends a bot on an errand (lbrick/cmangos-dev#86).
+enum NewRpgErrandNeed : uint8
+{
+    ERRAND_NONE   = 0,
+    ERRAND_REPAIR = 1,
+    ERRAND_SELL   = 2,
+    ERRAND_AMMO   = 3,
 };
 
 using NewRpgStatusTransitionProb = std::vector<std::vector<int>>;
@@ -119,8 +129,27 @@ struct NewRpgInfo
     struct Idle
     {
     };
+    // RPG_ERRAND (lbrick/cmangos-dev#86): the need, the vendor's spawn point, and the vendor once
+    // the bot has reached it.
+    struct Errand
+    {
+        NewRpgErrandNeed need{ERRAND_NONE};
+        WorldPosition pos{};
+        ObjectGuid npc{};
+        uint32 reachT{0};
+    };
 
     uint32 startT{0};  // start timestamp of the current status
+    // MoveToward (#86): the active time when MoveFarTo began failing, and the status (its
+    // startT) it failed in.
+    uint32 moveFailT{0};
+    uint32 moveFailStartT{0};
+    // CountActiveTime (#86): active ms in the status whose startT is activeStartT.
+    uint32 activeMs{0};
+    uint32 activeStartT{0};
+    uint32 lastFullUpdateT{0};
+    // No errand starts before this time: the last one found no vendor or did not finish (#86).
+    uint32 errandRetryT{0};
 
     // Post-quest routine (lbrick/cmangos-dev#45): a pause, or a vendor or trainer visit, after a
     // quest accept or turn-in. Held beside the status, so a status change does not cut it short.
@@ -186,12 +215,19 @@ struct NewRpgInfo
         DoQuest,
         Rest,
         TravelFlight,
-        ChangeZone
+        ChangeZone,
+        Errand
     >;
     RpgData data;
 
     NewRpgStatus GetStatus();
     bool HasStatusPersisted(uint32 maxDuration);
+    // Active time in the current status: the time between full AI updates less than
+    // activeGapLimit apart. A bot with no real player near it runs minimal updates, which skip
+    // every new RPG action, so a wall-clock limit ended errands that never got to run
+    // (lbrick/cmangos-dev#86). Errands time out on active time, under a wall-clock ceiling.
+    void CountActiveTime(uint32 now);
+    bool HasStatusBeenActive(uint32 maxDuration);
     void ChangeToGoGrind(WorldPosition pos);
     void ChangeToGoCamp(WorldPosition pos);
     void ChangeToWanderNpc();
@@ -200,6 +236,7 @@ struct NewRpgInfo
     void ChangeToTravelFlight(ObjectGuid fromFlightMaster, std::vector<uint32> path);
     void ChangeToRest();
     void ChangeToChangeZone(WorldPosition dest);
+    void ChangeToErrand(NewRpgErrandNeed need, WorldPosition pos);
     void ChangeToIdle();
     bool CanChangeTo(NewRpgStatus status);
     void Reset();

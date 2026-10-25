@@ -1589,6 +1589,10 @@ void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
     if (bot->IsBeingTeleported() || !bot->IsInWorld())
         return;
 
+    // Only full updates run new RPG actions; the status clocks that time out on activity count them.
+    if (!minimal)
+        rpgInfo.CountActiveTime(WorldTimer::getMSTime());
+
     aiTick++;
 
     std::string mapString = WorldPosition(bot).isInstance() ? "I" : std::to_string(bot->GetMapId());
