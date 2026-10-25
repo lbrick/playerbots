@@ -99,6 +99,18 @@ public:
     const float dismountRange = 30.0f;  // a mounted bot dismounts for loot this close
 };
 
+/// Run on a minimal update (lbrick/cmangos-dev#90). An inactive bot runs no new RPG action, and
+/// MinimalMove only walks the stored route, which new RPG's short steps leave nearly empty. This
+/// stores the full route to the status's destination, built as legacy travel builds it.
+class NewRpgMinimalRouteAction : public NewRpgBaseAction
+{
+public:
+    NewRpgMinimalRouteAction(PlayerbotAI* ai) : NewRpgBaseAction(ai, "new rpg minimal route") {}
+    bool Execute(Event& event) override;
+
+    const uint32 rebuildTime = 60 * 1000;
+};
+
 class NewRpgDoQuestAction : public NewRpgBaseAction
 {
 public:

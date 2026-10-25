@@ -1,6 +1,7 @@
 #include "playerbot/playerbot.h"
 #include "NewRpgAction.h"
 #include "playerbot/LootObjectStack.h"
+#include "playerbot/strategy/values/LastMovementValue.h"
 
 #define NEWRPG_LOG(...) do { if (!sPlayerbotAIConfig.logFilterPlayerBot) sLog.outDebug(__VA_ARGS__); } while(0)
 #include "playerbot/strategy/rpg/NewRpgInfo.h"
@@ -71,6 +72,20 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         }
     }
 
+    // A grouped bot that does not lead its group follows the leader with the existing follow and
+    // group travel actions; a status of its own would pull it away (lbrick/cmangos-dev#90).
+    if (bot->GetGroup() && !ai->IsGroupLeader())
+    {
+        if (status == RPG_IDLE)
+            return false;
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+            sLog.outString("[New RPG status] bot=%s event=status_end reason=grouped status=%u",
+                bot->GetName(), uint32(status));
+        info.tripEndReason = "grouped";
+        info.ChangeToIdle();
+        return true;
+    }
+
     // A need outranks grinding, camping, wandering and resting, not a quest or a trip (#86).
     if ((status == RPG_GO_GRIND || status == RPG_GO_CAMP || status == RPG_WANDER_RANDOM ||
          status == RPG_WANDER_NPC || status == RPG_REST) && TryStartErrand())
@@ -79,6 +94,9 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
     switch (status)
     {
         case RPG_IDLE:
+            // No new work while the activity throttle keeps the bot inactive, as legacy RPG (#90).
+            if (!ai->AllowActivity(RPG_ACTIVITY))
+                return false;
             if (TryStartErrand())
                 return true;
             return RandomChangeStatus({RPG_GO_CAMP, RPG_GO_GRIND, RPG_WANDER_RANDOM, RPG_WANDER_NPC,
@@ -509,6 +527,46 @@ bool NewRpgLootAction::Execute(Event& /*event*/)
     if (bot->IsMounted() && !AI_VALUE(LootObjectStack*, "available loot")->GetLoot(dismountRange).IsEmpty())
         ai->Unmount();
     return false;
+}
+
+// ─── NewRpgMinimalRouteAction ────────────────────────────────────────────────
+
+bool NewRpgMinimalRouteAction::Execute(Event& /*event*/)
+{
+    NewRpgInfo& info = ai->rpgInfo;
+    WorldPosition dest = info.GetDestination();
+    if (dest == WorldPosition())
+        return false;
+
+    WorldPosition here(bot);
+    if (here.getMapId() == dest.getMapId() && here.distance(dest) < 20.0f)
+        return false;
+    // Only a change-zone trip crosses maps; any other status aimed at another map is dropped
+    // (lbrick/cmangos-dev#67), so it is not carried there either.
+    if (here.getMapId() != dest.getMapId() && info.GetStatus() != RPG_CHANGE_ZONE)
+        return false;
+
+    LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
+    if (!lastMove.lastPath.empty() && lastMove.lastPath.getBack().distance(dest) < 30.0f)
+        return false;
+
+    uint32 now = WorldTimer::getMSTime();
+    if (info.minimalRouteT && WorldTimer::getMSTimeDiff(info.minimalRouteT, now) < rebuildTime)
+        return false;
+    info.minimalRouteT = now;
+
+    TravelPath path = ResolveMovePath(here, dest, bot, lastMove);
+    bool usable = path.getPath().size() > 1 && path.getBack().distance(dest) < 50.0f;
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=minimal_route status=%u points=%u dist=%.0f cross_map=%u stored=%u",
+            bot->GetName(), uint32(info.GetStatus()), uint32(path.getPath().size()),
+            here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f,
+            here.getMapId() != dest.getMapId() ? 1u : 0u, usable ? 1u : 0u);
+    if (!usable)
+        return false;
+
+    lastMove.setPath(path);
+    return true;
 }
 
 // ─── NewRpgDoQuestAction ─────────────────────────────────────────────────────

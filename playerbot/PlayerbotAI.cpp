@@ -2645,6 +2645,11 @@ void PlayerbotAI::DoNextAction(bool min)
 
     if (minimal)
     {
+        // An inactive bot with a new RPG destination keeps travelling: MinimalMove walks the
+        // stored route, which this fills with the full route (lbrick/cmangos-dev#90).
+        if (rpgInfo.GetStatus() != RPG_IDLE && HasStrategy("new rpg", BotState::BOT_STATE_NON_COMBAT))
+            DoSpecificAction("new rpg minimal route", Event(), true);
+
         if (!MovementAction::MinimalMove(this) && !bot->isAFK() && !bot->InBattleGround() && !HasRealPlayerMaster())
             bot->ToggleAFK();
 
