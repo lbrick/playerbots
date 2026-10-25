@@ -68,4 +68,10 @@ void NewRpgStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode(
         "often",
         NextAction::array(0, new NextAction("new rpg loot", 3.5f), NULL)));
+
+    // The legacy maintenance actions rank below every status action; this runs one of them
+    // while a status is active, as "new rpg loot" does for looting (#93).
+    triggers.push_back(new TriggerNode(
+        "random",
+        NextAction::array(0, new NextAction("new rpg maintenance", 3.5f), NULL)));
 }

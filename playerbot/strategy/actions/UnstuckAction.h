@@ -21,6 +21,9 @@ public:
     virtual std::vector<std::string> GetUsedActions() { return {"reset", "hearthstone", "repop"}; }
     virtual std::vector<std::string> GetUsedValues() { return {}; }
 #endif
+
+private:
+    bool TripProgressing(Event& event);
 };
 
 #endif
