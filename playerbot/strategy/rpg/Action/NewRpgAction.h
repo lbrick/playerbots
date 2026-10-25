@@ -109,6 +109,8 @@ public:
     bool Execute(Event& event) override;
 
     const uint32 rebuildTime = 60 * 1000;
+    // The gather status roams 40 yd around the bot at its spot (#87); inactive, around the spot.
+    const float gatherRoamRadius = 40.0f;
 };
 
 class NewRpgDoQuestAction : public NewRpgBaseAction
