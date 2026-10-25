@@ -340,6 +340,7 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     if (!bot->IsInWorld() || bot->IsBeingTeleported())
         return;
 
+    CheckChangeZoneCombatStall();
     LogChangeZoneEnd();
 
     if (sPlayerbotAIConfig.changeZoneSampleSeconds)
@@ -730,6 +731,39 @@ void PlayerbotAI::LogChangeZoneEnd(bool logout)
     }
     rpgInfo.tripStartT = onTrip ? rpgInfo.startT : 0;
     rpgInfo.tripEndReason = nullptr;
+}
+
+void PlayerbotAI::CheckChangeZoneCombatStall()
+{
+    auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&rpgInfo.data);
+    if (!cz)
+        return;
+
+    if (!bot->IsInCombat())
+    {
+        cz->combatT = 0;
+        return;
+    }
+
+    // Combat that moves the bot on (fighting along the road) is not a stall.
+    uint32 now = WorldTimer::getMSTime();
+    WorldPosition here(bot);
+    if (!cz->combatT || here.getMapId() != cz->combatPos.getMapId() || here.distance(cz->combatPos) > 30.0f)
+    {
+        cz->combatPos = here;
+        cz->combatT = now;
+        return;
+    }
+
+    if (WorldTimer::getMSTimeDiff(cz->combatT, now) < 10 * MINUTE * IN_MILLISECONDS)
+        return;
+
+    if (sPlayerbotAIConfig.logRpgTravelEvents)
+        sLog.outString("[New RPG travel] bot=%s event=change_zone_combat_stalled from=%u:%.1f,%.1f,%.1f trip_min=%u",
+            bot->GetName(), here.getMapId(), here.getX(), here.getY(), here.getZ(),
+            WorldTimer::getMSTimeDiff(rpgInfo.startT, now) / 60000);
+    rpgInfo.tripEndReason = "combat_stalled";
+    rpgInfo.ChangeToIdle();
 }
 
 // One line per ChangeZoneSampleSeconds for a bot on a change-zone trip, to find where slow

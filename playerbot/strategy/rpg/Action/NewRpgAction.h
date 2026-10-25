@@ -75,6 +75,13 @@ class NewRpgGoChangeZoneAction : public NewRpgBaseAction
 public:
     NewRpgGoChangeZoneAction(PlayerbotAI* ai) : NewRpgBaseAction(ai, "new rpg go change zone") {}
     bool Execute(Event& event) override;
+
+protected:
+    // The nearest live flight master within range, by grid search (lbrick/cmangos-dev#84).
+    Creature* FindFlightMaster(float range);
+
+    const float flightMasterSearchRange = 50.0f;
+    const uint32 flightRetryTime = 5 * 1000;
 };
 
 /// Runs the routine StartPostQuest sets after a quest accept or turn-in (lbrick/cmangos-dev#45).
