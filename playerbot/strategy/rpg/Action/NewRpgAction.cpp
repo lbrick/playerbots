@@ -1,5 +1,7 @@
 #include "playerbot/playerbot.h"
 #include "NewRpgAction.h"
+#include "playerbot/LootObjectStack.h"
+#include "playerbot/strategy/values/LastMovementValue.h"
 
 #define NEWRPG_LOG(...) do { if (!sPlayerbotAIConfig.logFilterPlayerBot) sLog.outDebug(__VA_ARGS__); } while(0)
 #include "playerbot/strategy/rpg/NewRpgInfo.h"
@@ -9,6 +11,9 @@
 #include "Server/DBCStructure.h"
 #include "Server/DBCStores.h"
 #include "playerbot/ServerFacade.h"
+#include "Grids/GridNotifiers.h"
+#include "Grids/GridNotifiersImpl.h"
+#include "Grids/CellImpl.h"
 
 using namespace ai;
 
@@ -34,6 +39,15 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
                 ai->rpgStatistic.questAbandoned++;
             }
             NEWRPG_LOG("[New RPG] %s gave up an unreachable move target", bot->GetName());
+            // An errand ends through EndErrand, for its log line and retry delay (#86).
+            if (status == RPG_ERRAND)
+                return EndErrand("stuck_abandoned");
+            // Gather and explore too, for their end line and spot cooldown (#87).
+            if (status == RPG_GATHER)
+                return EndGather("stuck_abandoned");
+            if (status == RPG_EXPLORE)
+                return EndExplore("stuck_abandoned");
+            info.tripEndReason = "stuck_abandoned";
             info.ChangeToIdle();
             return true;
         }
@@ -46,16 +60,48 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
         {
             // The target is valid on the map the bot left, so a quest is not marked low priority.
             NEWRPG_LOG("[New RPG] %s dropped a move target on another map", bot->GetName());
+            if (status == RPG_ERRAND)
+                return EndErrand("cross_map");
+            if (status == RPG_GATHER)
+                return EndGather("cross_map");
+            if (status == RPG_EXPLORE)
+                return EndExplore("cross_map");
+            info.tripEndReason = "cross_map";
             info.ChangeToIdle();
             return true;
         }
     }
 
+    // A grouped bot that does not lead its group follows the leader with the existing follow and
+    // group travel actions; a status of its own would pull it away (lbrick/cmangos-dev#90).
+    if (bot->GetGroup() && !ai->IsGroupLeader())
+    {
+        if (status == RPG_IDLE)
+            return false;
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+            sLog.outString("[New RPG status] bot=%s event=status_end reason=grouped status=%u",
+                bot->GetName(), uint32(status));
+        info.tripEndReason = "grouped";
+        info.ChangeToIdle();
+        return true;
+    }
+
+    // A need outranks grinding, camping, wandering and resting, not a quest or a trip (#86).
+    if ((status == RPG_GO_GRIND || status == RPG_GO_CAMP || status == RPG_WANDER_RANDOM ||
+         status == RPG_WANDER_NPC || status == RPG_REST) && TryStartErrand())
+        return true;
+
     switch (status)
     {
         case RPG_IDLE:
+            // No new work while the activity throttle keeps the bot inactive, as legacy RPG (#90).
+            if (!ai->AllowActivity(RPG_ACTIVITY))
+                return false;
+            if (TryStartErrand())
+                return true;
             return RandomChangeStatus({RPG_GO_CAMP, RPG_GO_GRIND, RPG_WANDER_RANDOM, RPG_WANDER_NPC,
-                                       RPG_DO_QUEST, RPG_TRAVEL_FLIGHT, RPG_REST, RPG_CHANGE_ZONE});
+                                       RPG_DO_QUEST, RPG_TRAVEL_FLIGHT, RPG_REST, RPG_CHANGE_ZONE,
+                                       RPG_GATHER, RPG_EXPLORE});
 
         case RPG_GO_GRIND:
         {
@@ -114,6 +160,34 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             }
             break;
         }
+        case RPG_ERRAND:
+        {
+            // A teleport (random teleport, summon, hearth) took the bot away from its errand.
+            auto& errand = std::get<NewRpgInfo::Errand>(info.data);
+            WorldPosition here(bot);
+            if (here.getMapId() != errand.pos.getMapId() || here.distance(errand.pos) > errandTeleportDistance)
+                return EndErrand("teleported");
+            // 20 min of active time, and a wall-clock ceiling for a bot that stays inactive or
+            // keeps fighting, since the active clock does not end it then.
+            if (info.HasStatusBeenActive(20 * MINUTE * IN_MILLISECONDS) || info.HasStatusPersisted(errandWallLimit))
+                return EndErrand("timeout");
+            break;
+        }
+        case RPG_GATHER:
+        {
+            if (info.HasStatusBeenActive(20 * MINUTE * IN_MILLISECONDS))
+                return EndGather("timeout");
+            break;
+        }
+        case RPG_EXPLORE:
+        {
+            auto& data = std::get<NewRpgInfo::Explore>(info.data);
+            if (AreaDiscovered(data.areaId))
+                return EndExplore("discovered");
+            if (info.HasStatusBeenActive(15 * MINUTE * IN_MILLISECONDS))
+                return EndExplore("timeout");
+            break;
+        }
         case RPG_REST:
         {
             if (info.HasStatusPersisted(statusRestDuration))
@@ -133,6 +207,31 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
             // that keeps moving is not cut short (lbrick/cmangos-dev#71).
             auto& data = std::get<NewRpgInfo::ChangeZone>(info.data);
             uint32 now = WorldTimer::getMSTime();
+
+            // Closing 100 yards on the current waypoint (a transport leg's source dock) is progress
+            // too: a long walk between two waypoints is not a stall (lbrick/cmangos-dev#83).
+            if (!data.waypoints.empty() && !data.waypoints.front().spell)
+            {
+                auto const& front = data.waypoints.front();
+                // A teleport leg and a flight leg not yet taken start at their source point.
+                bool atSource = front.teleport || (front.taxiPath && !front.takeoffT);
+                WorldPosition target = atSource && front.from != WorldPosition() ? front.from : front.pos;
+                if (target.getMapId() == bot->GetMapId())
+                {
+                    float distance = WorldPosition(bot).distance(target);
+                    if (target != data.progressTarget)
+                    {
+                        data.progressTarget = target;
+                        data.progressDist = distance;
+                    }
+                    else if (distance + 100.0f < data.progressDist)
+                    {
+                        data.progressDist = distance;
+                        data.progressT = now;
+                    }
+                }
+            }
+
             if (WorldTimer::getMSTimeDiff(data.progressT, now) > 30 * 60 * 1000)
             {
                 NEWRPG_LOG("[New RPG] %s CHANGE_ZONE timed out, returning to idle", bot->GetName());
@@ -142,6 +241,7 @@ bool NewRpgStatusUpdateAction::Execute(Event& /*event*/)
                         " waypoints_left=" + std::to_string(data.waypoints.size());
                     LogTravelEvent("change_zone_timeout", WorldPosition(bot), data.dest, detail.c_str());
                 }
+                info.tripEndReason = "timeout";
                 info.ChangeToIdle();
                 return true;
             }
@@ -228,6 +328,9 @@ bool NewRpgWanderNpcAction::Execute(Event& /*event*/)
             data.lastReach = WorldTimer::getMSTime();
             if (CanInteractWithQuestGiver(object))
                 InteractWithNpcOrGoForQuest(data.npcOrGo);
+            // Whatever else the NPC offers (repair, sale, training, a flight path, a chat) is the
+            // legacy RPG sub-actions' to do (lbrick/cmangos-dev#85).
+            HandOverToLegacyRpg(data.npcOrGo);
             return true;
         }
 
@@ -235,6 +338,7 @@ bool NewRpgWanderNpcAction::Execute(Event& /*event*/)
             return false;
 
         // stayed long enough — pick next target
+        EndLegacyRpgHandOver();
         data.npcOrGo = ObjectGuid();
         data.lastReach = 0;
     }
@@ -245,6 +349,223 @@ bool NewRpgWanderNpcAction::Execute(Event& /*event*/)
         return MoveRandomNear(15.0f);
     }
 
+    return true;
+}
+
+// ─── NewRpgGatherAction ──────────────────────────────────────────────────────
+
+bool NewRpgGatherAction::Execute(Event& /*event*/)
+{
+    auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data);
+    if (!g)
+        return false;
+
+    if (!g->arriveT)
+    {
+        switch (MoveToward(g->pos, 40.0f))
+        {
+            case MoveResult::Moving: return true;
+            case MoveResult::Failed: return EndGather("no_path");
+            case MoveResult::Arrived: break;
+        }
+        // Active time, plus one so that 0 stays "not arrived" (#86 CountActiveTime).
+        g->arriveT = ai->rpgInfo.activeMs + 1;
+        return true;
+    }
+
+    if (ai->rpgInfo.activeMs + 1 - g->arriveT >= stayTime)
+        return EndGather("done");
+
+    // Take a node of the status's skill in sight. The legacy "add gathering loot" skips a node
+    // farther than 15 yd or with a mob near the bot's level within 30 yd, which at a gather spot
+    // is almost every node: the xstack2 run logged no herb or ore loot during a gather status.
+    // "loot available" waits for no attackable mob nearby, so the status walks to the node and
+    // makes it the loot target itself; "can loot" then runs "open loot" (xstack3, 4 of 265).
+    LootObject current = AI_VALUE(LootObject, "loot target");
+    if (!current.IsEmpty() && current.skillId == g->skill && current.GetWorldObject(bot) && current.IsLootPossible(bot))
+        return false;
+
+    ObjectGuid nodeGuid;
+    WorldObject* node = nullptr;
+    float nodeDist = sPlayerbotAIConfig.sightDistance;
+    for (ObjectGuid const& guid : AI_VALUE(std::list<ObjectGuid>, g->skill == SKILL_SKINNING ? "nearest corpses" : "nearest game objects no los"))
+    {
+        LootObject loot(bot, guid);
+        if (loot.IsEmpty() || loot.skillId != g->skill || !loot.IsLootPossible(bot))
+            continue;
+        WorldObject* wo = loot.GetWorldObject(bot);
+        if (!wo)
+            continue;
+        float dist = bot->GetDistance(wo);
+        if (dist < nodeDist)
+        {
+            node = wo;
+            nodeGuid = guid;
+            nodeDist = dist;
+        }
+    }
+    if (node)
+    {
+        ++g->nodesSeen;
+        if (nodeDist > INTERACTION_DISTANCE - 1.0f)
+        {
+            if (sServerFacade.isMoving(bot))
+                return true;
+            if (bot->IsMounted() && nodeDist < 30.0f)
+                ai->Unmount();
+            return MoveTo(node->GetMapId(), node->GetPositionX(), node->GetPositionY(), node->GetPositionZ(), false, false, false, true);
+        }
+        ++g->nodesReached;
+        if (bot->IsMounted())
+            ai->Unmount();
+        AI_VALUE(LootObjectStack*, "available loot")->Add(nodeGuid);
+        SET_AI_VALUE(LootObject, "loot target", LootObject(bot, nodeGuid));
+        return false;
+    }
+
+    // No node seen 30 s (active time) after arriving: the spot is empty for now.
+    if (!g->nodesSeen && ai->rpgInfo.activeMs + 1 - g->arriveT >= gatherEmptyTime)
+        return EndGather("empty");
+
+    // No node in sight: roam the spot.
+    if (sServerFacade.isMoving(bot))
+        return false;
+    return MoveRandomNear(40.0f);
+}
+
+// ─── NewRpgExploreAction ─────────────────────────────────────────────────────
+
+bool NewRpgExploreAction::Execute(Event& /*event*/)
+{
+    auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data);
+    if (!e)
+        return false;
+
+    if (AreaDiscovered(e->areaId))
+        return EndExplore("discovered");
+
+    switch (MoveToward(e->pos, 20.0f))
+    {
+        case MoveResult::Moving: return true;
+        case MoveResult::Failed: return EndExplore("no_path");
+        case MoveResult::Arrived: break;
+    }
+    return EndExplore(AreaDiscovered(e->areaId) ? "discovered" : "reached");
+}
+
+// ─── NewRpgErrandAction ──────────────────────────────────────────────────────
+
+bool NewRpgErrandAction::Execute(Event& /*event*/)
+{
+    auto* errand = std::get_if<NewRpgInfo::Errand>(&ai->rpgInfo.data);
+    if (!errand)
+        return false;
+
+    uint32 now = WorldTimer::getMSTime();
+    if (errand->reachT)
+    {
+        if (WorldTimer::getMSTimeDiff(errand->reachT, now) < npcVisitTime)
+            return false;
+        return EndErrand("done");
+    }
+
+    Creature* npc = errand->npc ? ai->GetCreature(errand->npc) : nullptr;
+    if (!npc)
+    {
+        switch (MoveToward(errand->pos, 40.0f))
+        {
+            case MoveResult::Moving: return true;
+            case MoveResult::Failed: return EndErrand("no_path");
+            case MoveResult::Arrived: break;
+        }
+
+        npc = FindNearestNpc(errand->need == ERRAND_REPAIR ? UNIT_NPC_FLAG_REPAIR : UNIT_NPC_FLAG_VENDOR, errandNpcRange);
+        if (!npc)
+            return EndErrand("no_npc");
+        errand->npc = npc->GetObjectGuid();
+    }
+
+    if (!npc->IsAlive())
+        return EndErrand("no_npc");
+
+    if (bot->GetDistance(npc) > INTERACTION_DISTANCE)
+    {
+        if (sServerFacade.isMoving(bot) || MoveWorldObjectTo(errand->npc))
+            return true;
+        return EndErrand("unreachable");
+    }
+
+    errand->reachT = now;
+    bot->SetSelectionGuid(errand->npc);
+    bot->SetFacingToObject(npc);
+    // The legacy sub-action for the need first, then whatever else legacy RPG picks there (#85).
+    SET_AI_VALUE(GuidPosition, "rpg target", GuidPosition(npc));
+    char const* action = errand->need == ERRAND_REPAIR ? "rpg repair" : (errand->need == ERRAND_SELL ? "rpg sell" : "rpg buy");
+    bool done = ai->DoSpecificAction(action, Event("new rpg"), true);
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=errand_action entry=%u action=%s done=%d",
+            bot->GetName(), npc->GetEntry(), action, done ? 1 : 0);
+    HandOverToLegacyRpg(errand->npc);
+    return true;
+}
+
+// ─── NewRpgLootAction ────────────────────────────────────────────────────────
+
+bool NewRpgLootAction::isUseful()
+{
+    return ai->rpgInfo.GetStatus() != RPG_IDLE && !bot->IsTaxiFlying() && !bot->IsInCombat();
+}
+
+bool NewRpgLootAction::Execute(Event& /*event*/)
+{
+    if (ai->HasStrategy("loot", BotState::BOT_STATE_NON_COMBAT))
+        ai->DoSpecificAction("add all loot", Event("new rpg loot"), true);
+    if (ai->HasStrategy("gather", BotState::BOT_STATE_NON_COMBAT))
+        ai->DoSpecificAction("add gathering loot", Event("new rpg loot"), true);
+
+    // "loot available" waits for the bot to dismount, and new RPG travel keeps it mounted.
+    if (bot->IsMounted() && !AI_VALUE(LootObjectStack*, "available loot")->GetLoot(dismountRange).IsEmpty())
+        ai->Unmount();
+    return false;
+}
+
+// ─── NewRpgMinimalRouteAction ────────────────────────────────────────────────
+
+bool NewRpgMinimalRouteAction::Execute(Event& /*event*/)
+{
+    NewRpgInfo& info = ai->rpgInfo;
+    WorldPosition dest = info.GetDestination();
+    if (dest == WorldPosition())
+        return false;
+
+    WorldPosition here(bot);
+    if (here.getMapId() == dest.getMapId() && here.distance(dest) < 20.0f)
+        return false;
+    // Only a change-zone trip crosses maps; any other status aimed at another map is dropped
+    // (lbrick/cmangos-dev#67), so it is not carried there either.
+    if (here.getMapId() != dest.getMapId() && info.GetStatus() != RPG_CHANGE_ZONE)
+        return false;
+
+    LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
+    if (!lastMove.lastPath.empty() && lastMove.lastPath.getBack().distance(dest) < 30.0f)
+        return false;
+
+    uint32 now = WorldTimer::getMSTime();
+    if (info.minimalRouteT && WorldTimer::getMSTimeDiff(info.minimalRouteT, now) < rebuildTime)
+        return false;
+    info.minimalRouteT = now;
+
+    TravelPath path = ResolveMovePath(here, dest, bot, lastMove);
+    bool usable = path.getPath().size() > 1 && path.getBack().distance(dest) < 50.0f;
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=minimal_route status=%u points=%u dist=%.0f cross_map=%u stored=%u",
+            bot->GetName(), uint32(info.GetStatus()), uint32(path.getPath().size()),
+            here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f,
+            here.getMapId() != dest.getMapId() ? 1u : 0u, usable ? 1u : 0u);
+    if (!usable)
+        return false;
+
+    lastMove.setPath(path);
     return true;
 }
 
@@ -462,6 +783,29 @@ bool NewRpgTravelFlightAction::Execute(Event& /*event*/)
 
 // ─── NewRpgGoChangeZoneAction ─────────────────────────────────────────────────
 
+Creature* NewRpgGoChangeZoneAction::FindFlightMaster(float range)
+{
+    std::list<Unit*> units;
+    MaNGOS::AnyUnitInObjectRangeCheck check(bot, range);
+    MaNGOS::UnitListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(units, check);
+    Cell::VisitAllObjects(bot, searcher, range);
+
+    Creature* nearest = nullptr;
+    float nearestDist = range;
+    for (Unit* unit : units)
+    {
+        if (unit->GetTypeId() != TYPEID_UNIT || !unit->IsAlive() || !unit->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_FLIGHTMASTER))
+            continue;
+        float dist = bot->GetDistance(unit);
+        if (dist <= nearestDist)
+        {
+            nearest = static_cast<Creature*>(unit);
+            nearestDist = dist;
+        }
+    }
+    return nearest;
+}
+
 bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
 {
     auto* dataPtr = std::get_if<NewRpgInfo::ChangeZone>(&ai->rpgInfo.data);
@@ -519,8 +863,32 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         }
 
         ai->zoneScoreCache = {};
+        ai->rpgInfo.tripEndReason = "arrived";
         ai->rpgInfo.ChangeToIdle();
         return true;
+    }
+
+    // Another action (unstuck, a group invitation, a summon) moved the bot to another map mid-trip.
+    // The next waypoint lies on the map it left, so the cross-map check would drop the trip; rebuild
+    // the route from here instead, at most three times a trip (lbrick/cmangos-dev#83).
+    if (!dataPtr->waypoints.empty() && !dataPtr->waypoints.front().spell && dataPtr->reroutes < 3)
+    {
+        auto const& front = dataPtr->waypoints.front();
+        WorldPosition next = front.teleport && front.from != WorldPosition() ? front.from : front.pos;
+        if (next.getMapId() != bot->GetMapId())
+        {
+            ++dataPtr->reroutes;
+            if (sPlayerbotAIConfig.logRpgTravelEvents)
+            {
+                std::string detail = "reason=moved_map reroutes=" + std::to_string(dataPtr->reroutes);
+                LogTravelEvent("route_rebuilt", WorldPosition(bot), next, detail.c_str());
+            }
+            dataPtr->waypoints.clear();
+            dataPtr->waypointsBuilt = false;
+            dataPtr->progressT = WorldTimer::getMSTime();
+            ai->rpgInfo.SetMoveFarTo(WorldPosition());
+            return true;
+        }
     }
 
     // 5.2 — mount up when far from dest
@@ -597,6 +965,27 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     }
                 }
 
+                // A flight-path link is a leg the bot flies from the flight master at this node.
+                // Walked, it sent the bot overland between flight masters, and those trips
+                // arrived least often (lbrick/cmangos-dev#84). The landing node stays in the
+                // route, so a flight that continues from it becomes the next leg.
+                if (nextNode && !isTransportLeg)
+                {
+                    auto linkIt = node->getLinks()->find(nextNode);
+                    if (linkIt != node->getLinks()->end() &&
+                        linkIt->second->getPathType() == TravelNodePathType::flightPath &&
+                        sTaxiPathStore.LookupEntry(uint32(linkIt->second->getPathObject())))
+                    {
+                        WorldPosition landPos = *nextNode->getPosition();
+                        NewRpgInfo::ChangeZone::Waypoint leg{landPos, false, nodePos};
+                        leg.taxiPath = uint32(linkIt->second->getPathObject());
+                        dataPtr->waypoints.push_back(leg);
+                        std::string detail = "taxi_path=" + std::to_string(leg.taxiPath);
+                        LogTravelEvent("flight_leg_built", nodePos, landPos, detail.c_str());
+                        continue;
+                    }
+                }
+
                 // Links the waypoints walk across although they are not walks: flight paths,
                 // teleport spells such as the hearthstone, and map changes (lbrick/cmangos-dev#76).
                 if (nextNode && !isTransportLeg && sPlayerbotAIConfig.logRpgTravelEvents)
@@ -638,6 +1027,37 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                     if (!nodePos.isMmapLoaded(0))
                         continue;
                     dataPtr->waypoints.push_back({nodePos, false});
+
+                    // Walk the link along its stored path, as the legacy travel path does, rather
+                    // than straight to the next node: one point in every 60 yards or more becomes a
+                    // waypoint (lbrick/cmangos-dev#84).
+                    if (nextNode)
+                    {
+                        auto linkIt = node->getLinks()->find(nextNode);
+                        if (linkIt != node->getLinks()->end() &&
+                            linkIt->second->getPathType() == TravelNodePathType::walk &&
+                            linkIt->second->getComplete())
+                        {
+                            std::vector<WorldPosition> path = linkIt->second->getPath();
+                            WorldPosition last = nodePos;
+                            for (size_t p = 1; p + 1 < path.size(); ++p)
+                            {
+                                WorldPosition point = path[p];
+                                point.setMapId(segmentMapId);
+                                float step = last.distance(point);
+                                // A gap over 200 yards is not a walk: restart the spacing after it.
+                                if (step > 200.0f)
+                                {
+                                    last = point;
+                                    continue;
+                                }
+                                if (step < 60.0f || !point.isValid() || IsPosBad(point))
+                                    continue;
+                                dataPtr->waypoints.push_back({point, false});
+                                last = point;
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -736,7 +1156,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     while (!dataPtr->waypoints.empty())
     {
         auto& front = dataPtr->waypoints.front();
-        if (front.teleport)
+        if (front.teleport || front.taxiPath)
             break;
         WorldPosition check = front.pos;
         check.setMapId(bot->GetMapId());
@@ -758,6 +1178,72 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     {
         auto& front = dataPtr->waypoints.front();
         WorldPosition& wp = front.pos;
+
+        // Flight leg: walk to the flight master, fly, and drop the leg on landing. A flight that
+        // fails three times is walked instead, as every flight link was before
+        // (lbrick/cmangos-dev#84).
+        if (front.taxiPath)
+        {
+            uint32 now = WorldTimer::getMSTime();
+            std::string detail = "taxi_path=" + std::to_string(front.taxiPath) + " tries=" + std::to_string(front.taxiTries);
+            if (bot->IsTaxiFlying())
+            {
+                dataPtr->progressT = now;
+                return true;
+            }
+            if (front.takeoffT)
+            {
+                LogTravelEvent("flight_landed", WorldPosition(bot), wp, detail.c_str());
+                dataPtr->progressT = now;
+                dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+                ai->rpgInfo.SetMoveFarTo(WorldPosition());
+                return true;
+            }
+
+            if (WorldPosition(bot).distance(front.from) > 30.0f)
+            {
+                WorldPosition target = front.from;
+                if (MoveFarTo(target))
+                    return true;
+            }
+
+            if (front.taxiTryT && WorldTimer::getMSTimeDiff(front.taxiTryT, now) < flightRetryTime)
+                return true;
+
+            // A grid search, not the cached "nearest npcs" list: that list can predate the
+            // bot's arrival, and with three tries in three ticks a stale list alone failed
+            // 114 of 149 flight legs in the 4 h combined run (lbrick/cmangos-dev#84).
+            Creature* flightMaster = FindFlightMaster(flightMasterSearchRange);
+            if (flightMaster && bot->GetDistance(flightMaster) > INTERACTION_DISTANCE)
+            {
+                WorldPosition target(flightMaster);
+                if (MoveFarTo(target))
+                    return true;
+            }
+
+            front.taxiTryT = now;
+
+            if (flightMaster && UseTaxi(ai, front.taxiPath, true, flightMaster))
+            {
+                front.takeoffT = now;
+                dataPtr->progressT = now;
+                LogTravelEvent("flight_taken", WorldPosition(bot), wp, detail.c_str());
+                return true;
+            }
+
+            if (++front.taxiTries < 3)
+                return true;
+            std::string reason;
+            if (!flightMaster)
+                reason = " no_flight_master=1";
+            else
+                reason = " flight_master=" + std::to_string(flightMaster->GetEntry()) +
+                    " distance=" + std::to_string(int(bot->GetDistance(flightMaster))) +
+                    " money=" + std::to_string(bot->GetMoney());
+            LogTravelEvent("flight_failed", WorldPosition(bot), wp, (detail + reason).c_str());
+            front.taxiPath = 0;
+            return true;
+        }
 
         // Teleport-spell leg: cast the spell where the bot stands, then wait for the teleport.
         // A spell that cannot be cast, or a cast that does not move the bot, rebuilds the route
@@ -854,6 +1340,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
                               bot->GetName(), wp.getZ(), wp.getX(), wp.getY(), wp.getMapId());
                 LogTravelEvent("teleport_rejected", WorldPosition(bot), wp, "reason=dest_z");
                 dataPtr->waypoints.erase(dataPtr->waypoints.begin());
+                ai->rpgInfo.tripEndReason = "teleport_rejected";
                 ai->rpgInfo.Reset();
                 return false;
             }
@@ -930,6 +1417,7 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
     if (IsPosBad(dest))
     {
         NEWRPG_LOG("[New RPG] %s CHANGE_ZONE dest is bad — resetting to IDLE", bot->GetName());
+        ai->rpgInfo.tripEndReason = "dest_bad";
         ai->rpgInfo.Reset();
         return false;
     }
@@ -938,4 +1426,101 @@ bool NewRpgGoChangeZoneAction::Execute(Event& /*event*/)
         return true;
 
     return MoveRandomNear(10.0f);
+}
+
+// ─── NewRpgPostQuestAction ───────────────────────────────────────────────────
+
+bool NewRpgPostQuestAction::Execute(Event& /*event*/)
+{
+    NewRpgInfo::PostQuest& pq = ai->rpgInfo.postQuest;
+    if (pq.kind == NewRpgInfo::PostQuest::NONE)
+        return false;
+
+    uint32 now = WorldTimer::getMSTime();
+    // A bot that fell to minimal activity skips this action until it is active again; the gap is
+    // not time spent in the routine, so end it rather than report it as a timeout.
+    if (WorldTimer::getMSTimeDiff(pq.lastT, now) > pq.lastWait + postQuestStallTime)
+        return EndPostQuest("inactive");
+    if (WorldTimer::getMSTimeDiff(pq.startT, now) >= postQuestMaxTime)
+        return EndPostQuest("timeout");
+
+    pq.lastT = now;
+    pq.lastWait = 0;
+    auto wait = [&](uint32 ms) { pq.lastWait = ms; return ForceToWait(ms); };
+
+    if (pq.routine != NewRpgInfo::PostQuest::PAUSE)
+    {
+        Creature* npc = ai->GetCreature(pq.target);
+        if (!npc || !npc->IsAlive())
+            return EndPostQuest("lost");
+
+        if (!pq.reachT)
+        {
+            float distance = bot->GetDistance(npc);
+            if (distance > INTERACTION_DISTANCE)
+            {
+                // The next run may come as late as the walk takes, which is not a throttle gap.
+                float speed = bot->GetSpeed(MOVE_RUN);
+                pq.lastWait = uint32(distance / (speed > 1.0f ? speed : 1.0f) * IN_MILLISECONDS);
+                // MoveWorldObjectTo refuses while the bot moves; a walk already under way is progress.
+                if (sServerFacade.isMoving(bot) || MoveWorldObjectTo(pq.target))
+                    return true;
+                return EndPostQuest("unreachable");
+            }
+
+            pq.reachT = now;
+            bot->SetSelectionGuid(pq.target);
+            bot->SetFacingToObject(npc);
+            // The legacy RPG sub-actions' own actions, called directly so the routine does not
+            // depend on the legacy "rpg target" value.
+            if (pq.routine == NewRpgInfo::PostQuest::VENDOR)
+                ai->DoSpecificAction("sell", Event("rpg action", "vendor"), true);
+            else
+                ai->DoSpecificAction("trainer", Event("rpg action", pq.target), true);
+            // Then whatever else the NPC offers, through the legacy sub-actions (#85).
+            HandOverToLegacyRpg(pq.target);
+            return wait(npcVisitTime);
+        }
+
+        uint32 stayed = WorldTimer::getMSTimeDiff(pq.reachT, now);
+        if (stayed < npcVisitTime)
+            return wait(npcVisitTime - stayed);
+        EndLegacyRpgHandOver();
+        return EndPostQuest("done");
+    }
+
+    if (!pq.reachT)
+    {
+        pq.reachT = now;
+        if (pq.kind == NewRpgInfo::PostQuest::TURN_IN)
+        {
+            static uint32 const emotes[] = { EMOTE_ONESHOT_TALK, EMOTE_ONESHOT_BOW, EMOTE_ONESHOT_WAVE,
+                EMOTE_ONESHOT_CHEER, EMOTE_ONESHOT_LAUGH };
+            bot->HandleEmoteCommand(emotes[urand(0, 4)]);
+        }
+        else if (WorldObject* giver = bot->GetMap()->GetWorldObject(pq.giver))
+            bot->SetFacingToObject(giver);
+        return wait(pq.pauseMs);
+    }
+
+    uint32 paused = WorldTimer::getMSTimeDiff(pq.reachT, now);
+    if (paused < pq.pauseMs)
+        return wait(pq.pauseMs - paused);
+
+    // After an accept the bot turns from the quest giver before it leaves.
+    if (pq.kind == NewRpgInfo::PostQuest::ACCEPT)
+        bot->SetFacingTo(bot->GetOrientation() + M_PI_F);
+
+    return EndPostQuest("done");
+}
+
+bool NewRpgPostQuestAction::EndPostQuest(char const* result)
+{
+    NewRpgInfo::PostQuest& pq = ai->rpgInfo.postQuest;
+    if (sPlayerbotAIConfig.logRpgQuestEvents)
+        sLog.outString("[New RPG quest] bot=%s event=post_quest_end kind=%s routine=%s result=%s duration_ms=%u",
+            bot->GetName(), PostQuestKindName(pq.kind), PostQuestRoutineName(pq.routine), result,
+            WorldTimer::getMSTimeDiff(pq.startT, WorldTimer::getMSTime()));
+    pq = NewRpgInfo::PostQuest{};
+    return true;
 }

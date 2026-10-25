@@ -21,7 +21,19 @@ enum NewRpgStatus : int
     RPG_TRAVEL_FLIGHT  = 6,
     RPG_REST           = 7,
     RPG_CHANGE_ZONE    = 8,
-    RPG_STATUS_END     = 9,
+    RPG_ERRAND         = 9,
+    RPG_GATHER         = 10,
+    RPG_EXPLORE        = 11,
+    RPG_STATUS_END     = 12,
+};
+
+// What sends a bot on an errand (lbrick/cmangos-dev#86).
+enum NewRpgErrandNeed : uint8
+{
+    ERRAND_NONE   = 0,
+    ERRAND_REPAIR = 1,
+    ERRAND_SELL   = 2,
+    ERRAND_AMMO   = 3,
 };
 
 using NewRpgStatusTransitionProb = std::vector<std::vector<int>>;
@@ -93,18 +105,94 @@ struct NewRpgInfo
             uint32 spell{0};
             uint32 castT{0};
             uint32 castTries{0};
+            // Flight legs only (lbrick/cmangos-dev#84): the TaxiPath the bot flies from the
+            // flight master at `from` to `pos`, when it took off, its failed tries, and when
+            // it last tried.
+            uint32 taxiPath{0};
+            uint32 takeoffT{0};
+            uint32 taxiTries{0};
+            uint32 taxiTryT{0};
         };
         std::vector<Waypoint> waypoints{};   // TravelNode multi-hop path; empty = direct
         bool waypointsBuilt{false};          // true after first TravelNode build — no rebuild
         std::vector<WorldPosition> rejectedTransportDocks{};  // BUG-2: cache bad destDock coords to skip on rebuild
         uint32 progressT{0};  // last completed waypoint or transport leg; the timeout counts from here
         bool noTeleportSpells{false};  // a teleport-spell leg failed: rebuild without them (#76)
+        uint32 reroutes{0};  // routes rebuilt after another action moved the bot to another map (#83)
+        // The waypoint the bot walks to and its nearest distance to it so far: closing 100 yards
+        // also counts as progress, so a long walk between waypoints does not time out (#83).
+        WorldPosition progressTarget{};
+        float progressDist{0.0f};
+        // Where and since when the bot has stayed in combat; the status update does not run in
+        // combat, so PlayerbotAI ends a trip held there (lbrick/cmangos-dev#84).
+        WorldPosition combatPos{};
+        uint32 combatT{0};
     };
     struct Idle
     {
     };
+    // RPG_GATHER (lbrick/cmangos-dev#87): the profession, the node or creature entry and its
+    // nearest spawn, when the bot arrived, and the gathering count when the status began.
+    struct Gather
+    {
+        uint32 skill{0};
+        int32 entry{0};
+        WorldPosition pos{};
+        uint32 arriveT{0};  // active time at arrival plus one; 0 until the bot arrives
+        uint32 gatheredAtStart{0};
+        uint32 nodesSeen{0};    // distinct ticks a node of the skill was in sight
+        uint32 nodesReached{0}; // times the bot stood at a node and made it the loot target
+    };
+    // RPG_EXPLORE (lbrick/cmangos-dev#87): an undiscovered area of the bot's map.
+    struct Explore
+    {
+        uint32 areaId{0};
+        WorldPosition pos{};
+    };
+    // RPG_ERRAND (lbrick/cmangos-dev#86): the need, the vendor's spawn point, and the vendor once
+    // the bot has reached it.
+    struct Errand
+    {
+        NewRpgErrandNeed need{ERRAND_NONE};
+        WorldPosition pos{};
+        ObjectGuid npc{};
+        uint32 reachT{0};
+    };
 
     uint32 startT{0};  // start timestamp of the current status
+    // MoveToward (#86): the active time when MoveFarTo began failing, and the status (its
+    // startT) it failed in.
+    uint32 moveFailT{0};
+    uint32 moveFailStartT{0};
+    // CountActiveTime (#86): active ms in the status whose startT is activeStartT.
+    uint32 activeMs{0};
+    uint32 activeStartT{0};
+    uint32 lastFullUpdateT{0};
+    // No errand starts before this time: the last one found no vendor or did not finish (#86).
+    uint32 errandRetryT{0};
+    // Herbs, ore and skins the legacy loot actions gathered, for the gather status's log (#87).
+    uint32 gathered{0};
+    // Gather and explore spots that failed or yielded nothing, with the time each cooldown ends
+    // (lbrick/cmangos-dev#87), as legacy travel puts a used destination on cooldown.
+    std::vector<std::pair<WorldPosition, uint32>> spotCooldowns;
+
+    // Post-quest routine (lbrick/cmangos-dev#45): a pause, or a vendor or trainer visit, after a
+    // quest accept or turn-in. Held beside the status, so a status change does not cut it short.
+    struct PostQuest
+    {
+        enum Kind : uint8 { NONE = 0, ACCEPT = 1, TURN_IN = 2 };
+        enum Routine : uint8 { PAUSE = 0, VENDOR = 1, TRAINER = 2 };
+        Kind kind{NONE};
+        Routine routine{PAUSE};
+        ObjectGuid giver{};
+        ObjectGuid target{};   // vendor or trainer
+        uint32 startT{0};
+        uint32 pauseMs{0};
+        uint32 reachT{0};      // pause begun, or vendor or trainer reached; 0 = not yet
+        uint32 lastT{0};       // last run of the routine's action (start time before the first)
+        uint32 lastWait{0};    // wait that run asked the engine for
+    };
+    PostQuest postQuest;
 
     // MOVE_FAR
     float nearestMoveFarDis{FLT_MAX};
@@ -136,6 +224,11 @@ struct NewRpgInfo
     const char* moveFarStep{"none"};
     bool moveFarResult{false};
     uint32 crossMapStartT{0};
+    // The change-zone trip under way (its startT) and why it ended, set by the exit that ends it.
+    // PlayerbotAI::LogChangeZoneEnd logs one change_zone_ended line per trip, with reason
+    // "unlogged" for an exit that set none (AiPlayerbot.LogRpgTravelEvents, lbrick/cmangos-dev#83).
+    uint32 tripStartT{0};
+    const char* tripEndReason{nullptr};
     // END MOVE_FAR
 
     using RpgData = std::variant<
@@ -147,12 +240,25 @@ struct NewRpgInfo
         DoQuest,
         Rest,
         TravelFlight,
-        ChangeZone
+        ChangeZone,
+        Errand,
+        Gather,
+        Explore
     >;
     RpgData data;
 
     NewRpgStatus GetStatus();
+    // The position the current status travels to, or an empty position (lbrick/cmangos-dev#90).
+    WorldPosition GetDestination();
+    // When the minimal-update route was last built (#90), to rebuild it at most once a minute.
+    uint32 minimalRouteT{0};
     bool HasStatusPersisted(uint32 maxDuration);
+    // Active time in the current status: the time between full AI updates less than
+    // activeGapLimit apart. A bot with no real player near it runs minimal updates, which skip
+    // every new RPG action, so a wall-clock limit ended errands that never got to run
+    // (lbrick/cmangos-dev#86). Errands time out on active time, under a wall-clock ceiling.
+    void CountActiveTime(uint32 now);
+    bool HasStatusBeenActive(uint32 maxDuration);
     void ChangeToGoGrind(WorldPosition pos);
     void ChangeToGoCamp(WorldPosition pos);
     void ChangeToWanderNpc();
@@ -161,6 +267,9 @@ struct NewRpgInfo
     void ChangeToTravelFlight(ObjectGuid fromFlightMaster, std::vector<uint32> path);
     void ChangeToRest();
     void ChangeToChangeZone(WorldPosition dest);
+    void ChangeToErrand(NewRpgErrandNeed need, WorldPosition pos);
+    void ChangeToGather(uint32 skill, int32 entry, WorldPosition pos);
+    void ChangeToExplore(uint32 areaId, WorldPosition pos);
     void ChangeToIdle();
     bool CanChangeTo(NewRpgStatus status);
     void Reset();

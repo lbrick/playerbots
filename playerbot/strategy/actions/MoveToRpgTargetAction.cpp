@@ -220,6 +220,11 @@ bool MoveToRpgTargetAction::Execute(Event& event)
 
 bool MoveToRpgTargetAction::isUseful()
 {
+    // A target picked while new RPG was idle no longer pulls the bot once new RPG has sent it
+    // somewhere (lbrick/cmangos-dev#47).
+    if (AI_VALUE(bool, "new rpg macro active"))
+        return false;
+
     GuidPosition guidP = AI_VALUE(GuidPosition, "rpg target");
     WorldPosition oldPosition = guidP;
 

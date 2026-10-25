@@ -33,4 +33,12 @@ protected:
     static constexpr uint32 statusUpdateInterval = 5 * 1000;
 };
 
+// Active while a post-quest routine runs (lbrick/cmangos-dev#45).
+class NewRpgPostQuestTrigger : public Trigger
+{
+public:
+    NewRpgPostQuestTrigger(PlayerbotAI* ai) : Trigger(ai, "new rpg post quest") {}
+    bool IsActive() override;
+};
+
 } // namespace ai

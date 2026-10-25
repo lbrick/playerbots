@@ -268,12 +268,16 @@ namespace ai
 
             creators["go grind status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GO_GRIND); };
             creators["go camp status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GO_CAMP); };
+            creators["errand status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_ERRAND); };
+            creators["gather status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_GATHER); };
+            creators["explore status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_EXPLORE); };
             creators["wander random status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_WANDER_RANDOM); };
             creators["wander npc status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_WANDER_NPC); };
             creators["do quest status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_DO_QUEST); };
             creators["travel flight status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_TRAVEL_FLIGHT); };
             creators["change zone status"] = [](PlayerbotAI* ai) { return new NewRpgStatusTrigger(ai, RPG_CHANGE_ZONE); };
             creators["new rpg status due"] = [](PlayerbotAI* ai) { return new NewRpgStatusDueTrigger(ai); };
+            creators["new rpg post quest"] = [](PlayerbotAI* ai) { return new NewRpgPostQuestTrigger(ai); };
             creators["rpg"] = [](PlayerbotAI* ai) { return new RpgTrigger(ai); };
             creators["rpg wander"] = [](PlayerbotAI* ai) { return new RpgWanderTrigger(ai); };
             creators["rpg taxi"] = [](PlayerbotAI* ai) { return new RpgTaxiTrigger(ai); };

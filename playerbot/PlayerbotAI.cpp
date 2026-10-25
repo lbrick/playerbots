@@ -322,6 +322,9 @@ PlayerbotAI::PlayerbotAI(Player* bot) :
 
 PlayerbotAI::~PlayerbotAI()
 {
+    if (bot)
+        LogChangeZoneEnd(true);
+
     for (uint8 i = 0 ; i < (uint8)BotState::BOT_STATE_ALL; i++)
     {
         if (engines[i])
@@ -336,6 +339,9 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 {
     if (!bot->IsInWorld() || bot->IsBeingTeleported())
         return;
+
+    CheckChangeZoneCombatStall();
+    LogChangeZoneEnd();
 
     if (sPlayerbotAIConfig.changeZoneSampleSeconds)
         LogChangeZoneSample();
@@ -707,12 +713,73 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     }
 }
 
-// One line per ChangeZoneSampleSeconds for a bot on a change-zone trip, to find where slow
-// trips spend their time (lbrick/cmangos-dev#74).
-void PlayerbotAI::LogChangeZoneSample()
+void PlayerbotAI::LogChangeZoneEnd(bool logout)
+{
+    if (!sPlayerbotAIConfig.logRpgTravelEvents)
+        return;
+
+    bool onTrip = !logout && rpgInfo.GetStatus() == RPG_CHANGE_ZONE;
+    if (onTrip && rpgInfo.startT == rpgInfo.tripStartT)
+        return;
+
+    if (rpgInfo.tripStartT)
+    {
+        const char* reason = logout ? "logout" : (rpgInfo.tripEndReason ? rpgInfo.tripEndReason : "unlogged");
+        sLog.outString("[New RPG travel] bot=%s event=change_zone_ended reason=%s trip_min=%u new_status=%d",
+            bot->GetName(), reason, WorldTimer::getMSTimeDiff(rpgInfo.tripStartT, WorldTimer::getMSTime()) / 60000,
+            logout ? -1 : (int)rpgInfo.GetStatus());
+    }
+    rpgInfo.tripStartT = onTrip ? rpgInfo.startT : 0;
+    rpgInfo.tripEndReason = nullptr;
+}
+
+void PlayerbotAI::CheckChangeZoneCombatStall()
 {
     auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&rpgInfo.data);
     if (!cz)
+        return;
+
+    if (!bot->IsInCombat())
+    {
+        cz->combatT = 0;
+        return;
+    }
+
+    // Combat that moves the bot on (fighting along the road) is not a stall.
+    uint32 now = WorldTimer::getMSTime();
+    WorldPosition here(bot);
+    if (!cz->combatT || here.getMapId() != cz->combatPos.getMapId() || here.distance(cz->combatPos) > 30.0f)
+    {
+        cz->combatPos = here;
+        cz->combatT = now;
+        return;
+    }
+
+    if (WorldTimer::getMSTimeDiff(cz->combatT, now) < 10 * MINUTE * IN_MILLISECONDS)
+        return;
+
+    if (sPlayerbotAIConfig.logRpgTravelEvents)
+        sLog.outString("[New RPG travel] bot=%s event=change_zone_combat_stalled from=%u:%.1f,%.1f,%.1f trip_min=%u",
+            bot->GetName(), here.getMapId(), here.getX(), here.getY(), here.getZ(),
+            WorldTimer::getMSTimeDiff(rpgInfo.startT, now) / 60000);
+    rpgInfo.tripEndReason = "combat_stalled";
+    rpgInfo.ChangeToIdle();
+}
+
+// One line per ChangeZoneSampleSeconds for a bot on a change-zone trip, to find where slow
+// trips spend their time (lbrick/cmangos-dev#74), and for errand, gather and explore statuses,
+// whose timeouts showed bots standing still with a path to follow (lbrick/cmangos-dev#86, #87).
+void PlayerbotAI::LogChangeZoneSample()
+{
+    auto* cz = std::get_if<NewRpgInfo::ChangeZone>(&rpgInfo.data);
+    WorldPosition target;
+    if (auto* errand = std::get_if<NewRpgInfo::Errand>(&rpgInfo.data))
+        target = errand->pos;
+    else if (auto* gather = std::get_if<NewRpgInfo::Gather>(&rpgInfo.data))
+        target = gather->pos;
+    else if (auto* explore = std::get_if<NewRpgInfo::Explore>(&rpgInfo.data))
+        target = explore->pos;
+    if (!cz && target == WorldPosition())
     {
         czSampleT = 0;
         return;
@@ -734,20 +801,20 @@ void PlayerbotAI::LogChangeZoneSample()
     if (since < sPlayerbotAIConfig.changeZoneSampleSeconds * IN_MILLISECONDS)
         return;
 
-    WorldPosition next = cz->waypoints.empty() ? cz->dest : cz->waypoints.front().pos;
-    bool leg = !cz->waypoints.empty() && cz->waypoints.front().teleport;
+    WorldPosition next = !cz ? target : (cz->waypoints.empty() ? cz->dest : cz->waypoints.front().pos);
+    bool leg = cz && !cz->waypoints.empty() && cz->waypoints.front().teleport;
     float distNext = next.getMapId() == pos.getMapId() ? pos.distance(next) : -1.0f;
     float moved = czSamplePos.getMapId() == pos.getMapId() ? pos.fDist(czSamplePos) : -1.0f;
     MotionMaster* mm = bot->GetMotionMaster();
 
-    sLog.outString("[New RPG sample] bot=%s pos=%u:%.1f,%.1f,%.1f next=%u:%.1f,%.1f,%.1f dist_next=%.0f moved=%.0f since_s=%u internal=%u minimal=%u combat=%u moving=%u mgen=%u dead=%u taxi=%u leg=%u waypoints_left=%u movefar_calls=%u movefar=%s:%u last_nc=\"%s\"",
+    sLog.outString("[New RPG sample] bot=%s pos=%u:%.1f,%.1f,%.1f next=%u:%.1f,%.1f,%.1f dist_next=%.0f moved=%.0f since_s=%u internal=%u minimal=%u combat=%u moving=%u mgen=%u dead=%u taxi=%u leg=%u waypoints_left=%u movefar_calls=%u movefar=%s:%u last_nc=\"%s\" status=%u",
         bot->GetName(), pos.getMapId(), pos.getX(), pos.getY(), pos.getZ(),
         next.getMapId(), next.getX(), next.getY(), next.getZ(), distNext, moved, since / IN_MILLISECONDS,
         czInternalRuns, czMinimalRuns, sServerFacade.IsInCombat(bot) ? 1u : 0u, bot->IsStopped() ? 0u : 1u,
         mm->empty() ? 0u : uint32(mm->GetCurrentMovementGeneratorType()), sServerFacade.UnitIsDead(bot) ? 1u : 0u,
-        bot->IsTaxiFlying() ? 1u : 0u, leg ? 1u : 0u, uint32(cz->waypoints.size()),
+        bot->IsTaxiFlying() ? 1u : 0u, leg ? 1u : 0u, cz ? uint32(cz->waypoints.size()) : 0u,
         rpgInfo.moveFarCalls, rpgInfo.moveFarStep, rpgInfo.moveFarResult ? 1u : 0u,
-        GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT).c_str());
+        GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT).c_str(), uint32(rpgInfo.GetStatus()));
 
     // The five actions tried most since the last sample, as name:executed/tried/delay_s, where
     // delay_s is the AI delay the executed runs set in total.
@@ -1529,6 +1596,10 @@ void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
 {
     if (bot->IsBeingTeleported() || !bot->IsInWorld())
         return;
+
+    // Only full updates run new RPG actions; the status clocks that time out on activity count them.
+    if (!minimal)
+        rpgInfo.CountActiveTime(WorldTimer::getMSTime());
 
     aiTick++;
 
@@ -2574,6 +2645,11 @@ void PlayerbotAI::DoNextAction(bool min)
 
     if (minimal)
     {
+        // An inactive bot with a new RPG destination keeps travelling: MinimalMove walks the
+        // stored route, which this fills with the full route (lbrick/cmangos-dev#90).
+        if (rpgInfo.GetStatus() != RPG_IDLE && HasStrategy("new rpg", BotState::BOT_STATE_NON_COMBAT))
+            DoSpecificAction("new rpg minimal route", Event(), true);
+
         if (!MovementAction::MinimalMove(this) && !bot->isAFK() && !bot->InBattleGround() && !HasRealPlayerMaster())
             bot->ToggleAFK();
 

@@ -11,6 +11,30 @@ bool NewRpgInfo::HasStatusPersisted(uint32 maxDuration)
     return WorldTimer::getMSTimeDiff(startT, WorldTimer::getMSTime()) > maxDuration;
 }
 
+static const uint32 activeGapLimit = 5 * IN_MILLISECONDS;
+
+void NewRpgInfo::CountActiveTime(uint32 now)
+{
+    if (activeStartT != startT)
+    {
+        activeStartT = startT;
+        activeMs = 0;
+        lastFullUpdateT = 0;
+    }
+    if (lastFullUpdateT)
+    {
+        uint32 gap = WorldTimer::getMSTimeDiff(lastFullUpdateT, now);
+        if (gap < activeGapLimit)
+            activeMs += gap;
+    }
+    lastFullUpdateT = now;
+}
+
+bool NewRpgInfo::HasStatusBeenActive(uint32 maxDuration)
+{
+    return activeStartT == startT && activeMs > maxDuration;
+}
+
 void NewRpgInfo::ChangeToGoGrind(WorldPosition pos)
 {
     startT = WorldTimer::getMSTime();
@@ -67,6 +91,35 @@ void NewRpgInfo::ChangeToChangeZone(WorldPosition dest)
     std::get<ChangeZone>(data).progressT = startT;
 }
 
+void NewRpgInfo::ChangeToErrand(NewRpgErrandNeed need, WorldPosition pos)
+{
+    startT = WorldTimer::getMSTime();
+    Errand errand;
+    errand.need = need;
+    errand.pos = pos;
+    data = errand;
+}
+
+void NewRpgInfo::ChangeToGather(uint32 skill, int32 entry, WorldPosition pos)
+{
+    startT = WorldTimer::getMSTime();
+    Gather g;
+    g.skill = skill;
+    g.entry = entry;
+    g.pos = pos;
+    g.gatheredAtStart = gathered;
+    data = g;
+}
+
+void NewRpgInfo::ChangeToExplore(uint32 areaId, WorldPosition pos)
+{
+    startT = WorldTimer::getMSTime();
+    Explore e;
+    e.areaId = areaId;
+    e.pos = pos;
+    data = e;
+}
+
 void NewRpgInfo::ChangeToIdle()
 {
     startT = WorldTimer::getMSTime();
@@ -82,6 +135,7 @@ void NewRpgInfo::Reset()
 {
     data   = Idle{};
     startT = WorldTimer::getMSTime();
+    postQuest = PostQuest{};
 }
 
 void NewRpgInfo::SetMoveFarTo(WorldPosition pos)
@@ -90,6 +144,25 @@ void NewRpgInfo::SetMoveFarTo(WorldPosition pos)
     stuckTs           = 0;
     stuckAttempts     = 0;
     moveFarPos        = pos;
+}
+
+WorldPosition NewRpgInfo::GetDestination()
+{
+    if (auto* d = std::get_if<GoGrind>(&data))
+        return d->pos;
+    if (auto* d = std::get_if<GoCamp>(&data))
+        return d->pos;
+    if (auto* d = std::get_if<DoQuest>(&data))
+        return d->pos;
+    if (auto* d = std::get_if<ChangeZone>(&data))
+        return d->dest;
+    if (auto* d = std::get_if<Errand>(&data))
+        return d->pos;
+    if (auto* d = std::get_if<Gather>(&data))
+        return d->arriveT ? WorldPosition() : d->pos;
+    if (auto* d = std::get_if<Explore>(&data))
+        return d->pos;
+    return WorldPosition();
 }
 
 NewRpgStatus NewRpgInfo::GetStatus()
@@ -105,6 +178,9 @@ NewRpgStatus NewRpgInfo::GetStatus()
         if constexpr (std::is_same_v<T, DoQuest>)       return RPG_DO_QUEST;
         if constexpr (std::is_same_v<T, TravelFlight>)  return RPG_TRAVEL_FLIGHT;
         if constexpr (std::is_same_v<T, ChangeZone>)    return RPG_CHANGE_ZONE;
+        if constexpr (std::is_same_v<T, Errand>)        return RPG_ERRAND;
+        if constexpr (std::is_same_v<T, Gather>)        return RPG_GATHER;
+        if constexpr (std::is_same_v<T, Explore>)       return RPG_EXPLORE;
         return RPG_IDLE;
     }, data);
 }

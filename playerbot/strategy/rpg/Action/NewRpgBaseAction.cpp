@@ -16,6 +16,9 @@
 #include "playerbot/strategy/values/TravelValues.h"
 #include "playerbot/TravelMgr.h"
 #include "playerbot/TravelNode.h"
+#include "Grids/GridNotifiers.h"
+#include "Grids/GridNotifiersImpl.h"
+#include "Grids/CellImpl.h"
 #include <algorithm>
 #include <functional>
 #include <iomanip>
@@ -37,7 +40,7 @@ static WorldObject* GetWorldObjectByGuid(PlayerbotAI* ai, Player* bot, ObjectGui
 static char const* StatusName(NewRpgStatus status)
 {
     static char const* const names[] = { "idle", "go_grind", "go_camp", "wander_random",
-        "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "none" };
+        "wander_npc", "do_quest", "travel_flight", "rest", "change_zone", "errand", "gather", "explore", "none" };
     return names[status <= RPG_STATUS_END ? status : RPG_STATUS_END];
 }
 
@@ -76,6 +79,11 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 
     if (dest != ai->rpgInfo.moveFarPos)
         ai->rpgInfo.SetMoveFarTo(dest);
+
+    // Wait out an open trade, a crafting cast or a group that is not ready, as legacy travel and
+    // RPG do (lbrick/cmangos-dev#90).
+    if (!AI_VALUE(bool, "can move around"))
+        return step("cannot_move", true);
 
     // Let committed movement finish before recomputing path.
     // If bot is still moving toward its last waypoint, wait.
@@ -429,6 +437,8 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
         return false;
 
     bool goFailed = false;
+    bool accepted = false;
+    bool turnedIn = false;
     bot->PrepareQuestMenu(guid);
     QuestMenu& menu = bot->GetPlayerMenu()->GetQuestMenu();
     if (!menu.MenuItemCount())
@@ -480,6 +490,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
                 BroadcastHelper::BroadcastQuestAccepted(ai, bot, quest);
                 ai->rpgStatistic.questAccepted++;
                 LogQuestEvent("accepted", item.m_qId, guid, object);
+                accepted = true;
                 NEWRPG_LOG("[New RPG] %s accept quest %u", bot->GetName(), quest->GetQuestId());
             }
         }
@@ -492,6 +503,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
             BroadcastHelper::BroadcastQuestTurnedIn(ai, bot, quest);
             ai->rpgStatistic.questRewarded++;
             LogQuestEvent("turned_in", quest->GetQuestId(), guid, object);
+            turnedIn = true;
             NEWRPG_LOG("[New RPG] %s turned in quest %u", bot->GetName(), quest->GetQuestId());
         }
     }
@@ -501,7 +513,77 @@ bool NewRpgBaseAction::InteractWithNpcOrGoForQuest(ObjectGuid guid)
     else
         ai->questGiverBackoff.erase(guid.GetRawValue());
 
+    if (turnedIn || accepted)
+        StartPostQuest(turnedIn, guid);
+
     return true;
+}
+
+char const* NewRpgBaseAction::PostQuestKindName(uint8 kind)
+{
+    switch (kind)
+    {
+        case NewRpgInfo::PostQuest::ACCEPT:  return "accept";
+        case NewRpgInfo::PostQuest::TURN_IN: return "turn_in";
+        default:                             return "none";
+    }
+}
+
+char const* NewRpgBaseAction::PostQuestRoutineName(uint8 routine)
+{
+    switch (routine)
+    {
+        case NewRpgInfo::PostQuest::VENDOR:  return "vendor";
+        case NewRpgInfo::PostQuest::TRAINER: return "trainer";
+        default:                             return "pause";
+    }
+}
+
+// After a turn-in: the nearest vendor within 50 yd, else the nearest trainer that can teach the
+// bot, else a 5-15 s pause with an emote. After an accept: a 2-5 s pause facing the giver, then
+// the bot turns away. NewRpgPostQuestAction runs it (lbrick/cmangos-dev#45).
+void NewRpgBaseAction::StartPostQuest(bool turnedIn, ObjectGuid giver)
+{
+    NewRpgInfo::PostQuest pq;
+    pq.kind = turnedIn ? NewRpgInfo::PostQuest::TURN_IN : NewRpgInfo::PostQuest::ACCEPT;
+    pq.giver = giver;
+    pq.startT = WorldTimer::getMSTime();
+    pq.lastT = pq.startT;
+
+    Creature* vendor = nullptr;
+    Creature* trainer = nullptr;
+    if (turnedIn)
+    {
+        for (ObjectGuid const& npcGuid : AI_VALUE(std::list<ObjectGuid>, "possible rpg targets"))
+        {
+            Creature* npc = ai->GetCreature(npcGuid);
+            if (!npc || !npc->IsAlive() || !bot->CanInteract(npc))
+                continue;
+            float dist = bot->GetDistance(npc);
+            if (dist > postQuestNpcRange)
+                continue;
+            if (npc->isVendor() && (!vendor || dist < bot->GetDistance(vendor)))
+                vendor = npc;
+            else if (npc->isTrainer() && npc->IsTrainerOf(bot, false) && (!trainer || dist < bot->GetDistance(trainer)))
+                trainer = npc;
+        }
+    }
+
+    Creature* npc = vendor ? vendor : trainer;
+    if (npc)
+    {
+        pq.routine = vendor ? NewRpgInfo::PostQuest::VENDOR : NewRpgInfo::PostQuest::TRAINER;
+        pq.target = npc->GetObjectGuid();
+    }
+    else
+        pq.pauseMs = turnedIn ? urand(5000, 15000) : urand(2000, 5000);
+
+    ai->rpgInfo.postQuest = pq;
+
+    if (sPlayerbotAIConfig.logRpgQuestEvents)
+        sLog.outString("[New RPG quest] bot=%s event=post_quest_start kind=%s routine=%s target=%u distance=%.1f pause_ms=%u",
+            bot->GetName(), PostQuestKindName(pq.kind), PostQuestRoutineName(pq.routine),
+            npc ? npc->GetEntry() : 0, npc ? bot->GetDistance(npc) : 0.0f, pq.pauseMs);
 }
 
 // One server log line per quest accept, failed accept, turn-in or abandoned quest giver,
@@ -526,6 +608,383 @@ void NewRpgBaseAction::LogQuestEvent(char const* event, uint32 questId, ObjectGu
 
 // One server log line per transport leg built or rejected, transport teleport and zone
 // arrival, when AiPlayerbot.LogRpgTravelEvents is on.
+std::string NewRpgBaseAction::HandOverToLegacyRpg(ObjectGuid target)
+{
+    WorldObject* object = bot->GetMap()->GetWorldObject(target);
+    if (!object)
+        return "";
+
+    SET_AI_VALUE(GuidPosition, "rpg target", GuidPosition(object));
+    SET_AI_VALUE(std::string, "next rpg action", "");
+    // The legacy "rpg" action weighs every useful sub-action for the target and stores its pick.
+    ai->DoSpecificAction("rpg", Event("new rpg"), true);
+    std::string next = AI_VALUE(std::string, "next rpg action");
+    bool done = !next.empty() && next != "rpg" && ai->DoSpecificAction(next, Event("new rpg"), true);
+
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=npc_handover entry=%u action=%s done=%d",
+            bot->GetName(), object->GetEntry(), next.empty() ? "none" : next.c_str(), done ? 1 : 0);
+    return done ? next : "";
+}
+
+void NewRpgBaseAction::EndLegacyRpgHandOver()
+{
+    RESET_AI_VALUE(GuidPosition, "rpg target");
+    SET_AI_VALUE(std::string, "next rpg action", "");
+}
+
+// ─── Errands (lbrick/cmangos-dev#86) ─────────────────────────────────────────
+
+static bool IsInCapitalCity(Player* bot);
+static bool IsInTavern(Player* bot);
+
+static char const* ErrandNeedName(NewRpgErrandNeed need)
+{
+    switch (need)
+    {
+        case ERRAND_REPAIR: return "repair";
+        case ERRAND_SELL:   return "sell";
+        case ERRAND_AMMO:   return "ammo";
+        default:            return "none";
+    }
+}
+
+uint32 NewRpgBaseAction::LowestDurabilityPct()
+{
+    uint32 lowest = 100;
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+    {
+        Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+        if (!item)
+            continue;
+        uint32 maxDurability = item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY);
+        if (!maxDurability)
+            continue;
+        uint32 pct = item->GetUInt32Value(ITEM_FIELD_DURABILITY) * 100 / maxDurability;
+        if (pct < lowest)
+            lowest = pct;
+    }
+    return lowest;
+}
+
+uint32 NewRpgBaseAction::FreeBagSlots()
+{
+    uint32 free = 0;
+    for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        if (!bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            ++free;
+    // Plain bags only: a quiver or soul bag cannot take loot.
+    for (uint8 slot = INVENTORY_SLOT_BAG_START; slot < INVENTORY_SLOT_BAG_END; ++slot)
+    {
+        Bag* bag = dynamic_cast<Bag*>(bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot));
+        if (bag && bag->GetProto()->Class == ITEM_CLASS_CONTAINER && bag->GetProto()->SubClass == ITEM_SUBCLASS_CONTAINER)
+            free += bag->GetFreeSlots();
+    }
+    return free;
+}
+
+NewRpgErrandNeed NewRpgBaseAction::CurrentErrandNeed()
+{
+    if (LowestDurabilityPct() < 25)
+        return ERRAND_REPAIR;
+    if (FreeBagSlots() < 2)
+        return ERRAND_SELL;
+    if (bot->getClass() == CLASS_HUNTER)
+    {
+        Item* ranged = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED);
+        uint32 sub = ranged ? ranged->GetProto()->SubClass : 0;
+        if (ranged && (sub == ITEM_SUBCLASS_WEAPON_BOW || sub == ITEM_SUBCLASS_WEAPON_GUN || sub == ITEM_SUBCLASS_WEAPON_CROSSBOW))
+        {
+            uint32 ammo = bot->GetUInt32Value(PLAYER_AMMO_ID);
+            if (!ammo || bot->GetItemCount(ammo) < 100)
+                return ERRAND_AMMO;
+        }
+    }
+    return ERRAND_NONE;
+}
+
+// The nearest repairer (for repair) or vendor (otherwise) on the bot's map within 1,500 yards,
+// from the legacy travel destinations, that is not hostile to the bot.
+bool NewRpgBaseAction::SelectErrandDestination(NewRpgErrandNeed need, WorldPosition& out)
+{
+    PlayerTravelInfo info(bot);
+    uint32 purpose = (uint32)(need == ERRAND_REPAIR ? TravelDestinationPurpose::Repair : TravelDestinationPurpose::Vendor);
+    WorldPosition botPos(bot);
+    float best = FLT_MAX;
+    for (TravelDestination* dest : sTravelMgr.GetDestinations(info, purpose, {}, true, 1500.0f))
+    {
+        auto* entryDest = dynamic_cast<EntryTravelDestination*>(dest);
+        if (!entryDest || entryDest->GetEntry() <= 0)
+            continue;
+        if (need == ERRAND_REPAIR && !entryDest->HasNpcFlag(UNIT_NPC_FLAG_REPAIR))
+            continue;
+        if (GuidPosition(HIGHGUID_UNIT, entryDest->GetEntry()).IsHostileTo(bot))
+            continue;
+        WorldPosition* point = dest->GetClosestPoint(botPos);
+        if (!point || point->getMapId() != botPos.getMapId())
+            continue;
+        float distance = botPos.distance(*point);
+        if (distance < best)
+        {
+            best = distance;
+            out = *point;
+        }
+    }
+    return best < FLT_MAX;
+}
+
+bool NewRpgBaseAction::TryStartErrand()
+{
+    if (!sPlayerbotAIConfig.RpgStatusProbWeight[RPG_ERRAND])
+        return false;
+    uint32 now = WorldTimer::getMSTime();
+    if (ai->rpgInfo.errandRetryT && int32(ai->rpgInfo.errandRetryT - now) > 0)
+        return false;
+
+    NewRpgErrandNeed need = CurrentErrandNeed();
+    if (need == ERRAND_NONE)
+        return false;
+
+    WorldPosition pos;
+    if (!SelectErrandDestination(need, pos))
+    {
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+            sLog.outString("[New RPG status] bot=%s event=errand_skipped need=%s", bot->GetName(), ErrandNeedName(need));
+        ai->rpgInfo.errandRetryT = now + 20 * MINUTE * IN_MILLISECONDS;
+        return false;
+    }
+
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+    {
+        sLog.outString("[New RPG status] bot=%s status=%s zone=%u area=%u resting=%u capital=%u tavern=%u grind_target=%u",
+            bot->GetName(), StatusName(RPG_ERRAND),
+            bot->GetZoneId(), bot->GetAreaId(), (uint32)bot->GetRestType(),
+            IsInCapitalCity(bot) ? 1u : 0u, IsInTavern(bot) ? 1u : 0u,
+            ai->GetUnit(AI_VALUE(ObjectGuid, "grind target")) ? 1u : 0u);
+        sLog.outString("[New RPG status] bot=%s event=errand_start need=%s dist=%.0f durability=%u free_slots=%u",
+            bot->GetName(), ErrandNeedName(need), WorldPosition(bot).distance(pos), LowestDurabilityPct(), FreeBagSlots());
+    }
+    ai->rpgInfo.ChangeToErrand(need, pos);
+    return true;
+}
+
+NewRpgBaseAction::MoveResult NewRpgBaseAction::MoveToward(WorldPosition dest, float arriveRange)
+{
+    WorldPosition here(bot);
+    if (here.getMapId() == dest.getMapId() && here.distance(dest) <= arriveRange)
+        return MoveResult::Arrived;
+
+    NewRpgInfo& info = ai->rpgInfo;
+    if (sServerFacade.isMoving(bot) || MoveFarTo(dest))
+    {
+        info.moveFailT = 0;
+        return MoveResult::Moving;
+    }
+
+    std::string step = info.moveFarStep;
+    bool hopeless = step == "abandoned" || step == "cross_map" || step == "no_dest";
+    if (!hopeless)
+    {
+        // Counted in active time, plus one so that 0 stays "not failing". Before the active
+        // clock has caught up with a new status, nothing is counted yet.
+        if (info.activeStartT != info.startT)
+            return MoveResult::Moving;
+        if (!info.moveFailT || info.moveFailStartT != info.startT)
+        {
+            info.moveFailT = info.activeMs + 1;
+            info.moveFailStartT = info.startT;
+        }
+        if (info.activeMs + 1 - info.moveFailT < moveGiveUpTime)
+            return MoveResult::Moving;
+    }
+
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=move_gave_up status=%s step=%s distance=%.0f",
+            bot->GetName(), StatusName(info.GetStatus()), step.c_str(),
+            here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f);
+    info.moveFailT = 0;
+    return MoveResult::Failed;
+}
+
+Creature* NewRpgBaseAction::FindNearestNpc(uint32 npcFlag, float range)
+{
+    std::list<Unit*> units;
+    MaNGOS::AnyUnitInObjectRangeCheck check(bot, range);
+    MaNGOS::UnitListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(units, check);
+    Cell::VisitAllObjects(bot, searcher, range);
+
+    Creature* nearest = nullptr;
+    float nearestDist = range;
+    for (Unit* unit : units)
+    {
+        if (unit->GetTypeId() != TYPEID_UNIT || !unit->IsAlive() || !unit->HasFlag(UNIT_NPC_FLAGS, npcFlag))
+            continue;
+        if (GuidPosition(unit).IsHostileTo(bot))
+            continue;
+        float dist = bot->GetDistance(unit);
+        if (dist <= nearestDist)
+        {
+            nearest = static_cast<Creature*>(unit);
+            nearestDist = dist;
+        }
+    }
+    return nearest;
+}
+
+std::string NewRpgBaseAction::TimeoutDetail(WorldPosition const& dest)
+{
+    NewRpgInfo const& info = ai->rpgInfo;
+    WorldPosition here(bot);
+    char buf[160];
+    snprintf(buf, sizeof(buf), " left=%.0f step=%s move_calls=%u combat=%d moving=%d",
+        here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f, info.moveFarStep, info.moveFarCalls,
+        bot->IsInCombat() ? 1 : 0, sServerFacade.isMoving(bot) ? 1 : 0);
+    return std::string(buf) + " last_nc=\"" + ai->GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT) +
+        "\" last_c=\"" + ai->GetLastExecutedActionName(BotState::BOT_STATE_COMBAT) + "\"";
+}
+
+bool NewRpgBaseAction::EndErrand(char const* reason)
+{
+    auto* errand = std::get_if<NewRpgInfo::Errand>(&ai->rpgInfo.data);
+    uint32 now = WorldTimer::getMSTime();
+    if (errand && sPlayerbotAIConfig.logRpgStatusEvents)
+    {
+        std::string detail = std::string(reason) == "timeout" ? TimeoutDetail(errand->pos) : "";
+        sLog.outString("[New RPG status] bot=%s event=errand_end reason=%s need=%s min=%u active_min=%u durability=%u free_slots=%u%s",
+            bot->GetName(), reason, ErrandNeedName(errand->need),
+            WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, now) / 60000, ai->rpgInfo.activeMs / 60000,
+            LowestDurabilityPct(), FreeBagSlots(), detail.c_str());
+    }
+    EndLegacyRpgHandOver();
+    // A need the visit did not meet (unsellable items, no money) must not start errand after errand.
+    bool done = std::string(reason) == "done";
+    ai->rpgInfo.errandRetryT = now + (done ? 10 : 20) * MINUTE * IN_MILLISECONDS;
+    ai->rpgInfo.ChangeToIdle();
+    return true;
+}
+
+// ─── Gather and explore (lbrick/cmangos-dev#87) ──────────────────────────────
+
+// One of the bot's gathering professions at random, then a node or creature its skill can use on
+// the bot's map, 100 to 1,500 yards away: one of the five nearest, so bots do not all pick one.
+bool NewRpgBaseAction::SelectGatherDestination()
+{
+    std::vector<std::pair<uint32, TravelDestinationPurpose>> skills;
+    if (ai->HasSkill(SKILL_HERBALISM))
+        skills.push_back({SKILL_HERBALISM, TravelDestinationPurpose::GatherHerbalism});
+    if (ai->HasSkill(SKILL_MINING))
+        skills.push_back({SKILL_MINING, TravelDestinationPurpose::GatherMining});
+    if (ai->HasSkill(SKILL_SKINNING))
+        skills.push_back({SKILL_SKINNING, TravelDestinationPurpose::GatherSkinning});
+    if (skills.empty())
+        return false;
+
+    auto const& [skill, purpose] = skills[urand(0, skills.size() - 1)];
+    PlayerTravelInfo info(bot);
+    WorldPosition botPos(bot);
+    std::vector<std::tuple<float, int32, WorldPosition>> candidates;
+    for (TravelDestination* dest : sTravelMgr.GetDestinations(info, (uint32)purpose, {}, true, 1500.0f))
+    {
+        WorldPosition* point = dest->GetClosestPoint(botPos);
+        if (!point || point->getMapId() != botPos.getMapId() || IsPosBad(*point) || SpotOnCooldown(*point))
+            continue;
+        float distance = botPos.distance(*point);
+        if (distance < 100.0f)
+            continue;
+        candidates.push_back({distance, dest->GetEntry(), *point});
+    }
+    if (candidates.empty())
+        return false;
+
+    std::sort(candidates.begin(), candidates.end(), [](auto const& a, auto const& b) { return std::get<0>(a) < std::get<0>(b); });
+    auto const& chosen = candidates[urand(0, std::min<size_t>(candidates.size(), 5) - 1)];
+    pendingSkill = skill;
+    pendingEntry = std::get<1>(chosen);
+    pendingGatherPos = std::get<2>(chosen);
+    return true;
+}
+
+bool NewRpgBaseAction::AreaDiscovered(uint32 areaId)
+{
+    AreaTableEntry const* area = GetAreaEntryByAreaID(areaId);
+    if (!area || area->exploreFlag == 0xffff)
+        return true;
+    uint32 offset = area->exploreFlag / 32;
+    uint32 mask = uint32(1) << (area->exploreFlag % 32);
+    return bot->GetUInt32Value(PLAYER_EXPLORED_ZONES_1 + offset) & mask;
+}
+
+// The nearest undiscovered area on the bot's map within 1,500 yards that is not above its level.
+bool NewRpgBaseAction::SelectExploreDestination()
+{
+    PlayerTravelInfo info(bot);
+    WorldPosition botPos(bot);
+    float best = FLT_MAX;
+    for (TravelDestination* dest : sTravelMgr.GetDestinations(info, (uint32)TravelDestinationPurpose::Explore, {}, true, 1500.0f))
+    {
+        if (dest->GetEntry() <= 0 || AreaDiscovered(dest->GetEntry()))
+            continue;
+        WorldPosition* point = dest->GetClosestPoint(botPos);
+        if (!point || point->getMapId() != botPos.getMapId() || IsPosBad(*point) || SpotOnCooldown(*point))
+            continue;
+        float distance = botPos.distance(*point);
+        if (distance < best)
+        {
+            best = distance;
+            pendingArea = dest->GetEntry();
+            pendingExplorePos = *point;
+        }
+    }
+    return best < FLT_MAX;
+}
+
+bool NewRpgBaseAction::SpotOnCooldown(WorldPosition const& pos)
+{
+    uint32 now = WorldTimer::getMSTime();
+    auto& spots = ai->rpgInfo.spotCooldowns;
+    spots.erase(std::remove_if(spots.begin(), spots.end(), [now](auto const& s) { return int32(s.second - now) <= 0; }), spots.end());
+    for (auto const& s : spots)
+        if (s.first.getMapId() == pos.getMapId() && s.first.distance(pos) < 50.0f)
+            return true;
+    return false;
+}
+
+void NewRpgBaseAction::CooldownSpot(WorldPosition const& pos)
+{
+    ai->rpgInfo.spotCooldowns.push_back({pos, WorldTimer::getMSTime() + spotCooldownTime});
+}
+
+bool NewRpgBaseAction::EndGather(char const* reason)
+{
+    if (auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data))
+        if (std::string(reason) != "done" || ai->rpgInfo.gathered == g->gatheredAtStart)
+            CooldownSpot(g->pos);
+    if (auto* g = std::get_if<NewRpgInfo::Gather>(&ai->rpgInfo.data))
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+            sLog.outString("[New RPG status] bot=%s event=gather_end reason=%s skill=%u entry=%d gathered=%u nodes_seen=%u nodes_reached=%u min=%u%s",
+                bot->GetName(), reason, g->skill, g->entry, ai->rpgInfo.gathered - g->gatheredAtStart,
+                g->nodesSeen, g->nodesReached,
+                WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, WorldTimer::getMSTime()) / 60000,
+                std::string(reason) == "timeout" ? TimeoutDetail(g->pos).c_str() : "");
+    ai->rpgInfo.ChangeToIdle();
+    return true;
+}
+
+bool NewRpgBaseAction::EndExplore(char const* reason)
+{
+    if (auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data))
+        if (std::string(reason) == "no_path" || std::string(reason) == "timeout" || std::string(reason) == "stuck_abandoned")
+            CooldownSpot(e->pos);
+    if (auto* e = std::get_if<NewRpgInfo::Explore>(&ai->rpgInfo.data))
+        if (sPlayerbotAIConfig.logRpgStatusEvents)
+            sLog.outString("[New RPG status] bot=%s event=explore_end reason=%s area=%u discovered=%u min=%u%s",
+                bot->GetName(), reason, e->areaId, AreaDiscovered(e->areaId) ? 1u : 0u,
+                WorldTimer::getMSTimeDiff(ai->rpgInfo.startT, WorldTimer::getMSTime()) / 60000,
+                std::string(reason) == "timeout" ? TimeoutDetail(e->pos).c_str() : "");
+    ai->rpgInfo.ChangeToIdle();
+    return true;
+}
+
 void NewRpgBaseAction::LogTravelEvent(char const* event, WorldPosition const& from, WorldPosition const& to, char const* detail)
 {
     if (!sPlayerbotAIConfig.logRpgTravelEvents)
@@ -1431,6 +1890,20 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
             ai->rpgInfo.ChangeToIdle();
             return true;
 
+        case RPG_GATHER:
+            if (sPlayerbotAIConfig.logRpgStatusEvents)
+                sLog.outString("[New RPG status] bot=%s event=gather_start skill=%u entry=%d dist=%.0f",
+                    bot->GetName(), pendingSkill, pendingEntry, WorldPosition(bot).distance(pendingGatherPos));
+            ai->rpgInfo.ChangeToGather(pendingSkill, pendingEntry, pendingGatherPos);
+            return true;
+
+        case RPG_EXPLORE:
+            if (sPlayerbotAIConfig.logRpgStatusEvents)
+                sLog.outString("[New RPG status] bot=%s event=explore_start area=%u dist=%.0f",
+                    bot->GetName(), pendingArea, WorldPosition(bot).distance(pendingExplorePos));
+            ai->rpgInfo.ChangeToExplore(pendingArea, pendingExplorePos);
+            return true;
+
         case RPG_REST:
         default:
             ai->rpgInfo.ChangeToRest();
@@ -1444,6 +1917,12 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
 {
     switch (status)
     {
+        case RPG_GATHER:
+            return SelectGatherDestination();
+
+        case RPG_EXPLORE:
+            return SelectExploreDestination();
+
         case RPG_IDLE:
         case RPG_REST:
             return true;

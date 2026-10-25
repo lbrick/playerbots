@@ -30,7 +30,7 @@ namespace ai
            return MoveTo(location.mapid, location.coord_x, location.coord_y, location.coord_z, idle, react, noPath, ignoreEnemyTargets);
         }
 
-        static bool UseTaxi(PlayerbotAI* ai, uint32 entry = 0, bool needNpc = true);
+        static bool UseTaxi(PlayerbotAI* ai, uint32 entry = 0, bool needNpc = true, Creature* flightMaster = nullptr);
 
 
         bool WaitForTransport();

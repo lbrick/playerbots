@@ -125,11 +125,17 @@ namespace ai
             creators["new rpg status update"] = [](PlayerbotAI* ai) { return new NewRpgStatusUpdateAction(ai); };
             creators["new rpg go grind"] = [](PlayerbotAI* ai) { return new NewRpgGoGrindAction(ai); };
             creators["new rpg go camp"] = [](PlayerbotAI* ai) { return new NewRpgGoCampAction(ai); };
+            creators["new rpg errand"] = [](PlayerbotAI* ai) { return new NewRpgErrandAction(ai); };
+            creators["new rpg loot"] = [](PlayerbotAI* ai) { return new NewRpgLootAction(ai); };
+            creators["new rpg minimal route"] = [](PlayerbotAI* ai) { return new NewRpgMinimalRouteAction(ai); };
+            creators["new rpg gather"] = [](PlayerbotAI* ai) { return new NewRpgGatherAction(ai); };
+            creators["new rpg explore"] = [](PlayerbotAI* ai) { return new NewRpgExploreAction(ai); };
             creators["new rpg wander random"] = [](PlayerbotAI* ai) { return new NewRpgWanderRandomAction(ai); };
             creators["new rpg wander npc"] = [](PlayerbotAI* ai) { return new NewRpgWanderNpcAction(ai); };
             creators["new rpg do quest"] = [](PlayerbotAI* ai) { return new NewRpgDoQuestAction(ai); };
             creators["new rpg travel flight"] = [](PlayerbotAI* ai) { return new NewRpgTravelFlightAction(ai); };
             creators["new rpg go change zone"] = [](PlayerbotAI* ai) { return new NewRpgGoChangeZoneAction(ai); };
+            creators["new rpg post quest"] = [](PlayerbotAI* ai) { return new NewRpgPostQuestAction(ai); };
 			creators["travel"] = [](PlayerbotAI* ai) { return new TravelAction(ai); };
 			creators["choose travel target"] = [](PlayerbotAI* ai) { return new ChooseTravelTargetAction(ai); };
             creators["choose group travel target"] = [](PlayerbotAI* ai) { return new ChooseGroupTravelTargetAction(ai); };

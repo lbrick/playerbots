@@ -56,6 +56,20 @@ bool OpenLootAction::Execute(Event& event)
     bool result = DoLoot(lootObject);
     if (result)
     {
+        // Counted for the new RPG gather status's log, and logged with the new RPG status, to
+        // show looting under new RPG (lbrick/cmangos-dev#87). A true result is a loot opened
+        // or a gathering cast started.
+        if (lootObject.skillId == SKILL_HERBALISM || lootObject.skillId == SKILL_MINING || lootObject.skillId == SKILL_SKINNING)
+            ++ai->rpgInfo.gathered;
+        if (sPlayerbotAIConfig.logRpgStatusEvents && !lootObject.IsEmpty())
+        {
+            char const* kind = lootObject.skillId == SKILL_HERBALISM ? "herb" :
+                lootObject.skillId == SKILL_MINING ? "ore" :
+                lootObject.skillId == SKILL_SKINNING ? "skin" :
+                lootObject.guid.IsCreatureOrPet() ? "corpse" : "chest";
+            sLog.outString("[New RPG status] bot=%s event=rpg_loot kind=%s entry=%u new_rpg_status=%d",
+                bot->GetName(), kind, lootObject.guid.GetEntry(), int(ai->rpgInfo.GetStatus()));
+        }
         AI_VALUE(LootObjectStack*, "available loot")->Remove(lootObject.guid);
         context->GetValue<LootObject>("loot target")->Set(LootObject());
     }
