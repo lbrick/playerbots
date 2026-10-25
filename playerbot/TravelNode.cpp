@@ -118,6 +118,31 @@ float TravelNodePath::getCost(Unit* unit, uint32 cGold)
         if (path.size() && path.back().getMapId() == 571 && bot->GetLevel() < 68) //Northrend
             return -1;
 
+        // Faction transports only (lbrick/cmangos-dev#38): the zeppelins are Horde; the Menethil,
+        // Auberdine, Teldrassil and Feathermoon boats are Alliance. Booty Bay - Ratchet is open
+        // to both.
+        if (getPathType() == TravelNodePathType::transport && pathObject)
+        {
+            switch (getPathObject())
+            {
+                case 164871: // Orgrimmar - Undercity
+                case 175080: // Grom'gol - Orgrimmar
+                case 176495: // Grom'gol - Undercity
+                    if (bot->GetTeam() != HORDE)
+                        return -1;
+                    break;
+                case 176231: // Menethil - Theramore
+                case 176244: // Teldrassil - Auberdine
+                case 176310: // Menethil - Auberdine
+                case 177233: // Forgotten Coast - Feathermoon
+                    if (bot->GetTeam() != ALLIANCE)
+                        return -1;
+                    break;
+                default:
+                    break;
+            }
+        }
+
         //Check if we can use this area trigger.
         if (getPathType() == TravelNodePathType::areaTrigger && pathObject)
         {
