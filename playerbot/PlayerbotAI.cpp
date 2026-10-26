@@ -879,12 +879,16 @@ void PlayerbotAI::CheckRpgStatusStill(NewRpgStatus status)
     }
 
     // Drop what held the bot: the target (skipped by the grind target for a while, as #94 does),
-    // the loot target and the stored route, then end the status.
+    // the loot target and the stored route, then end the status. The loot target also leaves the
+    // available loot, as a looted object does, or the loot action picks it again in the next status.
     if (target)
     {
         rpgInfo.droppedTarget = target;
         rpgInfo.droppedTargetT = now;
     }
+    LootObject loot = AI_VALUE(LootObject, "loot target");
+    if (!loot.IsEmpty())
+        AI_VALUE(LootObjectStack*, "available loot")->Remove(loot.guid);
     Reset();
     lastMove.lastPath.clear();
     rpgInfo.stillT = 0;
