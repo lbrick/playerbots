@@ -19,6 +19,8 @@
 #endif
 
 #include <numeric>
+#include <shared_mutex>
+#include <unordered_map>
 #include <iomanip>
 
 using namespace ai;
@@ -451,7 +453,27 @@ AreaTableEntry const* WorldPosition::GetArea() const
 {
     uint16 areaFlag = getAreaFlag();
 
+#ifdef MANGOSBOT_ZERO
+    // The Classic core finds the area by scanning the whole AreaTable, and the travel-point level
+    // check asks for every point of every destination: 12% of world update time with 400 bots
+    // (lbrick/cmangos-dev#96). AreaTable does not change after load, so each answer is kept.
+    static std::shared_mutex areaLock;
+    static std::unordered_map<uint32, AreaTableEntry const*> areaByFlagAndMap;
+    uint32 key = (uint32(areaFlag) << 16) | (getMapId() & 0xFFFF);
+    {
+        std::shared_lock<std::shared_mutex> lock(areaLock);
+        auto it = areaByFlagAndMap.find(key);
+        if (it != areaByFlagAndMap.end())
+            return it->second;
+    }
+
+    AreaTableEntry const* area = GetAreaEntryByAreaFlagAndMap(areaFlag, getMapId());
+    std::unique_lock<std::shared_mutex> lock(areaLock);
+    areaByFlagAndMap.emplace(key, area);
+    return area;
+#else
     return GetAreaEntryByAreaFlagAndMap(areaFlag, getMapId());
+#endif
 }
 
 std::string WorldPosition::getAreaName(const bool fullName, const bool zoneName) const

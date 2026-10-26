@@ -74,9 +74,12 @@ protected:
     uint32 pendingSkill{0};
     int32 pendingEntry{0};
     uint32 pendingArea{0};
-    // Separate, because availability checks select both before the roll picks one.
+    // Each availability check keeps its own destination for the status change that follows it.
     WorldPosition pendingGatherPos{};
     WorldPosition pendingExplorePos{};
+    // The change-zone destination the availability check scored, so the status change does not
+    // score every zone again (lbrick/cmangos-dev#96).
+    WorldPosition pendingZoneDest{};
     void CheckStuckTeleport();
     uint32 BestRewardIndex(Quest const* quest);
     bool IsQuestWorthDoing(Quest const* quest);
