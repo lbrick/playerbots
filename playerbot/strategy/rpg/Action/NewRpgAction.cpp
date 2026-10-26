@@ -578,19 +578,35 @@ bool NewRpgMinimalRouteAction::Execute(Event& /*event*/)
 {
     NewRpgInfo& info = ai->rpgInfo;
     WorldPosition dest = info.GetDestination();
+    // A gather bot at its spot roams it (#87); inactive, it walks to a point near the spot (#92).
+    auto* gather = std::get_if<NewRpgInfo::Gather>(&info.data);
+    bool roam = gather && gather->arriveT;
+    if (roam)
+        dest = gather->pos;
     if (dest == WorldPosition())
         return false;
 
     WorldPosition here(bot);
-    if (here.getMapId() == dest.getMapId() && here.distance(dest) < 20.0f)
-        return false;
-    // Only a change-zone trip crosses maps; any other status aimed at another map is dropped
-    // (lbrick/cmangos-dev#67), so it is not carried there either.
+    // Only a change-zone trip crosses maps; any other status aimed at another map ends here
+    // (lbrick/cmangos-dev#67, #92), as the status update would on the bot's next full update.
     if (here.getMapId() != dest.getMapId() && info.GetStatus() != RPG_CHANGE_ZONE)
+    {
+        switch (info.GetStatus())
+        {
+            case RPG_ERRAND: return EndErrand("cross_map");
+            case RPG_GATHER: return EndGather("cross_map");
+            case RPG_EXPLORE: return EndExplore("cross_map");
+            default:
+                info.tripEndReason = "cross_map";
+                info.ChangeToIdle();
+                return true;
+        }
+    }
+    if (!roam && here.distance(dest) < 20.0f)
         return false;
 
     LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
-    if (!lastMove.lastPath.empty() && lastMove.lastPath.getBack().distance(dest) < 30.0f)
+    if (!roam && !lastMove.lastPath.empty() && lastMove.lastPath.getBack().distance(dest) < 30.0f)
         return false;
 
     uint32 now = WorldTimer::getMSTime();
@@ -598,14 +614,52 @@ bool NewRpgMinimalRouteAction::Execute(Event& /*event*/)
         return false;
     info.minimalRouteT = now;
 
+    if (roam)
+    {
+        float angle = frand(0.0f, 2 * M_PI_F);
+        float radius = frand(10.0f, gatherRoamRadius);
+        dest = WorldPosition(dest.getMapId(), dest.getX() + radius * cos(angle), dest.getY() + radius * sin(angle), dest.getZ());
+        dest.setZ(dest.getHeight());
+        lastMove.lastPath.clear();
+    }
+
     TravelPath path = ResolveMovePath(here, dest, bot, lastMove);
-    bool usable = path.getPath().size() > 1 && path.getBack().distance(dest) < 50.0f;
+    float hereDist = here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f;
+    float endDist = path.empty() ? -1.0f : path.getBack().distance(dest);
+    bool full = path.getPath().size() > 1 && endDist < 50.0f;
+    // A route that stops short of the destination still takes the bot 20 yd or more closer;
+    // the next build, a minute on, carries it further (#92).
+    bool partial = !full && path.getPath().size() > 1 && hereDist >= 0.0f && endDist + 20.0f < hereDist;
+    // Neither: the node route failed and handed back the destination alone. Walk the navmesh to
+    // a stepping stone on the line to the destination instead, as MoveFarTo's fallback does (#92).
+    bool fallback = false;
+    uint32 routePoints = uint32(path.getPath().size());
+    if (!full && !partial && hereDist >= 0.0f)
+    {
+        WorldPosition step = dest;
+        if (hereDist > steppingStoneDistance)
+        {
+            float ratio = steppingStoneDistance / hereDist;
+            step = WorldPosition(dest.getMapId(), here.getX() + (dest.getX() - here.getX()) * ratio,
+                here.getY() + (dest.getY() - here.getY()) * ratio, here.getZ());
+            step.setZ(step.getHeight());
+        }
+        TravelPath meshPath;
+        meshPath.addPath(here.getPathTo(step, bot));
+        if (meshPath.getPath().size() > 1 && meshPath.getBack().distance(dest) + 20.0f < hereDist)
+        {
+            path = meshPath;
+            endDist = path.getBack().distance(dest);
+            fallback = true;
+        }
+    }
     if (sPlayerbotAIConfig.logRpgStatusEvents)
-        sLog.outString("[New RPG status] bot=%s event=minimal_route status=%u points=%u dist=%.0f cross_map=%u stored=%u",
-            bot->GetName(), uint32(info.GetStatus()), uint32(path.getPath().size()),
-            here.getMapId() == dest.getMapId() ? here.distance(dest) : -1.0f,
-            here.getMapId() != dest.getMapId() ? 1u : 0u, usable ? 1u : 0u);
-    if (!usable)
+        sLog.outString("[New RPG status] bot=%s event=minimal_route status=%u points=%u dist=%.0f end_dist=%.0f long=%u roam=%u cross_map=%u stored=%u partial=%u fallback=%u route_points=%u",
+            bot->GetName(), uint32(info.GetStatus()), uint32(path.getPath().size()), hereDist, endDist,
+            (here.getMapId() != dest.getMapId() || hereDist > sPlayerbotAIConfig.sightDistance) ? 1u : 0u,
+            roam ? 1u : 0u, here.getMapId() != dest.getMapId() ? 1u : 0u, (full || partial || fallback) ? 1u : 0u,
+            partial ? 1u : 0u, fallback ? 1u : 0u, routePoints);
+    if (!full && !partial && !fallback)
         return false;
 
     lastMove.setPath(path);
