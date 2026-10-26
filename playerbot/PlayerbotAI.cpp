@@ -739,12 +739,16 @@ void PlayerbotAI::CheckRpgStatusLockup()
     if (status == RPG_IDLE || HasRealPlayerMaster() || bot->GetMap()->IsDungeon() || bot->InBattleGround())
     {
         rpgInfo.stallT = 0;
+        rpgInfo.stillT = 0;
         return;
     }
 
     // The status update keeps the errand's wall-clock ceiling too, but an action that runs on
     // every tick (reach spell on an unreachable target) can keep it from ever running (#94).
-    if (status == RPG_ERRAND && rpgInfo.HasStatusPersisted(60 * MINUTE * IN_MILLISECONDS))
+    // Gather and explore end on active time only, which a bot on minimal updates never accrues,
+    // so they take the same ceiling (#97).
+    if ((status == RPG_ERRAND || status == RPG_GATHER || status == RPG_EXPLORE) &&
+        rpgInfo.HasStatusPersisted(60 * MINUTE * IN_MILLISECONDS))
     {
         EndRpgStatusLockup("timeout");
         return;
@@ -755,8 +759,11 @@ void PlayerbotAI::CheckRpgStatusLockup()
     if (!bot->IsInCombat() && currentState != BotState::BOT_STATE_COMBAT)
     {
         rpgInfo.stallT = 0;
+        CheckRpgStatusStill(status);
         return;
     }
+    // The still timer runs on through a fight: a bot that drops in and out of short fights in one
+    // place reset it on each one and stood 36 minutes (#97). It ends the status out of combat.
 
     AiObjectContext* context = aiObjectContext;
     ObjectGuid target = AI_VALUE(ObjectGuid, "current target");
@@ -825,6 +832,68 @@ void PlayerbotAI::CheckRpgStatusLockup()
     }
     rpgInfo.stallT = 0;
     EndRpgStatusLockup("combat_stalled");
+}
+
+// A bot standing out of combat in an errand, gather or explore status: a stored route MinimalMove
+// cannot walk, an action looping on a target or loot it cannot reach, or a status whose end check
+// runs only in its own action, which a bot on minimal updates does not run. Ten minutes within
+// 20 yd of one place, measured across the ground, ends the status (lbrick/cmangos-dev#97). Height
+// is left out: a bot teleported onto a step it then falls from changes height by 50 yd in place.
+void PlayerbotAI::CheckRpgStatusStill(NewRpgStatus status)
+{
+    if ((status != RPG_ERRAND && status != RPG_GATHER && status != RPG_EXPLORE) || bot->GetTransport())
+    {
+        rpgInfo.stillT = 0;
+        return;
+    }
+
+    uint32 now = WorldTimer::getMSTime();
+    WorldPosition here(bot);
+    if (!rpgInfo.stillT || rpgInfo.stillStartT != rpgInfo.startT || here.getMapId() != rpgInfo.stillPos.getMapId() ||
+        here.sqDistance2d(rpgInfo.stillPos) > 20.0f * 20.0f)
+    {
+        rpgInfo.stillPos = here;
+        rpgInfo.stillT = now;
+        rpgInfo.stillStartT = rpgInfo.startT;
+        return;
+    }
+
+    if (WorldTimer::getMSTimeDiff(rpgInfo.stillT, now) < 10 * MINUTE * IN_MILLISECONDS)
+        return;
+
+    AiObjectContext* context = aiObjectContext;
+    LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
+    ObjectGuid target = AI_VALUE(ObjectGuid, "current target");
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+    {
+        // The stored route's next step, the one MinimalMove waits on or teleports to.
+        std::vector<PathNodePoint>& route = lastMove.lastPath.getPath();
+        WorldPosition dest = rpgInfo.GetDestination();
+        sLog.outString("[New RPG status] bot=%s event=status_still status=%u pos=%u:%.1f,%.1f,%.1f dist=%.0f still_s=%u route_left=%u route_front=%u:%u route_front_dist=%.0f last_nc=\"%s\" target=%s loot=%u",
+            bot->GetName(), uint32(status), here.getMapId(), here.getX(), here.getY(), here.getZ(),
+            dest.getMapId() == here.getMapId() ? here.distance(dest) : -1.0f,
+            WorldTimer::getMSTimeDiff(rpgInfo.stillT, now) / IN_MILLISECONDS, uint32(route.size()),
+            route.empty() ? 0u : uint32(route.front().type), route.empty() ? 0u : route.front().entry,
+            route.empty() || route.front().point.getMapId() != here.getMapId() ? -1.0f : here.distance(route.front().point),
+            GetLastExecutedActionName(BotState::BOT_STATE_NON_COMBAT).c_str(), target.GetString().c_str(),
+            AI_VALUE(LootObject, "loot target").IsEmpty() ? 0u : 1u);
+    }
+
+    // Drop what held the bot: the target (skipped by the grind target for a while, as #94 does),
+    // the loot target and the stored route, then end the status. The loot target also leaves the
+    // available loot, as a looted object does, or the loot action picks it again in the next status.
+    if (target)
+    {
+        rpgInfo.droppedTarget = target;
+        rpgInfo.droppedTargetT = now;
+    }
+    LootObject loot = AI_VALUE(LootObject, "loot target");
+    if (!loot.IsEmpty())
+        AI_VALUE(LootObjectStack*, "available loot")->Remove(loot.guid);
+    Reset();
+    lastMove.lastPath.clear();
+    rpgInfo.stillT = 0;
+    EndRpgStatusLockup("stalled");
 }
 
 void PlayerbotAI::EndRpgStatusLockup(char const* reason)
