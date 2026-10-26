@@ -123,10 +123,6 @@ struct NewRpgInfo
         // also counts as progress, so a long walk between waypoints does not time out (#83).
         WorldPosition progressTarget{};
         float progressDist{0.0f};
-        // Where and since when the bot has stayed in combat; the status update does not run in
-        // combat, so PlayerbotAI ends a trip held there (lbrick/cmangos-dev#84).
-        WorldPosition combatPos{};
-        uint32 combatT{0};
     };
     struct Idle
     {
@@ -175,6 +171,25 @@ struct NewRpgInfo
     // Gather and explore spots that failed or yielded nothing, with the time each cooldown ends
     // (lbrick/cmangos-dev#87), as legacy travel puts a used destination on cooldown.
     std::vector<std::pair<WorldPosition, uint32>> spotCooldowns;
+    // Where and since when the bot has stayed fighting in the status whose startT is stallStartT.
+    // The status update does not run while the combat engine does, so PlayerbotAI ends a status
+    // held there (lbrick/cmangos-dev#84, #94).
+    WorldPosition stallPos{};
+    uint32 stallT{0};
+    uint32 stallStartT{0};
+    // When the bot last made damage progress in that fight: its target fell below the lowest
+    // health seen for it, or a target it fought died. fightTargetHealth is that lowest health.
+    uint32 fightProgressT{0};
+    ObjectGuid fightTarget{};
+    uint32 fightTargetHealth{0};
+    // Set by PlayerbotAI for a held status; the status update ends that status (its startT is
+    // lockupStartT) with this reason and its own end line (lbrick/cmangos-dev#94).
+    char const* lockupEnd{nullptr};
+    uint32 lockupStartT{0};
+    // The target the bot was fighting when a lockup was broken, and when. The grind target
+    // skips it for 10 minutes so the bot does not pick it straight back up (#94).
+    ObjectGuid droppedTarget{};
+    uint32 droppedTargetT{0};
 
     // Post-quest routine (lbrick/cmangos-dev#45): a pause, or a vendor or trainer visit, after a
     // quest accept or turn-in. Held beside the status, so a status change does not cut it short.
