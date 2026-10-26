@@ -762,7 +762,8 @@ void PlayerbotAI::CheckRpgStatusLockup()
         CheckRpgStatusStill(status);
         return;
     }
-    rpgInfo.stillT = 0;
+    // The still timer runs on through a fight: a bot that drops in and out of short fights in one
+    // place reset it on each one and stood 36 minutes (#97). It ends the status out of combat.
 
     AiObjectContext* context = aiObjectContext;
     ObjectGuid target = AI_VALUE(ObjectGuid, "current target");

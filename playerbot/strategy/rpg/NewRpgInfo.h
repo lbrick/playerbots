@@ -182,9 +182,9 @@ struct NewRpgInfo
     uint32 fightProgressT{0};
     ObjectGuid fightTarget{};
     uint32 fightTargetHealth{0};
-    // Where and since when the bot has stood out of combat in the errand, gather or explore status
-    // whose startT is stillStartT. PlayerbotAI ends a status held still for 10 minutes, on full and
-    // minimal updates alike (lbrick/cmangos-dev#97).
+    // Where and since when the bot has stood, fighting or not, in the errand, gather or explore
+    // status whose startT is stillStartT. PlayerbotAI ends a status held still for 10 minutes, out
+    // of combat, on full and minimal updates alike (lbrick/cmangos-dev#97).
     WorldPosition stillPos{};
     uint32 stillT{0};
     uint32 stillStartT{0};
