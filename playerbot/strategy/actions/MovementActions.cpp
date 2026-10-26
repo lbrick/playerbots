@@ -561,6 +561,16 @@ bool MovementAction::MinimalMove(PlayerbotAI* ai)
 
     bool doDelay = true;
 
+    // An entry 0 transport point is the walk between a dock and the transport's stop, not a ride
+    // (lbrick/cmangos-dev#51). Handed to UseTransport, it took the nearest transport of any kind,
+    // scanning every game object on the map each tick, and held an inactive bot in the Undercity
+    // for hours (lbrick/cmangos-dev#97). Off a transport, step to it as to a walk point.
+    bool onTransport = bot->GetTransport() != nullptr;
+    auto walkable = [onTransport](PathNodePoint const& step)
+    {
+        return step.isWalkable() || (!onTransport && step.type == PathNodeType::NODE_TRANSPORT && !step.entry);
+    };
+
     //Taxi handling: Start taxi and remove path until it ends.
     if (nextStep->type == PathNodeType::NODE_FLIGHTPATH)
     {
@@ -586,7 +596,7 @@ bool MovementAction::MinimalMove(PlayerbotAI* ai)
     }
 
    //Transport handling: If not on transport wait for transport and teleport on it when it's near (and cut to last transport point). If on transport wait until it is near exit and teleport to exit.
-    if (nextStep != path.end() && nextStep->type == PathNodeType::NODE_TRANSPORT)
+    if (nextStep != path.end() && nextStep->type == PathNodeType::NODE_TRANSPORT && !walkable(*nextStep))
     {
         auto exitStep = std::next(nextStep);
 
@@ -630,11 +640,9 @@ bool MovementAction::MinimalMove(PlayerbotAI* ai)
     }
 
     //Skip over stuff we don't walk.
-    if (!nextStep->isWalkable())
+    if (!walkable(*nextStep))
     {
-        auto it = std::find_if(std::next(nextStep), path.end(), [](const auto& step) {
-            return step.isWalkable();
-        });
+        auto it = std::find_if(std::next(nextStep), path.end(), walkable);
 
         if (it != path.end())
         {
@@ -643,7 +651,7 @@ bool MovementAction::MinimalMove(PlayerbotAI* ai)
         }
     }
 
-    if (!nextStep->isWalkable())
+    if (!walkable(*nextStep))
         return false;
 
     if (ai->HasPlayerNearby(nextStep->point, sWorld.getConfig(CONFIG_FLOAT_LISTEN_RANGE_YELL)))
@@ -665,7 +673,7 @@ bool MovementAction::MinimalMove(PlayerbotAI* ai)
 
         nextStep = it;
 
-        if (!it->isWalkable() || time > sPlayerbotAIConfig.passiveDelay)
+        if (!walkable(*it) || time > sPlayerbotAIConfig.passiveDelay)
             break;
     }
 
