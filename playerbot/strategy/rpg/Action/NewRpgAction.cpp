@@ -529,6 +529,27 @@ bool NewRpgLootAction::Execute(Event& /*event*/)
     return false;
 }
 
+// ─── NewRpgMaintenanceAction ─────────────────────────────────────────────────
+
+bool NewRpgMaintenanceAction::isUseful()
+{
+    return ai->rpgInfo.GetStatus() != RPG_IDLE && !bot->IsTaxiFlying() && !bot->IsInCombat() &&
+        ai->HasStrategy("maintenance", BotState::BOT_STATE_NON_COMBAT);
+}
+
+bool NewRpgMaintenanceAction::Execute(Event& /*event*/)
+{
+    static char const* const actions[] = {"use random recipe", "open random item", "disenchant random item",
+        "enchant random item", "smart destroy item", "use random quest item", "auto share quest", "auto complete quest"};
+    char const* name = actions[urand(0, sizeof(actions) / sizeof(actions[0]) - 1)];
+    bool done = ai->DoSpecificAction(name, Event("new rpg maintenance"), true);
+    if (sPlayerbotAIConfig.logRpgStatusEvents)
+        sLog.outString("[New RPG status] bot=%s event=maintenance action=\"%s\" status=%u done=%u",
+            bot->GetName(), name, uint32(ai->rpgInfo.GetStatus()), done ? 1u : 0u);
+    // Yield the tick only when the action did something, so the status action still runs.
+    return done;
+}
+
 // ─── NewRpgMinimalRouteAction ────────────────────────────────────────────────
 
 bool NewRpgMinimalRouteAction::Execute(Event& /*event*/)
