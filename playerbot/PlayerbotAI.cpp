@@ -836,7 +836,8 @@ void PlayerbotAI::CheckRpgStatusLockup()
 // A bot standing out of combat in an errand, gather or explore status: a stored route MinimalMove
 // cannot walk, an action looping on a target or loot it cannot reach, or a status whose end check
 // runs only in its own action, which a bot on minimal updates does not run. Ten minutes within
-// 20 yd of one place ends the status (lbrick/cmangos-dev#97).
+// 20 yd of one place, measured across the ground, ends the status (lbrick/cmangos-dev#97). Height
+// is left out: a bot teleported onto a step it then falls from changes height by 50 yd in place.
 void PlayerbotAI::CheckRpgStatusStill(NewRpgStatus status)
 {
     if ((status != RPG_ERRAND && status != RPG_GATHER && status != RPG_EXPLORE) || bot->GetTransport())
@@ -848,7 +849,7 @@ void PlayerbotAI::CheckRpgStatusStill(NewRpgStatus status)
     uint32 now = WorldTimer::getMSTime();
     WorldPosition here(bot);
     if (!rpgInfo.stillT || rpgInfo.stillStartT != rpgInfo.startT || here.getMapId() != rpgInfo.stillPos.getMapId() ||
-        here.distance(rpgInfo.stillPos) > 20.0f)
+        here.sqDistance2d(rpgInfo.stillPos) > 20.0f * 20.0f)
     {
         rpgInfo.stillPos = here;
         rpgInfo.stillT = now;
