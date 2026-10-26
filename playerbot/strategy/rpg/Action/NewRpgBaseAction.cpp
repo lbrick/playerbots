@@ -1766,7 +1766,11 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
         }
     }
 
-    std::vector<NewRpgStatus> available;
+    // The roll picks a candidate by weight and checks only that one; one that is not available
+    // leaves the pool and the roll repeats. Each available status keeps the chance it had when every
+    // candidate was checked before the roll, but the checks, zone scoring above all, run only for
+    // the candidates the roll reaches (lbrick/cmangos-dev#96).
+    std::vector<std::pair<NewRpgStatus, uint32>> pool;
     uint32 probSum = 0;
 
     for (NewRpgStatus status : candidateStatus)
@@ -1776,14 +1780,32 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
             continue;
         if (hasDoableQuests && (status == RPG_GO_GRIND || status == RPG_GO_CAMP))
             weight = 1;
-        if (CheckRpgStatusAvailable(status))
+        pool.emplace_back(status, weight);
+        probSum += weight;
+    }
+
+    NewRpgStatus chosen = RPG_STATUS_END;
+    while (chosen == RPG_STATUS_END && !pool.empty())
+    {
+        uint32 roll = urand(1, probSum);
+        uint32 acc = 0;
+        for (auto it = pool.begin(); it != pool.end(); ++it)
         {
-            available.push_back(status);
-            probSum += weight;
+            acc += it->second;
+            if (acc < roll)
+                continue;
+            if (CheckRpgStatusAvailable(it->first))
+                chosen = it->first;
+            else
+            {
+                probSum -= it->second;
+                pool.erase(it);
+            }
+            break;
         }
     }
 
-    if (available.empty() || probSum == 0)
+    if (chosen == RPG_STATUS_END)
     {
         // Logged too, so every status pick after an abandon shows in the log (lbrick/cmangos-dev#66).
         if (sPlayerbotAIConfig.logRpgStatusEvents)
@@ -1797,18 +1819,6 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
         ai->rpgInfo.ChangeToRest();
         bot->SetStandState(UNIT_STAND_STATE_SIT);
         return true;
-    }
-
-    uint32 roll = urand(1, probSum);
-    uint32 acc  = 0;
-    NewRpgStatus chosen = RPG_STATUS_END;
-    for (NewRpgStatus status : available)
-    {
-        uint32 w = sPlayerbotAIConfig.RpgStatusProbWeight[status];
-        if (hasDoableQuests && (status == RPG_GO_GRIND || status == RPG_GO_CAMP))
-            w = 1;
-        acc += w;
-        if (acc >= roll) { chosen = status; break; }
     }
 
     if (sPlayerbotAIConfig.logRpgStatusEvents)
@@ -1877,7 +1887,7 @@ bool NewRpgBaseAction::RandomChangeStatus(std::vector<NewRpgStatus> candidateSta
 
         case RPG_CHANGE_ZONE:
         {
-            WorldPosition dest = SelectBestZoneForBot(bot);
+            WorldPosition dest = pendingZoneDest;
             if (dest != WorldPosition())
             {
                 ai->rpgInfo.ChangeToChangeZone(dest);
@@ -2011,6 +2021,7 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
             }
             if (hasDoable) return false;
             WorldPosition dest = SelectBestZoneForBot(bot);
+            pendingZoneDest = dest;
             if (dest == WorldPosition()) return false;
             // If dest is far and a flight master is nearby, suppress CHANGE_ZONE
             // so RPG_TRAVEL_FLIGHT gets selected instead (bot flies toward dest zone).
