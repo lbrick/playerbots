@@ -7,7 +7,9 @@ namespace ai
     class ShouldBankDepositValue : public BoolCalculatedValue
     {
     public:
-        ShouldBankDepositValue(PlayerbotAI* ai) : BoolCalculatedValue(ai, "should bank deposit", 5) {}
+        // Recomputed every 5 minutes (half the interval): it rates the bank usage of every bag item,
+        // 4.1 ms per check with 400 bots, and bags change slowly (lbrick/cmangos-dev#99).
+        ShouldBankDepositValue(PlayerbotAI* ai) : BoolCalculatedValue(ai, "should bank deposit", 600) {}
         virtual bool Calculate() override;
     };
 
