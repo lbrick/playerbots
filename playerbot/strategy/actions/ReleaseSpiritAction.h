@@ -143,10 +143,16 @@ namespace ai
             
             if (!ai->HasRealPlayerMaster())
             {
-                if (Group* group = bot->GetGroup())
+                if (bot->GetGroup())
                 {
                     sLog.outDetail("Repop: Removing bot #%d %s:%d <%s> from group", bot->GetGUIDLow(), bot->GetTeam() == ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName());
-                    group->RemoveMember(bot->GetObjectGuid(), 0);
+                    // Removal changes the other members, who can be on other maps, so it runs on the
+                    // world thread (lbrick/cmangos-dev#103).
+                    PlayerbotAI::RunOnWorldThread(bot->GetObjectGuid(), [](Player* p)
+                    {
+                        if (Group* group = p->GetGroup())
+                            group->RemoveMember(p->GetObjectGuid(), 0);
+                    });
                 }
             }
 
