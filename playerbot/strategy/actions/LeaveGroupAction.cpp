@@ -22,32 +22,47 @@ namespace ai
 
         bool shouldStay = freeBot && bot->GetGroup() && player == bot;
 
+        // Strategy setup reads the bot's group, so the master and strategies reset only once the
+        // bot is out of it.
+        auto afterLeave = [freeBot, aiMaster](PlayerbotAI* botAi)
+        {
+            if (freeBot)
+            {
+                botAi->SetMaster(nullptr);
+            }
+
+            if (!aiMaster)
+            {
+                if (!botAi->GetPreGroupStrategies().empty())
+                    botAi->RestorePreGroupStrategies();
+                else
+                    botAi->ResetStrategies();
+            }
+            botAi->Reset();
+        };
+
         if (!shouldStay)
         {
             if (group)
                 sPlayerbotAIConfig.logEvent(ai, "LeaveGroupAction", group->GetLeaderName(), std::to_string(group->GetMembersCount()-1));
 
-            WorldPacket p;
-            std::string member = bot->GetName();
-            p << uint32(PARTY_OP_LEAVE) << member << uint32(0);
-            bot->GetSession()->HandleGroupDisbandOpcode(p);
+            // CMSG_GROUP_DISBAND is PROCESS_THREADUNSAFE: leaving changes the other members, who can
+            // be on other maps, so it runs on the world thread (lbrick/cmangos-dev#98).
+            PlayerbotAI::RunOnWorldThread(bot->GetObjectGuid(), [afterLeave](Player* p)
+            {
+                WorldPacket packet;
+                std::string member = p->GetName();
+                packet << uint32(PARTY_OP_LEAVE) << member << uint32(0);
+                p->GetSession()->HandleGroupDisbandOpcode(packet);
+
+                if (PlayerbotAI* botAi = p->GetPlayerbotAI())
+                    afterLeave(botAi);
+            });
             if (ai->HasRealPlayerMaster() && ai->GetMaster()->GetObjectGuid() != player->GetObjectGuid())
                 bot->Whisper("I left my group", LANG_UNIVERSAL, player->GetObjectGuid());
         }
-
-        if (freeBot)
-        {
-            bot->GetPlayerbotAI()->SetMaster(nullptr);
-        }        
-
-        if (!aiMaster)
-        {
-            if (!ai->GetPreGroupStrategies().empty())
-                ai->RestorePreGroupStrategies();
-            else
-                ai->ResetStrategies();
-        }
-        ai->Reset();
+        else
+            afterLeave(ai);
 
         return true;
 	}

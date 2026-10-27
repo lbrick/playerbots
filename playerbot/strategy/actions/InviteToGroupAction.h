@@ -27,7 +27,9 @@ namespace ai
             return Invite(bot, target);
         }
 
-        virtual bool Invite(Player* inviter, Player* player);
+        // The invite runs on the world thread. With acceptEvent, the invited bot then runs
+        // "accept invitation" with it there, since the invite does not exist before then.
+        virtual bool Invite(Player* inviter, Player* player, Event* acceptEvent = nullptr);
         virtual bool isUsefulWhenStunned() override { return true; }
     };
 

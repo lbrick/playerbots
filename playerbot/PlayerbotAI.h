@@ -419,6 +419,12 @@ public:
     // map's player (teleports, resets, ...) from a foreign map thread.
     void RunOnOwningThread(Player* target, std::function<void(Player*)> action);
 
+    // Runs action on the world thread, with the player looked up again by guid; skipped if the
+    // player has left the world by then. Group handlers are PROCESS_THREADUNSAFE in the core: they
+    // change members who can be on other maps, so a bot never calls them inline from its map thread
+    // (lbrick/cmangos-dev#98). The world thread messager runs while all map updater threads are idle.
+    static void RunOnWorldThread(ObjectGuid guid, std::function<void(Player*)> action);
+
     // Uses the normal summon path: sets the summon point and sends SMSG_SUMMON_REQUEST so the
     // target accepts and teleports itself on its own map thread. Works for bots and real players.
     // Returns false when target cannot accept a summon (dead, in combat, no session) and the

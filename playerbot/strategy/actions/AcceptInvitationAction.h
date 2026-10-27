@@ -27,7 +27,36 @@ namespace ai
                 bot->UninviteFromGroup();
                 return false;
             }
-            
+
+            // CMSG_GROUP_ACCEPT is PROCESS_THREADUNSAFE: Group::Create marks the inviter for client
+            // update, and the inviter can be on another map. Accept on the world thread, through this
+            // bot's own action looked up again there. Players are passed by guid, since a pointer can
+            // go stale before the world thread runs (lbrick/cmangos-dev#98).
+            ObjectGuid inviterGuid = inviter->GetObjectGuid();
+            ObjectGuid ownerGuid = event.getOwner() ? event.getOwner()->GetObjectGuid() : ObjectGuid();
+            std::string source = event.getSource();
+            std::string param = event.getParam();
+            PlayerbotAI::RunOnWorldThread(bot->GetObjectGuid(), [inviterGuid, ownerGuid, source, param](Player* p)
+            {
+                if (PlayerbotAI* botAi = p->GetPlayerbotAI())
+                    if (AcceptInvitationAction* action = dynamic_cast<AcceptInvitationAction*>(botAi->GetAiObjectContext()->GetAction("accept invitation")))
+                        action->Accept(inviterGuid, Event(source, param, ownerGuid ? sObjectMgr.GetPlayer(ownerGuid) : nullptr));
+            });
+
+            return true;
+        }
+
+        // Runs on the world thread, while every map updater thread is idle.
+        void Accept(ObjectGuid inviterGuid, Event event)
+        {
+            Group* grp = bot->GetGroupInvite();
+            if (!grp || grp->GetLeaderGuid() != inviterGuid)
+                return;
+
+            Player* inviter = sObjectMgr.GetPlayer(inviterGuid);
+            if (!inviter)
+                return;
+
             if (bot->isAFK())
                 bot->ToggleAFK();
 
@@ -39,7 +68,7 @@ namespace ai
             bot->GetSession()->HandleGroupAcceptOpcode(p);
 
             if (!bot->GetGroup() || !bot->GetGroup()->IsMember(inviter->GetObjectGuid()))
-                return false;
+                return;
 
             if (sServerFacade.GetDistance2d(bot, inviter) > 5.0f)
             {
@@ -93,8 +122,6 @@ namespace ai
 
             ai->DoSpecificAction("reset raids", event, true);
             ai->DoSpecificAction("update gear", event, true);
-
-            return true;
         }
 
         virtual bool isUsefulWhenStunned() override { return true; }

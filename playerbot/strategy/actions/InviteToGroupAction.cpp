@@ -7,7 +7,7 @@
 
 namespace ai
 {
-    bool InviteToGroupAction::Invite(Player* inviter, Player* player)
+    bool InviteToGroupAction::Invite(Player* inviter, Player* player, Event* acceptEvent)
     {
         if (!player)
             return false;
@@ -18,18 +18,36 @@ namespace ai
         if (!player->GetPlayerbotAI() && !ai->GetSecurity()->CheckLevelFor(PlayerbotSecurityLevel::PLAYERBOT_SECURITY_INVITE, true, player))
             return false;
 
-        if (Group* group = inviter->GetGroup())
+        // CMSG_GROUP_INVITE is PROCESS_THREADUNSAFE and the raid conversion changes every member,
+        // who can be on other maps, so both run on the world thread (lbrick/cmangos-dev#98).
+        ObjectGuid playerGuid = player->GetObjectGuid();
+        std::string playerName = player->GetName();
+        bool accept = acceptEvent != nullptr;
+        std::string acceptSource = accept ? acceptEvent->getSource() : "";
+        std::string acceptParam = accept ? acceptEvent->getParam() : "";
+        ObjectGuid acceptOwner = accept && acceptEvent->getOwner() ? acceptEvent->getOwner()->GetObjectGuid() : ObjectGuid();
+        PlayerbotAI::RunOnWorldThread(inviter->GetObjectGuid(), [playerGuid, playerName, accept, acceptSource, acceptParam, acceptOwner](Player* inviter)
         {
-            if(player->GetPlayerbotAI() && !player->GetPlayerbotAI()->IsRealPlayer())
-                if (!group->IsRaidGroup() && group->GetMembersCount() > 4)
-                    group->ConvertToRaid();
-        }
+            Player* player = sObjectMgr.GetPlayer(playerGuid);
+            if (!player)
+                return;
 
-        WorldPacket p;
-        uint32 roles_mask = 0;
-        p << player->GetName();
-        p << roles_mask;
-        inviter->GetSession()->HandleGroupInviteOpcode(p);
+            if (Group* group = inviter->GetGroup())
+            {
+                if(player->GetPlayerbotAI() && !player->GetPlayerbotAI()->IsRealPlayer())
+                    if (!group->IsRaidGroup() && group->GetMembersCount() > 4)
+                        group->ConvertToRaid();
+            }
+
+            WorldPacket p;
+            uint32 roles_mask = 0;
+            p << playerName;
+            p << roles_mask;
+            inviter->GetSession()->HandleGroupInviteOpcode(p);
+
+            if (accept && player->GetPlayerbotAI())
+                player->GetPlayerbotAI()->DoSpecificAction("accept invitation", Event(acceptSource, acceptParam, acceptOwner ? sObjectMgr.GetPlayer(acceptOwner) : nullptr), true);
+        });
 
         return true;
     }
@@ -75,15 +93,8 @@ namespace ai
         if (bot->GetGroupInvite())
             bot->GetGroupInvite()->RemoveInvite(bot);
 
-        bool invite = Invite(master, bot);
-
-        if (invite && (event.getSource() == "create group"))
-        {
-            if (!ai->DoSpecificAction("accept invitation", event, true))
-                return false;
-        }
-
-        return invite;
+        // The bot accepts its own invite on the world thread, once the invite exists (lbrick/cmangos-dev#98).
+        return Invite(master, bot, event.getSource() == "create group" ? &event : nullptr);
     }
 
     std::unordered_map<uint8, std::unordered_map<BotRoles, uint32>> LfgAction::AllowedClassRoleNr(uint8 groupSize)
@@ -268,13 +279,11 @@ namespace ai
                 return false;
         }
 
-        bool invite = Invite(requester, bot);
+        // The bot accepts its own invite on the world thread, once the invite exists (lbrick/cmangos-dev#98).
+        bool invite = Invite(requester, bot, &event);
 
         if (invite)
         {
-            if (!ai->DoSpecificAction("accept invitation", event, true))
-                return false;
-
             std::map<std::string, std::string> placeholders;
             placeholders["%role"] = (role == BOT_ROLE_TANK ? "tank" : (role == BOT_ROLE_HEALER ? "healer" : "dps"));
             placeholders["%spotsleft"] = std::to_string(allowedClassNr[0][role] - 1);
