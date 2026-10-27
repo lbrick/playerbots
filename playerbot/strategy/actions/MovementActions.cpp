@@ -292,6 +292,12 @@ bool MovementAction::UseTaxi(PlayerbotAI* ai, uint32 entry, bool needNpc, Creatu
 
     ai->Unmount();
 
+    // The core refuses a flight master's flight to a shapeshifted player (Ghost Wolf, Travel
+    // Form), and Unmount leaves the form on, so drop it as the core's own taxi spell path does
+    // (lbrick/cmangos-dev#102).
+    if (bot->IsInDisallowedMountForm())
+        bot->RemoveSpellsCausingAura(SPELL_AURA_MOD_SHAPESHIFT);
+
     bool goTaxi = bot->ActivateTaxiPathTo({tEntry->from, tEntry->to}, unit, 1);
 
     if (!goTaxi)
