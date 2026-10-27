@@ -420,7 +420,7 @@ public:
     void RunOnOwningThread(Player* target, std::function<void(Player*)> action);
 
     // Runs action on the world thread, with the player looked up again by guid; skipped if the
-    // player has left the world by then. Group handlers are PROCESS_THREADUNSAFE in the core: they
+    // player has logged out by then (a player between maps still runs it). Group handlers are PROCESS_THREADUNSAFE in the core: they
     // change members who can be on other maps, so a bot never calls them inline from its map thread
     // (lbrick/cmangos-dev#98). The world thread messager runs while all map updater threads are idle.
     static void RunOnWorldThread(ObjectGuid guid, std::function<void(Player*)> action);
