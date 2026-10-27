@@ -122,6 +122,11 @@ namespace ai
     protected:
 	    Queue queue;
 	    std::list<TriggerNode*> triggers;
+        // The triggers a pass polls, with their Trigger: every resolved trigger that is not event-only
+        // (Trigger::IsEventOnly). Rebuilt by Init().
+        std::vector<std::pair<TriggerNode*, Trigger*>> polledTriggers;
+        // The bot's external event count when the last pass began (AiObjectContext).
+        uint32 lastExternalEventCount = 0;
         std::list<Multiplier*> multipliers;
         AiObjectContext* aiObjectContext;
         std::map<std::string, Strategy*> strategies;

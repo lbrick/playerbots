@@ -28,6 +28,11 @@ namespace ai
         virtual Action* GetAction(const std::string& name) { return actionContexts.GetObject(name, ai); }
         virtual UntypedValue* GetUntypedValue(const std::string& name) { return valueContexts.GetObject(name, ai); }
 
+        // Counts the events ExternalEventHelper hands this bot's triggers, so an engine can tell
+        // whether any event-only trigger may have fired since its last pass.
+        uint32 GetExternalEventCount() const { return externalEventCount; }
+        void OnExternalEvent() { ++externalEventCount; }
+
         template<class T>
         Value<T>* GetValue(const std::string& name)
         {
@@ -125,6 +130,9 @@ namespace ai
         NamedObjectContextList<Action> actionContexts;
         NamedObjectContextList<Trigger> triggerContexts;
         NamedObjectContextList<UntypedValue> valueContexts;
+
+    private:
+        uint32 externalEventCount = 0;
     };
 }
 

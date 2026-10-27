@@ -8,6 +8,8 @@ namespace ai
     public:
         ChatCommandTrigger(PlayerbotAI* ai, std::string command) : Trigger(ai, command) {}
 
+        virtual bool IsEventOnly() const override { return true; }
+
         virtual void ExternalEvent(std::string param, Player* owner = NULL) override
         {
             this->param = param;
