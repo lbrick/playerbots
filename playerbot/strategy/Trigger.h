@@ -35,6 +35,10 @@ namespace ai
         }
         virtual bool IsActive() { return false; }
         virtual bool IsAlreadyTriggered() { return triggered; }
+        // True for a trigger that only an external event fires (ChatCommandTrigger, WorldPacketTrigger):
+        // its Check() returns nothing until ExternalEventHelper hands it an event. The engine skips it
+        // while no event has arrived (Engine::ProcessTriggers).
+        virtual bool IsEventOnly() const { return false; }
         // True for a trigger fed by an external packet (WorldPacketTrigger). Such an event is a
         // one-shot obligation the bot has to answer, so the engine must not drop it just because its
         // action did not get to run in the tick that delivered it.

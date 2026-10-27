@@ -91,6 +91,7 @@ void Engine::Reset()
         delete trigger;
     }
     triggers.clear();
+    polledTriggers.clear();
 
     for (std::list<Multiplier*>::iterator i = multipliers.begin(); i != multipliers.end(); i++)
     {
@@ -110,6 +111,22 @@ void Engine::Init()
         strategy->InitMultipliers(multipliers, state);
         strategy->InitTriggers(triggers, state);
         MultiplyAndPush(strategy->getDefaultActions(state), 0.0f, false, Event(), "default");
+    }
+
+    for (TriggerNode* node : triggers)
+    {
+        if (!node)
+            continue;
+
+        Trigger* trigger = node->getTrigger();
+        if (!trigger)
+        {
+            trigger = aiObjectContext->GetTrigger(node->getName());
+            node->setTrigger(trigger);
+        }
+
+        if (trigger && !trigger->IsEventOnly())
+            polledTriggers.emplace_back(node, trigger);
     }
 
     PruneUnhandledExternalEvents();
@@ -644,26 +661,25 @@ Strategy* Engine::GetStrategy(const std::string& name) const
 
 void Engine::ProcessTriggers(bool minimal)
 {
-    for (std::list<TriggerNode*>::iterator i = triggers.begin(); i != triggers.end(); i++)
-    {
-        TriggerNode* node = *i;
-        if (!node)
-            continue;
+    // An event-only trigger (chat command, packet) fires only after ExternalEventHelper hands it an
+    // event, which bumps the bot's external event count. With no new event and none left armed, the
+    // pass walks only the polled triggers: walking every trigger node of every list was 9.7% of
+    // server CPU with 400 bots (lbrick/cmangos-dev#99).
+    const uint32 externalEventCount = aiObjectContext->GetExternalEventCount();
+    const bool scanAll = testMode || !unhandledExternalEvents.empty() || externalEventCount != lastExternalEventCount;
+    lastExternalEventCount = externalEventCount;
 
-        Trigger* trigger = node->getTrigger();
-        if (!trigger)
-        {
-            trigger = aiObjectContext->GetTrigger(node->getName());
-            node->setTrigger(trigger);
-        }
-        if (!trigger)
-            continue;
+    auto check = [&](TriggerNode* node, Trigger* trigger)
+    {
+        // The minimal filter goes first, so a trigger it skips keeps its check interval slot.
+        if (minimal && node->getFirstRelevance() < 100)
+            return;
 
         if (testMode || trigger->IsAlreadyTriggered() || trigger->needCheck())
         {
-            if (minimal && node->getFirstRelevance() < 100)
-                continue;
-            auto pmo = sPerformanceMonitor.start(PERF_MON_TRIGGER, trigger->getName(), ai);
+            std::unique_ptr<PerformanceMonitorOperation> pmo;
+            if (sPlayerbotAIConfig.perfMonEnabled)
+                pmo = sPerformanceMonitor.start(PERF_MON_TRIGGER, trigger->getName(), ai);
             Event event = trigger->Check();
 
 #ifdef PLAYERBOT_ELUNA
@@ -673,7 +689,7 @@ void Engine::ProcessTriggers(bool minimal)
 #endif
 
             if (!event)
-                continue;
+                return;
 
             // An external (packet) event is a one-shot obligation: keep the trigger armed until its
             // action has had its turn, so a basket that loses this tick or is dropped from the queue
@@ -684,19 +700,47 @@ void Engine::ProcessTriggers(bool minimal)
 
             LogAction("T:%s - %f", trigger->getName().c_str(), node->getFirstRelevance());
         }
-    }
+    };
 
-    for (std::list<TriggerNode*>::iterator i = triggers.begin(); i != triggers.end(); i++)
+    auto reset = [&](Trigger* trigger)
     {
-        Trigger* trigger = (*i)->getTrigger();
-        if (!trigger)
-            continue;
-
         // Deliberately left armed: its event has not reached an action yet (see above).
-        if (unhandledExternalEvents.find(trigger->getName()) != unhandledExternalEvents.end())
-            continue;
+        if (!unhandledExternalEvents.empty() && unhandledExternalEvents.find(trigger->getName()) != unhandledExternalEvents.end())
+            return;
 
         trigger->Reset();
+    };
+
+    if (scanAll)
+    {
+        for (TriggerNode* node : triggers)
+        {
+            if (!node)
+                continue;
+
+            Trigger* trigger = node->getTrigger();
+            if (!trigger)
+            {
+                trigger = aiObjectContext->GetTrigger(node->getName());
+                node->setTrigger(trigger);
+            }
+            if (trigger)
+                check(node, trigger);
+        }
+
+        for (TriggerNode* node : triggers)
+        {
+            if (node && node->getTrigger())
+                reset(node->getTrigger());
+        }
+    }
+    else
+    {
+        for (const auto& [node, trigger] : polledTriggers)
+            check(node, trigger);
+
+        for (const auto& [node, trigger] : polledTriggers)
+            reset(trigger);
     }
 }
 
