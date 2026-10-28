@@ -15,18 +15,29 @@ namespace ai
             Player* passLeaderTo = PassLeaderTo(event);
             if (passLeaderTo && passLeaderTo != bot && bot->GetGroup() && bot->GetGroup()->IsMember(passLeaderTo->GetObjectGuid()))
             {
-                WorldPacket p(SMSG_GROUP_SET_LEADER, 8);
-                p << passLeaderTo->GetObjectGuid();
-                bot->GetSession()->HandleGroupSetLeaderOpcode(p);
+                // CMSG_GROUP_SET_LEADER is PROCESS_THREADUNSAFE: the leader flag moves to a member who
+                // can be on another map, so it runs on the world thread (lbrick/cmangos-dev#98).
+                // Strategy setup reads whether the bot leads, so a random bot resets after the change.
+                ObjectGuid leaderGuid = passLeaderTo->GetObjectGuid();
+                bool reset = sRandomPlayerbotMgr.IsRandomBot(bot);
+                PlayerbotAI::RunOnWorldThread(bot->GetObjectGuid(), [leaderGuid, reset](Player* p)
+                {
+                    WorldPacket packet(SMSG_GROUP_SET_LEADER, 8);
+                    packet << leaderGuid;
+                    p->GetSession()->HandleGroupSetLeaderOpcode(packet);
+
+                    if (reset)
+                    {
+                        if (PlayerbotAI* botAi = p->GetPlayerbotAI())
+                        {
+                            botAi->ResetStrategies();
+                            botAi->Reset();
+                        }
+                    }
+                });
                 
                 if (!message.empty())
                     ai->TellPlayerNoFacing(passLeaderTo, message);
-
-                if (sRandomPlayerbotMgr.IsRandomBot(bot))
-                {
-                    ai->ResetStrategies();
-                    ai->Reset();
-                }
                 
                 return true;
             }

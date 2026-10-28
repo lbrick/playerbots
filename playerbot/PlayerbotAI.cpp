@@ -1618,6 +1618,20 @@ void PlayerbotAI::RunOnOwningThread(Player* target, std::function<void(Player*)>
     });
 }
 
+void PlayerbotAI::RunOnWorldThread(ObjectGuid guid, std::function<void(Player*)> action)
+{
+    if (!action)
+        return;
+
+    // Not only in-world players: a bot that far-teleports in the same tick is off every map until
+    // its worldport ack, which the world thread runs after this message.
+    sWorld.GetMessager().AddMessage([guid, action](World* /*world*/)
+    {
+        if (Player* p = sObjectAccessor.FindPlayer(guid, false))
+            action(p);
+    });
+}
+
 bool PlayerbotAI::SendSummonRequest(Player* summoner, Player* target)
 {
     if (!summoner)
