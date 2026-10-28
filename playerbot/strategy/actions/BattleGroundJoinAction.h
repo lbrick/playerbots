@@ -37,6 +37,8 @@ public:
     virtual bool shouldJoinBg(BattleGroundQueueTypeId queueTypeId, BattleGroundBracketId bracketId);
 #ifndef MANGOSBOT_ZERO
     virtual bool gatherArenaTeam(ArenaType type);
+    // Gathers the arena team and joins the rated queue; runs on the world thread.
+    bool JoinRatedArena(ArenaType type, uint32 queueTypeId);
 #endif
 protected:
     bool JoinQueue(uint32 type);

@@ -30,6 +30,10 @@ namespace ai
         // The invite runs on the world thread. With acceptEvent, the invited bot then runs
         // "accept invitation" with it there, since the invite does not exist before then.
         virtual bool Invite(Player* inviter, Player* player, Event* acceptEvent = nullptr);
+        // Converts member's group to a raid on the world thread, if it is still a party of at least
+        // minMembers there: the conversion changes every member, who can be on other maps
+        // (lbrick/cmangos-dev#103).
+        static void ConvertToRaid(Player* member, uint32 minMembers);
         virtual bool isUsefulWhenStunned() override { return true; }
     };
 

@@ -52,6 +52,16 @@ namespace ai
         return true;
     }
 
+    void InviteToGroupAction::ConvertToRaid(Player* member, uint32 minMembers)
+    {
+        PlayerbotAI::RunOnWorldThread(member->GetObjectGuid(), [minMembers](Player* p)
+        {
+            Group* group = p->GetGroup();
+            if (group && !group->IsRaidGroup() && group->GetMembersCount() >= minMembers)
+                group->ConvertToRaid();
+        });
+    }
+
     bool JoinGroupAction::Execute(Event& event)
     {
         if (bot->InBattleGround())
@@ -72,7 +82,7 @@ namespace ai
                     return false;
 
                 if(event.getSource() == "create group")
-                    group->ConvertToRaid();
+                    ConvertToRaid(master, MAX_GROUP_SIZE);
                 else 
                     return false;
             }
@@ -90,8 +100,14 @@ namespace ai
                 return false;
         }
 
+        // The invite belongs to a group whose members can be on other maps, so it is dropped on the
+        // world thread, before the new invite (lbrick/cmangos-dev#103).
         if (bot->GetGroupInvite())
-            bot->GetGroupInvite()->RemoveInvite(bot);
+            PlayerbotAI::RunOnWorldThread(bot->GetObjectGuid(), [](Player* p)
+            {
+                if (Group* invite = p->GetGroupInvite())
+                    invite->RemoveInvite(p);
+            });
 
         // The bot accepts its own invite on the world thread, once the invite exists (lbrick/cmangos-dev#98).
         return Invite(master, bot, event.getSource() == "create group" ? &event : nullptr);
@@ -255,7 +271,7 @@ namespace ai
                 if (param.empty() || param == "5" || group->IsRaidGroup())
                     return false; //Group or raid is full so stop trying.
                 else
-                    group->ConvertToRaid(); //We want a raid but are in a group so convert and continue.
+                    ConvertToRaid(requester, MAX_GROUP_SIZE); //We want a raid but are in a group so convert and continue.
             }
         }
 
@@ -361,7 +377,7 @@ namespace ai
 
             //When inviting the 5th member of the group convert to raid for future invites.
             if (group && ai->GetGrouperType() > GrouperType::LEADER_5 && !group->IsRaidGroup() && bot->GetGroup()->GetMembersCount() > 3)
-                group->ConvertToRaid();
+                ConvertToRaid(bot, 4);
 
             Guild* guild = sGuildMgr.GetGuildById(bot->GetGuildId());
             if (sPlayerbotAIConfig.inviteChat && (sRandomPlayerbotMgr.IsFreeBot(bot) || !ai->HasActivePlayerMaster()))
@@ -507,7 +523,7 @@ namespace ai
             //When inviting the 5th member of the group convert to raid for future invites.
             if (group && ai->GetGrouperType() > GrouperType::LEADER_5 && !group->IsRaidGroup() && bot->GetGroup()->GetMembersCount() > 3)
             {
-                group->ConvertToRaid();
+                ConvertToRaid(bot, 4);
             }
 
             if (sPlayerbotAIConfig.inviteChat && (sRandomPlayerbotMgr.IsFreeBot(bot) || !ai->HasActivePlayerMaster()))

@@ -86,10 +86,20 @@ bool BGJoinAction::Execute(Event& event)
             if (i != ratedList.end())
                 isRated = true;
 
-            if (isRated && !gatherArenaTeam(type))
+            if (isRated)
             {
-                sLog.outDetail("Team %dv%d, captain #%d <%s>: error making arena group!", uint32(type), uint32(type), bot->GetGUIDLow(), bot->GetName());
-                return false;
+                // Gathering the team creates the group and moves members out of other groups, and
+                // members can be on other maps, so it and the queue join run on the world thread
+                // (lbrick/cmangos-dev#103).
+                std::string actionName = getName();
+                PlayerbotAI::RunOnWorldThread(bot->GetObjectGuid(), [actionName, type, queueTypeId](Player* p)
+                {
+                    PlayerbotAI* botAi = p->GetPlayerbotAI();
+                    BGJoinAction* action = botAi ? dynamic_cast<BGJoinAction*>(botAi->GetAiObjectContext()->GetAction(actionName)) : nullptr;
+                    if (action)
+                        action->JoinRatedArena(type, queueTypeId);
+                });
+                return true;
             }
 
             ai->GetAiObjectContext()->GetValue<uint32>("arena type")->Set(isRated);
@@ -141,6 +151,20 @@ bool BGJoinAction::Execute(Event& event)
 }
 
 #ifndef MANGOSBOT_ZERO
+bool BGJoinAction::JoinRatedArena(ArenaType type, uint32 queueTypeId)
+{
+    if (!gatherArenaTeam(type))
+    {
+        sLog.outDetail("Team %dv%d, captain #%d <%s>: error making arena group!", uint32(type), uint32(type), bot->GetGUIDLow(), bot->GetName());
+        return false;
+    }
+
+    ai->GetAiObjectContext()->GetValue<uint32>("arena type")->Set(true);
+    ai->GetAiObjectContext()->GetValue<uint32>("bg type")->Set(queueTypeId);
+    sPlayerbotAIConfig.logEvent(ai, "BGJoinAction", "", std::to_string(queueTypeId));
+    return JoinQueue(queueTypeId);
+}
+
 bool BGJoinAction::gatherArenaTeam(ArenaType type)
 {
     ArenaTeam* arenateam = nullptr;

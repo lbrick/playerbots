@@ -74,18 +74,26 @@ bool GuildAcceptAction::Execute(Event& event)
             bot->Say(BOT_TEXT2("I would love to join!", placeholders), (bot->GetTeam() == ALLIANCE ? LANG_COMMON : LANG_ORCISH));
     }
 
-    WorldPacket packet;
-    if (accept)
+    // CMSG_GUILD_ACCEPT and CMSG_GUILD_DECLINE are PROCESS_THREADUNSAFE: they change the inviting
+    // guild and its members, who can be on other maps, so they run on the world thread. The public
+    // note and the log read the new membership, so they run after the accept there
+    // (lbrick/cmangos-dev#103).
+    PlayerbotAI::RunOnWorldThread(bot->GetObjectGuid(), [accept](Player* p)
     {
-        bot->GetSession()->HandleGuildAcceptOpcode(packet);
+        WorldPacket packet;
+        if (!accept)
+        {
+            p->GetSession()->HandleGuildDeclineOpcode(packet);
+            return;
+        }
 
-        TalentSpec::SetPublicNote(bot);
+        p->GetSession()->HandleGuildAcceptOpcode(packet);
 
-        sPlayerbotAIConfig.logEvent(ai, "GuildAcceptAction", guild->GetName(), std::to_string(guild->GetMemberSize()));
-    }
-    else
-    {
-        bot->GetSession()->HandleGuildDeclineOpcode(packet);
-    }
+        TalentSpec::SetPublicNote(p);
+
+        Guild* joined = sGuildMgr.GetGuildById(p->GetGuildId());
+        if (joined && p->GetPlayerbotAI())
+            sPlayerbotAIConfig.logEvent(p->GetPlayerbotAI(), "GuildAcceptAction", joined->GetName(), std::to_string(joined->GetMemberSize()));
+    });
     return true;
 }

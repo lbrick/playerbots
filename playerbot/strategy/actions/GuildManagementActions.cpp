@@ -262,7 +262,12 @@ bool GuildLeaveAction::Execute(Event& event)
 
     sPlayerbotAIConfig.logEvent(ai, "GuildLeaveAction", guild->GetName(), std::to_string(guild->GetMemberSize()));
 
-    WorldPacket packet;
-    bot->GetSession()->HandleGuildLeaveOpcode(packet);
+    // CMSG_GUILD_LEAVE is PROCESS_THREADUNSAFE: leaving changes the other members, who can be on
+    // other maps, so it runs on the world thread (lbrick/cmangos-dev#103).
+    PlayerbotAI::RunOnWorldThread(bot->GetObjectGuid(), [](Player* p)
+    {
+        WorldPacket packet;
+        p->GetSession()->HandleGuildLeaveOpcode(packet);
+    });
     return true;
 }
