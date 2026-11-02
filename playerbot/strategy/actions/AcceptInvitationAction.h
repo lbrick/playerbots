@@ -155,9 +155,7 @@ namespace ai
             ai->DoSpecificAction("reset raids", event, true);
             ai->DoSpecificAction("update gear", event, true);
 
-            // Last: off the map thread nothing delays a far teleport, which takes the bot off its map
-            // at once, and the steps above need it. On the map thread the core delayed the teleport
-            // until the bot's update ended, so this is the order they always ran in.
+            // Last: a far teleport takes the bot off its map at once, and the steps above need it.
             if (sServerFacade.GetDistance2d(bot, inviter) > 5.0f)
             {
                 sLog.outDetail("Bot %s: teleporting to %s on group join", bot->GetName(), inviter->GetName());
