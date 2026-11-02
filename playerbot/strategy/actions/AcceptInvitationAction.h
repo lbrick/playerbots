@@ -83,6 +83,11 @@ namespace ai
             if (!inviter)
                 return;
 
+            // A leave can run between the accept and a deferred follow-up.
+            Group* grp = bot->GetGroup();
+            if (!grp || !grp->IsMember(inviterGuid))
+                return;
+
             if (!OnMap(bot) || !OnMap(inviter))
             {
                 if (time(nullptr) >= deadline)
@@ -101,18 +106,7 @@ namespace ai
                 return;
             }
 
-            // A leave can run between the accept and a deferred follow-up.
-            Group* grp = bot->GetGroup();
-            if (!grp || !grp->IsMember(inviterGuid))
-                return;
-
             Event event(source, param, ownerGuid ? sObjectMgr.GetPlayer(ownerGuid) : nullptr);
-
-            if (sServerFacade.GetDistance2d(bot, inviter) > 5.0f)
-            {
-                sLog.outDetail("Bot %s: teleporting to %s on group join", bot->GetName(), inviter->GetName());
-                bot->TeleportTo(inviter->GetMapId(), inviter->GetPositionX(), inviter->GetPositionY(), inviter->GetPositionZ(), inviter->GetOrientation());
-            }
 
             if (sRandomPlayerbotMgr.IsFreeBot(bot))
             {
@@ -160,6 +154,15 @@ namespace ai
 
             ai->DoSpecificAction("reset raids", event, true);
             ai->DoSpecificAction("update gear", event, true);
+
+            // Last: off the map thread nothing delays a far teleport, which takes the bot off its map
+            // at once, and the steps above need it. On the map thread the core delayed the teleport
+            // until the bot's update ended, so this is the order they always ran in.
+            if (sServerFacade.GetDistance2d(bot, inviter) > 5.0f)
+            {
+                sLog.outDetail("Bot %s: teleporting to %s on group join", bot->GetName(), inviter->GetName());
+                bot->TeleportTo(inviter->GetMapId(), inviter->GetPositionX(), inviter->GetPositionY(), inviter->GetPositionZ(), inviter->GetOrientation());
+            }
         }
 
         // Added to a map, and not leaving it for another
