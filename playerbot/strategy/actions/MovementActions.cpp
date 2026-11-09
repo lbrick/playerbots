@@ -2507,7 +2507,9 @@ bool MovementAction::Follow(Unit* target, float distance, float angle)
                 {
                     WorldPosition longMove = PAI_VALUE(WorldPosition, "last long move");
 
-                    if (longMove)
+                    // The leader's long move can lie on another map while the leader stays on this one.
+                    // Following it sent bots back and forth across a boat route (lbrick/cmangos-dev#110).
+                    if (longMove && longMove.getMapId() == tarPos.getMapId())
                     {
                         return MoveTo(longMove.getMapId(), longMove.getX(), longMove.getY(), longMove.getZ());
                     }
