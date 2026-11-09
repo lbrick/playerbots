@@ -1159,13 +1159,24 @@ Unit* MovementAction::GetMover(Player* bot)
 
 void MovementAction::LogCrossMapMove(const char* kind, const WorldPosition& from, const WorldPosition& to, const WorldPosition& dest, const WorldPosition& pathFront, size_t pathPoints, bool reused, int nodeType)
 {
-    sLog.outString("[New RPG travel] bot=%s event=cross_map_move kind=%s action=\"%s\" from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f dest=%u:%.1f,%.1f,%.1f path_front=%u:%.1f,%.1f,%.1f path_points=%u reused=%d node_type=%d",
+    // The follow target and the long move Follow reads from it, so a destination that changes
+    // with the bot's map can be traced to the unit that supplied it.
+    Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
+    WorldPosition followPos = followTarget ? WorldPosition(followTarget) : WorldPosition();
+    WorldPosition followLongMove;
+    if (followTarget && followTarget->IsPlayer() && ((Player*)followTarget)->GetPlayerbotAI())
+        followLongMove = ((Player*)followTarget)->GetPlayerbotAI()->GetAiObjectContext()->GetValue<WorldPosition>("last long move")->Get();
+
+    sLog.outString("[New RPG travel] bot=%s event=cross_map_move kind=%s action=\"%s\" from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f dest=%u:%.1f,%.1f,%.1f path_front=%u:%.1f,%.1f,%.1f path_points=%u reused=%d node_type=%d follow_target=%s follow_pos=%u:%.1f,%.1f,%.1f follow_long_move=%u:%.1f,%.1f,%.1f",
         bot->GetName(), kind, getName().c_str(),
         from.getMapId(), from.getX(), from.getY(), from.getZ(),
         to.getMapId(), to.getX(), to.getY(), to.getZ(),
         dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(),
         pathFront.getMapId(), pathFront.getX(), pathFront.getY(), pathFront.getZ(),
-        (uint32)pathPoints, reused ? 1 : 0, nodeType);
+        (uint32)pathPoints, reused ? 1 : 0, nodeType,
+        followTarget ? followTarget->GetName() : "none",
+        followPos.getMapId(), followPos.getX(), followPos.getY(), followPos.getZ(),
+        followLongMove.getMapId(), followLongMove.getX(), followLongMove.getY(), followLongMove.getZ());
 }
 
 bool MovementAction::MoveTo2(const WorldPosition& endPos, bool idle, bool react, bool noPath, bool ignoreEnemyTargets)
