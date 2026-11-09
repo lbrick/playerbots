@@ -54,6 +54,7 @@ namespace ai
         Unit* GetMover(Player* bot);
 
         bool MoveTo2(const WorldPosition& endPos, bool idle = false, bool react = false, bool noPath = false, bool ignoreEnemyTargets = false);
+        void LogCrossMapMove(const char* kind, const WorldPosition& from, const WorldPosition& to, const WorldPosition& dest, const WorldPosition& pathFront, size_t pathPoints, bool reused, int nodeType);
 
         bool MoveTo(uint32 mapId, float x, float y, float z, bool idle = false, bool react = false, bool noPath = false, bool ignoreEnemyTargets = false);
         bool MoveTo(Unit* target, float distance = 0.0f);

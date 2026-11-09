@@ -1157,6 +1157,17 @@ Unit* MovementAction::GetMover(Player* bot)
     return bot;
 }
 
+void MovementAction::LogCrossMapMove(const char* kind, const WorldPosition& from, const WorldPosition& to, const WorldPosition& dest, const WorldPosition& pathFront, size_t pathPoints, bool reused, int nodeType)
+{
+    sLog.outString("[New RPG travel] bot=%s event=cross_map_move kind=%s action=\"%s\" from=%u:%.1f,%.1f,%.1f to=%u:%.1f,%.1f,%.1f dest=%u:%.1f,%.1f,%.1f path_front=%u:%.1f,%.1f,%.1f path_points=%u reused=%d node_type=%d",
+        bot->GetName(), kind, getName().c_str(),
+        from.getMapId(), from.getX(), from.getY(), from.getZ(),
+        to.getMapId(), to.getX(), to.getY(), to.getZ(),
+        dest.getMapId(), dest.getX(), dest.getY(), dest.getZ(),
+        pathFront.getMapId(), pathFront.getX(), pathFront.getY(), pathFront.getZ(),
+        (uint32)pathPoints, reused ? 1 : 0, nodeType);
+}
+
 bool MovementAction::MoveTo2(const WorldPosition& endPos, bool idle, bool react, bool noPath, bool ignoreEnemyTargets)
 {
     if (!endPos.isValid())
@@ -1211,7 +1222,14 @@ bool MovementAction::MoveTo2(const WorldPosition& endPos, bool idle, bool react,
     
     bool isWalking = false;
 
+    // The stored path's front before ResolveMovePath, so the travel log can tell a reused path
+    // from a fresh one (lbrick/cmangos-dev#110).
+    WorldPosition lastPathFront = lastMove.lastPath.empty() ? WorldPosition() : lastMove.lastPath.getFront();
+
     TravelPath movePath = ResolveMovePath(startPos, endPos, mover, lastMove);
+
+    WorldPosition pathFront = movePath.empty() ? WorldPosition() : movePath.getFront();
+    size_t pathPoints = movePath.getPath().size();
 
     lastMove.setPath(movePath);
 
@@ -1235,7 +1253,18 @@ bool MovementAction::MoveTo2(const WorldPosition& endPos, bool idle, bool react,
     bool specialMovement = movePath.UpcommingSpecialMovement(startPos, sPlayerbotAIConfig.reactDistance,bot->GetTransport());
 
     if (specialMovement)
+    {
+        // Names the destination and path behind a special move to another map, so a bot that
+        // crosses back and forth between two docks shows why (lbrick/cmangos-dev#110).
+        if (sPlayerbotAIConfig.logRpgTravelEvents && movePath.getPath().size() > 1)
+        {
+            WorldPosition const& to = std::next(movePath.getPath().begin())->point;
+            if (to.getMapId() != startPos.getMapId())
+                LogCrossMapMove("special", startPos, to, endPos, pathFront, pathPoints, lastPathFront && pathFront == lastPathFront, (int)movePath.getPath().front().type);
+        }
+
         return HandleSpecialMovement(movePath);
+    }
     
     if (bot->GetTransport()) //Transports needed to be handled before now.
         return false;
@@ -1298,6 +1327,9 @@ bool MovementAction::MoveTo2(const WorldPosition& endPos, bool idle, bool react,
         WorldPosition teleportPosition = movePath.getBack();
         if (!ai->HasPlayerNearby(teleportPosition))
         {
+            if (sPlayerbotAIConfig.logRpgTravelEvents && teleportPosition.getMapId() != startPos.getMapId())
+                LogCrossMapMove("long_teleport", startPos, teleportPosition, endPos, pathFront, pathPoints, lastPathFront && pathFront == lastPathFront, (int)movePath.getPath().back().type);
+
             time_t now = time(0);
             lastMove.nextTeleport = now + (time_t)MoveDelay(startPos.distance(teleportPosition));
             return bot->TeleportTo(teleportPosition.getMapId(),
